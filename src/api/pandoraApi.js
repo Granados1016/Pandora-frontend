@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+const BACKEND = import.meta.env.VITE_BACKEND_URL ?? '';
+const BASE_URL = BACKEND ? `${BACKEND}/api` : '/api';
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -62,7 +65,7 @@ api.interceptors.response.use(
 
     try {
       // Llamada directa con axios (no pasa por los interceptores de `api`)
-      const { data } = await axios.post('/api/auth/refresh', { refreshToken });
+      const { data } = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken });
 
       const newToken        = data.token;
       const newRefreshToken = data.refreshToken;
@@ -123,7 +126,7 @@ export const campaignApi = {
   getRecipients:(id)       => api.get(`/campaigns/${id}/recipients`),
   exportUrl:    (id) => {
     const token = localStorage.getItem('pandora_token');
-    return `/api/campaigns/${id}/export?access_token=${token}`;
+    return `${BASE_URL}/campaigns/${id}/export?access_token=${token}`;
   },
 };
 
@@ -179,11 +182,11 @@ export const inventoryApi = {
 
   exportUrl: () => {
     const token = localStorage.getItem('pandora_token');
-    return `/api/inventory/excel/export?access_token=${token}`;
+    return `${BASE_URL}/inventory/excel/export?access_token=${token}`;
   },
   templateUrl: () => {
     const token = localStorage.getItem('pandora_token');
-    return `/api/inventory/excel/template?access_token=${token}`;
+    return `${BASE_URL}/inventory/excel/template?access_token=${token}`;
   },
   importPreview: (file) => {
     const form = new FormData();
