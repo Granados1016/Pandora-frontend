@@ -189,6 +189,7 @@ export default function InventoryItems() {
     const { _deptId, _employeeId, ...formData } = form;
     const payload = {
       ...formData,
+      status:             Number(form.status),
       assignedEmployeeId: _employeeId || null,
       purchasePrice:  form.purchasePrice !== '' ? parseFloat(form.purchasePrice) : null,
       purchaseDate:   form.purchaseDate   || null,
