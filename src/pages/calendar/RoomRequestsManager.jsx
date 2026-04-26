@@ -16,6 +16,7 @@ import CoffeeIcon          from '@mui/icons-material/Coffee';
 import { format, parseISO } from 'date-fns';
 import { es }              from 'date-fns/locale';
 import { roomRequestApi, calendarApi } from '../../api/pandoraApi';
+import { apiError } from '../../api/apiError';
 import ReservationModal    from './ReservationModal';
 
 const STATUS_CONFIG = {
@@ -55,8 +56,7 @@ export default function RoomRequestsManager() {
       const reqRes = await roomRequestApi.getAll(tab || undefined);
       setRequests(reqRes.data);
     } catch (e) {
-      const msg = e.response?.data || e.message || 'Error desconocido';
-      setError(`No se pudieron cargar las solicitudes: ${msg}`);
+      setError(`No se pudieron cargar las solicitudes: ${apiError(e, e.message || 'Error desconocido')}`);
     } finally {
       setLoading(false);
     }

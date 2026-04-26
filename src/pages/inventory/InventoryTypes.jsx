@@ -9,6 +9,7 @@ import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { inventoryApi } from '../../api/pandoraApi';
+import { apiError } from '../../api/apiError';
 
 const EMPTY = { name: '', description: '', department: '', isActive: true };
 
@@ -51,7 +52,7 @@ export default function InventoryTypes() {
       setOpen(false);
       load();
     } catch (e) {
-      setError(e.response?.data || 'Error al guardar.');
+      setError(apiError(e, 'Error al guardar.'));
     } finally {
       setSaving(false);
     }
@@ -63,7 +64,7 @@ export default function InventoryTypes() {
       await inventoryApi.deleteType(id);
       load();
     } catch (e) {
-      setError(e.response?.data || 'No se puede eliminar.');
+      setError(apiError(e, 'No se puede eliminar.'));
     } finally {
       setDeleting(null);
     }

@@ -11,6 +11,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PeopleIcon from '@mui/icons-material/People';
 import TagIcon from '@mui/icons-material/Tag';
 import { catalogApi } from '../../api/pandoraApi';
+import { apiError } from '../../api/apiError';
 
 const EMPTY = { name: '', description: '', inventoryPrefix: '', isActive: true };
 
@@ -52,7 +53,7 @@ export default function Departments() {
       setOpen(false);
       load();
     } catch (e) {
-      setError(e.response?.data || 'Error al guardar.');
+      setError(apiError(e, 'Error al guardar.'));
     } finally {
       setSaving(false);
     }
@@ -68,7 +69,7 @@ export default function Departments() {
       await catalogApi.deleteDepartment(d.id);
       load();
     } catch (e) {
-      setError(e.response?.data || 'Error al eliminar.');
+      setError(apiError(e, 'Error al eliminar.'));
     }
   };
 

@@ -10,6 +10,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import VideoCallIcon from '@mui/icons-material/VideoCall';
 import RepeatIcon from '@mui/icons-material/Repeat';
 import { calendarApi } from '../../api/pandoraApi';
+import { apiError } from '../../api/apiError';
 
 const FREQ_OPTIONS = [
   { value: 'FREQ=DAILY',   label: 'Diario' },
@@ -131,7 +132,7 @@ export default function ReservationModal({ open, onClose, onSaved, rooms, employ
       onSaved();
       onClose();
     } catch (e) {
-      setError(e.response?.data || 'Error al guardar la reserva.');
+      setError(apiError(e, 'Error al guardar la reserva.'));
     } finally {
       setSaving(false);
     }
@@ -145,7 +146,7 @@ export default function ReservationModal({ open, onClose, onSaved, rooms, employ
       onSaved();
       onClose();
     } catch (e) {
-      setError(e.response?.data || 'Error al eliminar.');
+      setError(apiError(e, 'Error al eliminar.'));
     }
   };
 

@@ -10,6 +10,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import { calendarApi } from '../../api/pandoraApi';
+import { apiError } from '../../api/apiError';
 
 const COLORS = [
   '#1976d2', '#388e3c', '#d32f2f', '#7b1fa2',
@@ -54,7 +55,7 @@ export default function RoomsManager() {
       setOpen(false);
       load();
     } catch (e) {
-      setError(e.response?.data || 'Error al guardar.');
+      setError(apiError(e, 'Error al guardar.'));
     } finally {
       setSaving(false);
     }

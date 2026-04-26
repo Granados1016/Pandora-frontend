@@ -13,6 +13,7 @@ import WarningIcon from '@mui/icons-material/Warning';
 import DownloadIcon from '@mui/icons-material/Download';
 import CloseIcon from '@mui/icons-material/Close';
 import { inventoryApi } from '../../api/pandoraApi';
+import { apiError } from '../../api/apiError';
 
 const STEPS = ['Seleccionar archivo', 'Revisar preview', 'Importar'];
 
@@ -52,7 +53,7 @@ export default function ExcelImportDialog({ open, onClose, onImported }) {
       setPreview(r.data);
       setActiveStep(1);
     } catch (e) {
-      setError(e.response?.data || 'Error al leer el archivo.');
+      setError(apiError(e, 'Error al leer el archivo.'));
     } finally {
       setLoading(false);
     }
@@ -69,7 +70,7 @@ export default function ExcelImportDialog({ open, onClose, onImported }) {
       setActiveStep(2);
       onImported?.();
     } catch (e) {
-      setError(e.response?.data || 'Error al importar.');
+      setError(apiError(e, 'Error al importar.'));
     } finally {
       setLoading(false);
     }

@@ -12,6 +12,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SearchIcon from '@mui/icons-material/Search';
 import BadgeIcon from '@mui/icons-material/Badge';
 import { catalogApi } from '../../api/pandoraApi';
+import { apiError } from '../../api/apiError';
 
 const EMPTY = {
   fullName: '', position: '', email: '', phone: '',
@@ -81,7 +82,7 @@ export default function Employees() {
       setOpen(false);
       load();
     } catch (e) {
-      setError(e.response?.data || 'Error al guardar.');
+      setError(apiError(e, 'Error al guardar.'));
     } finally {
       setSaving(false);
     }
@@ -93,7 +94,7 @@ export default function Employees() {
       await catalogApi.deleteEmployee(emp.id);
       load();
     } catch (e) {
-      setError(e.response?.data || 'Error al eliminar.');
+      setError(apiError(e, 'Error al eliminar.'));
     }
   };
 

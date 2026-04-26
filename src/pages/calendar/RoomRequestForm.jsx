@@ -10,6 +10,7 @@ import CheckCircleIcon     from '@mui/icons-material/CheckCircle';
 import InfoOutlinedIcon    from '@mui/icons-material/InfoOutlined';
 import WarningAmberIcon    from '@mui/icons-material/WarningAmber';
 import { roomRequestApi }  from '../../api/pandoraApi';
+import { apiError } from '../../api/apiError';
 
 // ── Datos estáticos ───────────────────────────────────────────────────────────
 
@@ -227,7 +228,7 @@ export default function RoomRequestForm() {
       setForm(EMPTY);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
-      setError(e.response?.data || 'No se pudo enviar la solicitud. Intenta de nuevo.');
+      setError(apiError(e, 'No se pudo enviar la solicitud. Intenta de nuevo.'));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSaving(false);
