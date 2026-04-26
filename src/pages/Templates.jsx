@@ -81,7 +81,7 @@ export default function Templates() {
     try {
       const payload = {
         ...form,
-        isPlainText: editorMode === 'plain',
+        isPlainText: false,
         variables,
       };
       if (editing) {
