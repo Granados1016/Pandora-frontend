@@ -22,7 +22,6 @@ import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import FormatColorTextIcon from '@mui/icons-material/FormatColorText';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import { TextStyle, FontSize } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
@@ -225,7 +224,6 @@ export default function EmailEditor({
   const editor = useEditor({
     extensions: [
       StarterKit,
-      Underline,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       TextStyle,
       Color,
