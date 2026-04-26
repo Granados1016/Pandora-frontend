@@ -7,6 +7,18 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    optimizeDeps: {
+      include: [
+        '@tiptap/react',
+        '@tiptap/core',
+        '@tiptap/starter-kit',
+        '@tiptap/extension-underline',
+        '@tiptap/extension-text-align',
+        '@tiptap/extension-text-style',
+        '@tiptap/extension-color',
+        '@tiptap/extension-font-family',
+      ],
+    },
     server: {
       port: 3000,
       host: '0.0.0.0',
