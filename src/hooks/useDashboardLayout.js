@@ -7,7 +7,6 @@ export const DEFAULT_WIDGET_ORDER = [
   'recentCampaigns',
   'inventory',
   'calendar',
-  'biblioteca',
 ];
 
 const DEFAULT_LAYOUT = DEFAULT_WIDGET_ORDER.map(id => ({ id, enabled: true }));

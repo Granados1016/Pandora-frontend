@@ -19,7 +19,6 @@ import {
   RecentCampaignsWidget,
   InventoryWidget,
   CalendarTodayWidget,
-  BibliotecaWidget,
   WIDGET_META,
 } from '../components/dashboard/Widgets.jsx';
 
@@ -33,7 +32,6 @@ function WidgetRenderer({ id, extraProps }) {
     case 'recentCampaigns': return <RecentCampaignsWidget />;
     case 'inventory':       return <InventoryWidget />;
     case 'calendar':        return <CalendarTodayWidget />;
-    case 'biblioteca':      return <BibliotecaWidget />;
     default:                return null;
   }
 }

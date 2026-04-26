@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Card, CardContent, Grid, Chip, Stack, CircularProgress,
   Button, List, ListItem, ListItemText, ListItemIcon, Avatar, Divider,
-  LinearProgress, IconButton, Tooltip,
+  IconButton, Tooltip,
 } from '@mui/material';
 import SendIcon          from '@mui/icons-material/Send';
 import CheckCircleIcon   from '@mui/icons-material/CheckCircle';
@@ -18,8 +18,6 @@ import BuildIcon         from '@mui/icons-material/Build';
 import BlockIcon         from '@mui/icons-material/Block';
 import WarehouseIcon     from '@mui/icons-material/Warehouse';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-import AutoStoriesIcon   from '@mui/icons-material/AutoStories';
-import CategoryIcon      from '@mui/icons-material/Category';
 import ArrowForwardIcon  from '@mui/icons-material/ArrowForward';
 import ArticleIcon       from '@mui/icons-material/Article';
 import PeopleIcon        from '@mui/icons-material/People';
@@ -29,7 +27,6 @@ import MeetingRoomIcon   from '@mui/icons-material/MeetingRoom';
 import ScheduleIcon      from '@mui/icons-material/Schedule';
 
 import { campaignApi, inventoryApi, calendarApi } from '../../api/pandoraApi';
-import { librosApi }  from '../../api/bibliotecaApi';
 import { MODULES }    from '../../hooks/useAuth.jsx';
 import { statusColor, statusLabel } from '../../utils/statusHelpers';
 
@@ -204,7 +201,6 @@ export function QuickActionsWidget({ hasModule }) {
     { label: 'Personal',       icon: <PeopleIcon />,        path: '/catalogs/employees',  module: MODULES.INVENTARIO,  color: '#558b2f' },
     { label: 'Calendario',     icon: <CalendarMonthIcon />, path: '/calendar',            module: MODULES.CALENDARIO,  color: '#6a1b9a' },
     { label: 'Salas',          icon: <MeetingRoomIcon />,   path: '/calendar/rooms',      module: MODULES.CALENDARIO,  color: '#7b1fa2' },
-    { label: 'Biblioteca',     icon: <AutoStoriesIcon />,   path: '/biblioteca',          module: MODULES.BIBLIOTECA,  color: '#e65100' },
     { label: 'Reportes',       icon: <StorageIcon />,       path: '/reports',             module: null,                color: '#37474f' },
   ].filter(a => a.module === null || hasModule(a.module));
 
@@ -393,70 +389,6 @@ export function CalendarTodayWidget() {
   );
 }
 
-// ─── 7. Biblioteca Virtual ────────────────────────────────────────────────────
-
-export function BibliotecaWidget() {
-  const navigate = useNavigate();
-  const [data, setData]     = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    librosApi.dashboard()
-      .then(r => setData(r.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  const topCats = (data?.porCategoria || []).slice(0, 4);
-  const maxVal  = Math.max(...topCats.map(c => c.total), 1);
-
-  return (
-    <WidgetCard title="Biblioteca Virtual" icon={<AutoStoriesIcon fontSize="small" />}
-                action="/biblioteca" actionLabel="Ir a la biblioteca" loading={loading} minH={120}>
-      {data ? (
-        <Box>
-          <Grid container spacing={1.5} mb={2}>
-            <Grid item xs={4}>
-              <KpiMini label="Libros" value={data.totalLibros} color="primary.main"
-                icon={<AutoStoriesIcon sx={{ fontSize: 16 }} />} />
-            </Grid>
-            <Grid item xs={4}>
-              <KpiMini label="Categorías" value={data.totalCategorias ?? data.porCategoria?.length}
-                color="#e65100" icon={<CategoryIcon sx={{ fontSize: 16 }} />} />
-            </Grid>
-            <Grid item xs={4}>
-              <KpiMini label="Almacenado" value={formatBytes(data.totalBytes)}
-                color="secondary.main" icon={<StorageIcon sx={{ fontSize: 16 }} />} />
-            </Grid>
-          </Grid>
-
-          {topCats.length > 0 && (
-            <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={600} mb={0.5} display="block">
-                TOP CATEGORÍAS
-              </Typography>
-              <Stack spacing={0.8}>
-                {topCats.map(cat => (
-                  <Box key={cat.categoriaId ?? cat.nombre}>
-                    <Stack direction="row" justifyContent="space-between" mb={0.2}>
-                      <Typography variant="caption" noWrap sx={{ maxWidth: '75%' }}>{cat.nombre}</Typography>
-                      <Typography variant="caption" fontWeight={700} color="primary.main">{cat.total}</Typography>
-                    </Stack>
-                    <LinearProgress variant="determinate" value={(cat.total / maxVal) * 100}
-                      sx={{ borderRadius: 1, height: 5 }} />
-                  </Box>
-                ))}
-              </Stack>
-            </Box>
-          )}
-        </Box>
-      ) : (
-        <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>Sin datos.</Typography>
-      )}
-    </WidgetCard>
-  );
-}
-
 // ─── Registro de widgets ──────────────────────────────────────────────────────
 
 export const WIDGET_META = {
@@ -466,5 +398,4 @@ export const WIDGET_META = {
   recentCampaigns: { label: 'Campañas Recientes',       module: MODULES.MAIL_PLUS,  gridProps: { xs: 12, md: 6 } },
   inventory:       { label: 'Inventario',               module: MODULES.INVENTARIO, gridProps: { xs: 12, md: 6 } },
   calendar:        { label: 'Reservas de Hoy',          module: MODULES.CALENDARIO, gridProps: { xs: 12, md: 6 } },
-  biblioteca:      { label: 'Biblioteca Virtual',       module: MODULES.BIBLIOTECA, gridProps: { xs: 12, md: 6 } },
 };

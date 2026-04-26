@@ -25,7 +25,7 @@ const ALL_MODULES_VALUE = Object.entries(MODULE_LABELS)
 
 const EMPTY_FORM = {
   username: '', fullName: '', email: '', position: '',
-  password: '', role: 'User', modules: MODULES.BIBLIOTECA, isActive: true,
+  password: '', role: 'User', modules: 0, isActive: true,
 };
 
 export default function Admin() {
@@ -279,18 +279,12 @@ export default function Admin() {
                 {/* Selector rápido */}
                 <RadioGroup
                   row
-                  value={
-                    form.modules === MODULES.BIBLIOTECA ? 'biblioteca'
-                    : form.modules === ALL_MODULES_VALUE ? 'todos'
-                    : 'personalizado'
-                  }
+                  value={form.modules === ALL_MODULES_VALUE ? 'todos' : 'personalizado'}
                   onChange={e => {
-                    if (e.target.value === 'biblioteca') setForm(f => ({ ...f, modules: MODULES.BIBLIOTECA }));
-                    else if (e.target.value === 'todos')  setForm(f => ({ ...f, modules: ALL_MODULES_VALUE }));
+                    if (e.target.value === 'todos') setForm(f => ({ ...f, modules: ALL_MODULES_VALUE }));
                   }}
                   sx={{ mb: 1 }}
                 >
-                  <FormControlLabel value="biblioteca"  control={<Radio size="small" />} label="Solo Biblioteca Virtual" />
                   <FormControlLabel value="todos"       control={<Radio size="small" />} label="Todos los módulos" />
                   <FormControlLabel value="personalizado" control={<Radio size="small" />} label="Personalizado" />
                 </RadioGroup>
