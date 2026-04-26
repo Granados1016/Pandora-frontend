@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import DOMPurify from 'dompurify';
 import {
   Box, TextField, ToggleButton, ToggleButtonGroup, Typography,
-  Paper, Chip, Stack, Tooltip, Divider, Alert, IconButton, CircularProgress,
+  Paper, Chip, Stack, Tooltip, Divider, Alert, IconButton,
   Select, MenuItem,
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -26,7 +26,6 @@ import TextAlign from '@tiptap/extension-text-align';
 import { TextStyle, FontSize } from '@tiptap/extension-text-style';
 import Color from '@tiptap/extension-color';
 import FontFamily from '@tiptap/extension-font-family';
-import { mediaApi } from '../api/pandoraApi';
 
 const FIXED_VARIABLES = [
   { token: '{{nombre}}',     label: 'Nombre',     color: 'primary' },
@@ -215,9 +214,8 @@ export default function EmailEditor({
   subject, body, onSubjectChange, onBodyChange,
   variables = [],
 }) {
-  const [viewMode, setViewMode]           = useState('edit');
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [imageError, setImageError]       = useState('');
+  const [viewMode, setViewMode] = useState('edit');
+  const [imageError, setImageError] = useState('');
   const fileInputRef   = useRef(null);
   const isInternalEdit = useRef(false);
 
@@ -249,22 +247,23 @@ export default function EmailEditor({
     editor?.chain().focus().insertContent(token).run();
   };
 
-  const handleImageUpload = async (e) => {
+  const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setImageError('');
-    setUploadingImage(true);
-    try {
-      const { data } = await mediaApi.uploadImage(file);
-      editor?.chain().focus().insertContent(
-        `<img src="${data.url}" alt="imagen" style="max-width:100%;height:auto;" />`
-      ).run();
-    } catch (err) {
-      setImageError(err.response?.data || 'Error al subir la imagen.');
-    } finally {
-      setUploadingImage(false);
+    if (file.size > 5 * 1024 * 1024) {
+      setImageError('El archivo supera el límite de 5 MB.');
       if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
     }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      editor?.chain().focus().insertContent(
+        `<img src="${ev.target.result}" alt="imagen" style="max-width:100%;height:auto;" />`
+      ).run();
+    };
+    reader.readAsDataURL(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -312,17 +311,13 @@ export default function EmailEditor({
 
           <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
 
-          <Tooltip title="Subir e insertar imagen (jpg, png, gif, webp — máx 5 MB)">
-            <span>
-              <IconButton size="small" color="primary" disabled={uploadingImage}
-                onClick={() => fileInputRef.current?.click()}
-                sx={{ border: '1px solid', borderColor: 'primary.main', borderRadius: 1, px: 1 }}>
-                {uploadingImage ? <CircularProgress size={16} /> : <ImageIcon fontSize="small" />}
-                <Typography variant="caption" sx={{ ml: 0.5 }}>
-                  {uploadingImage ? 'Subiendo…' : 'Imagen'}
-                </Typography>
-              </IconButton>
-            </span>
+          <Tooltip title="Insertar imagen (jpg, png, gif, webp — máx 5 MB)">
+            <IconButton size="small" color="primary"
+              onClick={() => fileInputRef.current?.click()}
+              sx={{ border: '1px solid', borderColor: 'primary.main', borderRadius: 1, px: 1 }}>
+              <ImageIcon fontSize="small" />
+              <Typography variant="caption" sx={{ ml: 0.5 }}>Imagen</Typography>
+            </IconButton>
           </Tooltip>
           <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.gif,.webp" hidden
             onChange={handleImageUpload} />
