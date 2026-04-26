@@ -320,27 +320,12 @@ export default function EmailEditor({
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2} flexWrap="wrap" gap={1}>
         <Typography variant="subtitle1" fontWeight={600}>Contenido del Correo</Typography>
         <Stack direction="row" spacing={1}>
-          <ToggleButtonGroup value={inputMode} exclusive onChange={handleModeSwitch} size="small">
-            <ToggleButton value="plain">
-              <EditIcon fontSize="small" sx={{ mr: 0.5 }} />Editor
-            </ToggleButton>
-            <ToggleButton value="html">
-              <CodeIcon fontSize="small" sx={{ mr: 0.5 }} />HTML
-            </ToggleButton>
-          </ToggleButtonGroup>
           <ToggleButtonGroup value={viewMode} exclusive onChange={(_, v) => v && setViewMode(v)} size="small">
             <ToggleButton value="edit"><EditIcon fontSize="small" sx={{ mr: 0.5 }} />Editar</ToggleButton>
             <ToggleButton value="preview"><VisibilityIcon fontSize="small" sx={{ mr: 0.5 }} />Vista Previa</ToggleButton>
           </ToggleButtonGroup>
         </Stack>
       </Stack>
-
-      {inputMode === 'html' && (
-        <Alert severity="warning" sx={{ mb: 2 }} icon={false}>
-          Modo <strong>HTML</strong> — escribe etiquetas directamente. Las imágenes se insertan con el botón{' '}
-          <ImageIcon fontSize="inherit" sx={{ verticalAlign: 'middle' }} />.
-        </Alert>
-      )}
 
       <TextField
         fullWidth
