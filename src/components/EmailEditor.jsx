@@ -1,13 +1,32 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import DOMPurify from 'dompurify';
 import {
   Box, TextField, ToggleButton, ToggleButtonGroup, Typography,
   Paper, Chip, Stack, Tooltip, Divider, Alert, IconButton, CircularProgress,
+  Select, MenuItem,
 } from '@mui/material';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditIcon from '@mui/icons-material/Edit';
 import ImageIcon from '@mui/icons-material/Image';
+import FormatBoldIcon from '@mui/icons-material/FormatBold';
+import FormatItalicIcon from '@mui/icons-material/FormatItalic';
+import FormatUnderlinedIcon from '@mui/icons-material/FormatUnderlined';
+import FormatStrikethroughIcon from '@mui/icons-material/FormatStrikethrough';
+import FormatAlignLeftIcon from '@mui/icons-material/FormatAlignLeft';
+import FormatAlignCenterIcon from '@mui/icons-material/FormatAlignCenter';
+import FormatAlignRightIcon from '@mui/icons-material/FormatAlignRight';
+import FormatAlignJustifyIcon from '@mui/icons-material/FormatAlignJustify';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
+import FormatColorTextIcon from '@mui/icons-material/FormatColorText';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import TextAlign from '@tiptap/extension-text-align';
+import { TextStyle, FontSize } from '@tiptap/extension-text-style';
+import Color from '@tiptap/extension-color';
+import FontFamily from '@tiptap/extension-font-family';
 import { mediaApi } from '../api/pandoraApi';
 
 const FIXED_VARIABLES = [
@@ -29,14 +48,19 @@ export function plainToHtml(text) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
-  const paragraphs = escaped.split(/\n{2,}/);
-  return paragraphs
+  return escaped.split(/\n{2,}/)
     .map(p => `<p style="margin:0 0 12px 0">${p.replace(/\n/g, '<br>')}</p>`)
     .join('');
 }
 
+function ensureHtml(content) {
+  if (!content) return '';
+  if (/<[a-z][\s\S]*>/i.test(content)) return content;
+  return plainToHtml(content);
+}
+
 function renderPreview(body, customVars) {
-  let result = plainToHtml(body);
+  let result = body;
   Object.entries(FIXED_PREVIEW).forEach(([token, val]) => {
     result = result.replaceAll(token, `<strong style="color:#1a237e">${val}</strong>`);
   });
@@ -49,29 +73,182 @@ function renderPreview(body, customVars) {
   return result;
 }
 
+const FONT_FAMILIES = [
+  { label: 'Predeterminada', value: '' },
+  { label: 'Arial',          value: 'Arial, sans-serif' },
+  { label: 'Times New Roman',value: 'Times New Roman, serif' },
+  { label: 'Georgia',        value: 'Georgia, serif' },
+  { label: 'Verdana',        value: 'Verdana, sans-serif' },
+  { label: 'Courier New',    value: 'Courier New, monospace' },
+];
+
+const FONT_SIZES = ['10px','11px','12px','13px','14px','16px','18px','20px','24px','28px','32px'];
+
+function RichToolbar({ editor }) {
+  const colorRef = useRef(null);
+  if (!editor) return null;
+
+  const currentFamily = editor.getAttributes('textStyle').fontFamily || '';
+  const currentSize   = editor.getAttributes('textStyle').fontSize   || '';
+
+  return (
+    <Box sx={{
+      display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.25,
+      px: 1, py: 0.5,
+      borderBottom: '1px solid', borderColor: 'divider',
+      bgcolor: 'grey.50',
+    }}>
+      <Tooltip title="Negrita (Ctrl+B)">
+        <IconButton size="small" onClick={() => editor.chain().focus().toggleBold().run()}
+          color={editor.isActive('bold') ? 'primary' : 'default'}>
+          <FormatBoldIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Cursiva (Ctrl+I)">
+        <IconButton size="small" onClick={() => editor.chain().focus().toggleItalic().run()}
+          color={editor.isActive('italic') ? 'primary' : 'default'}>
+          <FormatItalicIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Subrayado (Ctrl+U)">
+        <IconButton size="small" onClick={() => editor.chain().focus().toggleUnderline().run()}
+          color={editor.isActive('underline') ? 'primary' : 'default'}>
+          <FormatUnderlinedIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Tachado">
+        <IconButton size="small" onClick={() => editor.chain().focus().toggleStrike().run()}
+          color={editor.isActive('strike') ? 'primary' : 'default'}>
+          <FormatStrikethroughIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+
+      <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+
+      <Select size="small" value={currentFamily} displayEmpty
+        onChange={e => {
+          const v = e.target.value;
+          v ? editor.chain().focus().setFontFamily(v).run()
+            : editor.chain().focus().unsetFontFamily().run();
+        }}
+        sx={{ fontSize: 12, height: 28, minWidth: 120, '.MuiSelect-select': { py: 0.25, px: 1 } }}
+        renderValue={v => FONT_FAMILIES.find(f => f.value === v)?.label || 'Fuente'}
+      >
+        {FONT_FAMILIES.map(f => (
+          <MenuItem key={f.value} value={f.value} sx={{ fontFamily: f.value || 'inherit', fontSize: 13 }}>
+            {f.label}
+          </MenuItem>
+        ))}
+      </Select>
+
+      <Select size="small" value={currentSize} displayEmpty
+        onChange={e => {
+          const v = e.target.value;
+          v ? editor.chain().focus().setFontSize(v).run()
+            : editor.chain().focus().unsetFontSize().run();
+        }}
+        sx={{ fontSize: 12, height: 28, minWidth: 80, '.MuiSelect-select': { py: 0.25, px: 1 } }}
+        renderValue={v => v ? v.replace('px', '') : 'Tamaño'}
+      >
+        <MenuItem value="" sx={{ fontSize: 13 }}>Predeterminado</MenuItem>
+        {FONT_SIZES.map(s => (
+          <MenuItem key={s} value={s} sx={{ fontSize: 13 }}>{s.replace('px', '')}</MenuItem>
+        ))}
+      </Select>
+
+      <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+
+      <Tooltip title="Color de texto">
+        <IconButton size="small" onClick={() => colorRef.current?.click()} sx={{ position: 'relative' }}>
+          <FormatColorTextIcon fontSize="small" />
+          <input ref={colorRef} type="color"
+            style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }}
+            onChange={e => editor.chain().focus().setColor(e.target.value).run()} />
+        </IconButton>
+      </Tooltip>
+
+      <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+
+      <Tooltip title="Izquierda">
+        <IconButton size="small" onClick={() => editor.chain().focus().setTextAlign('left').run()}
+          color={editor.isActive({ textAlign: 'left' }) ? 'primary' : 'default'}>
+          <FormatAlignLeftIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Centro">
+        <IconButton size="small" onClick={() => editor.chain().focus().setTextAlign('center').run()}
+          color={editor.isActive({ textAlign: 'center' }) ? 'primary' : 'default'}>
+          <FormatAlignCenterIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Derecha">
+        <IconButton size="small" onClick={() => editor.chain().focus().setTextAlign('right').run()}
+          color={editor.isActive({ textAlign: 'right' }) ? 'primary' : 'default'}>
+          <FormatAlignRightIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Justificar">
+        <IconButton size="small" onClick={() => editor.chain().focus().setTextAlign('justify').run()}
+          color={editor.isActive({ textAlign: 'justify' }) ? 'primary' : 'default'}>
+          <FormatAlignJustifyIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+
+      <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
+
+      <Tooltip title="Lista con viñetas">
+        <IconButton size="small" onClick={() => editor.chain().focus().toggleBulletList().run()}
+          color={editor.isActive('bulletList') ? 'primary' : 'default'}>
+          <FormatListBulletedIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Lista numerada">
+        <IconButton size="small" onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          color={editor.isActive('orderedList') ? 'primary' : 'default'}>
+          <FormatListNumberedIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+    </Box>
+  );
+}
+
 export default function EmailEditor({
   subject, body, onSubjectChange, onBodyChange,
   variables = [],
 }) {
-  const [viewMode, setViewMode]         = useState('edit');
+  const [viewMode, setViewMode]           = useState('edit');
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [imageError, setImageError]     = useState('');
-  const fileInputRef = useRef(null);
-  const bodyRef      = useRef(null);
+  const [imageError, setImageError]       = useState('');
+  const fileInputRef   = useRef(null);
+  const isInternalEdit = useRef(false);
 
-  const insertAtCursor = (text) => {
-    const el = bodyRef.current?.querySelector('textarea');
-    if (el) {
-      const start = el.selectionStart ?? body.length;
-      const end   = el.selectionEnd   ?? body.length;
-      onBodyChange(body.slice(0, start) + text + body.slice(end));
-      setTimeout(() => {
-        el.selectionStart = el.selectionEnd = start + text.length;
-        el.focus();
-      }, 0);
-    } else {
-      onBodyChange(body + text);
-    }
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      TextStyle,
+      Color,
+      FontFamily,
+      FontSize,
+    ],
+    content: ensureHtml(body),
+    onUpdate: ({ editor }) => {
+      isInternalEdit.current = true;
+      onBodyChange(editor.getHTML());
+    },
+  });
+
+  // Sincroniza cuando se abre una plantilla diferente
+  useEffect(() => {
+    if (!editor) return;
+    if (isInternalEdit.current) { isInternalEdit.current = false; return; }
+    const html = ensureHtml(body);
+    if (html !== editor.getHTML()) editor.commands.setContent(html, false);
+  }, [body, editor]);
+
+  const insertVariable = (token) => {
+    editor?.chain().focus().insertContent(token).run();
   };
 
   const handleImageUpload = async (e) => {
@@ -81,7 +258,9 @@ export default function EmailEditor({
     setUploadingImage(true);
     try {
       const { data } = await mediaApi.uploadImage(file);
-      insertAtCursor(`[imagen: ${data.url}]`);
+      editor?.chain().focus().insertContent(
+        `<img src="${data.url}" alt="imagen" style="max-width:100%;height:auto;" />`
+      ).run();
     } catch (err) {
       setImageError(err.response?.data || 'Error al subir la imagen.');
     } finally {
@@ -116,16 +295,9 @@ export default function EmailEditor({
           </Tooltip>
           <Typography variant="caption" color="text.secondary">Variables fijas:</Typography>
           {FIXED_VARIABLES.map(({ token, label, color }) => (
-            <Chip
-              key={token}
-              label={label}
-              size="small"
-              color={color}
-              variant="outlined"
-              clickable
-              onClick={() => insertAtCursor(token)}
-              sx={{ fontFamily: 'monospace', fontSize: 12 }}
-            />
+            <Chip key={token} label={label} size="small" color={color} variant="outlined" clickable
+              onClick={() => insertVariable(token)}
+              sx={{ fontFamily: 'monospace', fontSize: 12 }} />
           ))}
 
           {variables.length > 0 && (
@@ -133,15 +305,9 @@ export default function EmailEditor({
               <Divider orientation="vertical" flexItem sx={{ mx: 0.5 }} />
               <Typography variant="caption" color="text.secondary">Personalizadas:</Typography>
               {variables.map(name => (
-                <Chip
-                  key={name}
-                  label={name}
-                  size="small"
-                  color="secondary"
-                  clickable
-                  onClick={() => insertAtCursor(`{{${name}}}`)}
-                  sx={{ fontFamily: 'monospace', fontSize: 12, bgcolor: '#f3e5f5' }}
-                />
+                <Chip key={name} label={name} size="small" color="secondary" clickable
+                  onClick={() => insertVariable(`{{${name}}}`)}
+                  sx={{ fontFamily: 'monospace', fontSize: 12, bgcolor: '#f3e5f5' }} />
               ))}
             </>
           )}
@@ -150,13 +316,9 @@ export default function EmailEditor({
 
           <Tooltip title="Subir e insertar imagen (jpg, png, gif, webp — máx 5 MB)">
             <span>
-              <IconButton
-                size="small"
-                color="primary"
+              <IconButton size="small" color="primary" disabled={uploadingImage}
                 onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingImage}
-                sx={{ border: '1px solid', borderColor: 'primary.main', borderRadius: 1, px: 1 }}
-              >
+                sx={{ border: '1px solid', borderColor: 'primary.main', borderRadius: 1, px: 1 }}>
                 {uploadingImage ? <CircularProgress size={16} /> : <ImageIcon fontSize="small" />}
                 <Typography variant="caption" sx={{ ml: 0.5 }}>
                   {uploadingImage ? 'Subiendo…' : 'Imagen'}
@@ -164,35 +326,29 @@ export default function EmailEditor({
               </IconButton>
             </span>
           </Tooltip>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".jpg,.jpeg,.png,.gif,.webp"
-            hidden
-            onChange={handleImageUpload}
-          />
+          <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.gif,.webp" hidden
+            onChange={handleImageUpload} />
         </Stack>
 
         {imageError && (
-          <Alert severity="error" sx={{ mt: 1 }} onClose={() => setImageError('')}>
-            {imageError}
-          </Alert>
+          <Alert severity="error" sx={{ mt: 1 }} onClose={() => setImageError('')}>{imageError}</Alert>
         )}
       </Box>
 
       {viewMode === 'edit' ? (
-        <Box ref={bodyRef}>
-          <TextField
-            fullWidth
-            multiline
-            minRows={14}
-            maxRows={28}
-            label="Cuerpo del correo"
-            value={body}
-            onChange={(e) => onBodyChange(e.target.value)}
-            placeholder={`Estimado/a {{nombre}},\n\nTe informamos que tus credenciales de acceso son:\n\nUsuario: {{usuario}}\nContraseña: {{contrasena}}\nPrograma: {{programa}}\n\nSaludos,\nCoordinación de TI — iMET`}
-          />
-        </Box>
+        <Paper variant="outlined" sx={{
+          overflow: 'hidden',
+          '& .ProseMirror': {
+            minHeight: 280, maxHeight: 500, overflowY: 'auto',
+            p: 2, outline: 'none', fontSize: 14, lineHeight: 1.7,
+            '& p': { margin: '0 0 8px 0' },
+            '& ul, & ol': { paddingLeft: '1.5rem' },
+            '& img': { maxWidth: '100%', height: 'auto' },
+          },
+        }}>
+          <RichToolbar editor={editor} />
+          <EditorContent editor={editor} />
+        </Paper>
       ) : (
         <Paper variant="outlined" sx={{ p: 3, minHeight: 300, bgcolor: '#fafafa' }}>
           <Typography variant="caption" color="text.secondary" display="block" mb={1.5}>
@@ -200,12 +356,10 @@ export default function EmailEditor({
             {variables.length > 0 && ' — las variables personalizadas aparecen en morado'}
           </Typography>
           <Divider sx={{ mb: 2 }} />
-          <div
-            style={{ lineHeight: 1.7, fontSize: 14 }}
+          <div style={{ lineHeight: 1.7, fontSize: 14 }}
             dangerouslySetInnerHTML={{
               __html: DOMPurify.sanitize(renderPreview(body, variables), { USE_PROFILES: { html: true } }),
-            }}
-          />
+            }} />
         </Paper>
       )}
     </Box>
