@@ -189,7 +189,6 @@ export default function InventoryItems() {
     const { _deptId, _employeeId, ...formData } = form;
     const payload = {
       ...formData,
-      status:         STATUS_OPTIONS.find(o => o.value === form.status)?.label ?? 'Activo',
       assignedEmployeeId: _employeeId || null,
       purchasePrice:  form.purchasePrice !== '' ? parseFloat(form.purchasePrice) : null,
       purchaseDate:   form.purchaseDate   || null,
