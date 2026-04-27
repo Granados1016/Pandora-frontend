@@ -31,6 +31,7 @@ import CalendarPage        from './pages/calendar/CalendarPage';
 import RoomsManager        from './pages/calendar/RoomsManager';
 import RoomRequestForm     from './pages/calendar/RoomRequestForm';
 import RoomRequestsManager from './pages/calendar/RoomRequestsManager';
+import CalendarReports     from './pages/calendar/CalendarReports';
 
 // ── ProtectedRoute ────────────────────────────────────────────────────────────
 // Props:
@@ -152,6 +153,11 @@ function AppRoutes() {
               <Route path="/calendar/solicitudes" element={
                 <ProtectedRoute requiredModule={MODULES.CALENDARIO_ADMIN}>
                   <RoomRequestsManager />
+                </ProtectedRoute>
+              } />
+              <Route path="/calendar/reports" element={
+                <ProtectedRoute requiredModule={MODULES.CALENDARIO_ADMIN}>
+                  <CalendarReports />
                 </ProtectedRoute>
               } />
 

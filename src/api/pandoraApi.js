@@ -204,6 +204,8 @@ export const calendarApi = {
   updateRoom: (id, data) => api.put(`/calendar/rooms/${id}`, data),
   deleteRoom: (id)       => api.delete(`/calendar/rooms/${id}`),
 
+  getReports: () => api.get('/calendar/reports'),
+
   getReservations: (rangeStart, rangeEnd, roomId) =>
     api.get('/calendar/reservations', { params: { rangeStart, rangeEnd, ...(roomId ? { roomId } : {}) } }),
   getReservationById: (id) => api.get(`/calendar/reservations/${id}`),
