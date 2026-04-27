@@ -1,41 +1,60 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box, Typography, Paper, Grid, Stack, Chip, Button, Alert,
-  CircularProgress, Divider, Table, TableBody, TableCell, TableContainer,
+  CircularProgress, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Tooltip, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Select, MenuItem,
-  FormControl, InputLabel, InputAdornment,
+  FormControl, InputLabel, InputAdornment, Tabs, Tab,
 } from '@mui/material';
-import AssignmentIcon         from '@mui/icons-material/Assignment';
-import WarningAmberIcon       from '@mui/icons-material/WarningAmber';
-import ErrorOutlineIcon       from '@mui/icons-material/ErrorOutline';
-import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import CancelIcon             from '@mui/icons-material/Cancel';
-import DownloadIcon           from '@mui/icons-material/Download';
-import AddIcon                from '@mui/icons-material/Add';
-import EditIcon               from '@mui/icons-material/Edit';
-import DeleteIcon             from '@mui/icons-material/Delete';
-import RefreshIcon            from '@mui/icons-material/Refresh';
-import SearchIcon             from '@mui/icons-material/Search';
-import AttachMoneyIcon        from '@mui/icons-material/AttachMoney';
+import AssignmentIcon          from '@mui/icons-material/Assignment';
+import WarningAmberIcon        from '@mui/icons-material/WarningAmber';
+import ErrorOutlineIcon        from '@mui/icons-material/ErrorOutline';
+import CheckCircleOutlineIcon  from '@mui/icons-material/CheckCircleOutline';
+import CancelIcon              from '@mui/icons-material/Cancel';
+import DownloadIcon            from '@mui/icons-material/Download';
+import AddIcon                 from '@mui/icons-material/Add';
+import EditIcon                from '@mui/icons-material/Edit';
+import DeleteIcon              from '@mui/icons-material/Delete';
+import RefreshIcon             from '@mui/icons-material/Refresh';
+import SearchIcon              from '@mui/icons-material/Search';
+import AttachMoneyIcon         from '@mui/icons-material/AttachMoney';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import CalendarMonthIcon       from '@mui/icons-material/CalendarMonth';
+import ChevronLeftIcon         from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon        from '@mui/icons-material/ChevronRight';
 import { licenciasApi } from '../api/pandoraApi';
 import { useAuth }      from '../hooks/useAuth.jsx';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const fmt$ = (n) =>
-  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n ?? 0);
+
+const FREQ_MONTHS = { Mensual: 1, Trimestral: 3, Semestral: 6, Anual: 12 };
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+               'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const AREA_COLOR = { TI: '#1a237e', Marketing: '#880e4f', 'Innovación': '#00695c', Socios: '#e65100' };
+const AREA_BG    = { TI: '#e8eaf6', Marketing: '#fce4ec', 'Innovación': '#e0f2f1', Socios: '#fff3e0' };
+
+const costoMensualNorm = (l) => l.costoMXN / (FREQ_MONTHS[l.frecuenciaPago] || 12);
+
+function hasPaymentInMonth(l, year, month) {
+  if (!l.proximoPago || l.estado === 'Cancelada') return false;
+  const fm   = FREQ_MONTHS[l.frecuenciaPago] || 12;
+  const base = new Date(l.proximoPago + 'T12:00:00');
+  const diff = (year * 12 + month) - (base.getFullYear() * 12 + base.getMonth());
+  return ((diff % fm) + fm) % fm === 0;
+}
 
 const ESTADO_CHIP = {
-  'Activa':     { color: 'success', label: 'Activa' },
-  'Por vencer': { color: 'warning', label: 'Por vencer' },
-  'Vencida':    { color: 'error',   label: 'Vencida' },
-  'Cancelada':  { color: 'default', label: 'Cancelada' },
+  'Activa':     { color: 'success' },
+  'Por vencer': { color: 'warning' },
+  'Vencida':    { color: 'error'   },
+  'Cancelada':  { color: 'default' },
 };
 
-const AREAS      = ['TI', 'Marketing', 'Innovación', 'Socios'];
+const AREAS       = ['TI', 'Marketing', 'Innovación', 'Socios'];
 const FRECUENCIAS = ['Mensual', 'Trimestral', 'Semestral', 'Anual'];
-const ESTADOS    = ['Activa', 'Por vencer', 'Vencida', 'Cancelada'];
+const ESTADOS     = ['Activa', 'Por vencer', 'Vencida', 'Cancelada'];
 
 const EMPTY_FORM = {
   numero: '', plataforma: '', area: 'TI', responsable: '',
@@ -43,9 +62,353 @@ const EMPTY_FORM = {
   costoMXN: '', estado: 'Activa', notas: '',
 };
 
+// ── GastosSection ─────────────────────────────────────────────────────────────
+function GastosSection({ licencias }) {
+  const today    = new Date();
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+
+  const activas = licencias.filter(l => l.estado !== 'Cancelada');
+
+  const areaMap = {};
+  activas.forEach(l => {
+    if (!areaMap[l.area]) areaMap[l.area] = { count: 0, mensual: 0, anual: 0 };
+    areaMap[l.area].count++;
+    areaMap[l.area].mensual += costoMensualNorm(l);
+    areaMap[l.area].anual   += (l.costoAnualMXN ?? 0);
+  });
+  const areaRows = Object.entries(areaMap)
+    .map(([area, v]) => ({ area, ...v }))
+    .sort((a, b) => b.anual - a.anual);
+  const totalAnual   = areaRows.reduce((s, a) => s + a.anual, 0);
+  const totalMensual = areaRows.reduce((s, a) => s + a.mensual, 0);
+
+  const monthlyData = Array.from({ length: 12 }, (_, m) => {
+    const items = activas.filter(l => hasPaymentInMonth(l, viewYear, m));
+    return { month: m, total: items.reduce((s, l) => s + l.costoMXN, 0), count: items.length };
+  });
+  const maxMonthly = Math.max(...monthlyData.map(m => m.total), 1);
+
+  return (
+    <Box>
+      {/* Tarjetas resumen */}
+      <Grid container spacing={2} mb={3}>
+        {[
+          { label: 'Gasto Mensual',   value: fmt$(totalMensual), note: 'Promedio normalizado',      bg: '#e3f2fd', color: '#1565c0' },
+          { label: 'Gasto Anual',     value: fmt$(totalAnual),   note: 'Todas las áreas activas',   bg: '#f3e5f5', color: '#6a1b9a' },
+          { label: 'Áreas cubiertas', value: areaRows.length,    note: `${activas.length} licencias activas`, bg: '#e8f5e9', color: '#2e7d32' },
+        ].map(c => (
+          <Grid item xs={12} sm={4} key={c.label}>
+            <Paper elevation={0} sx={{ p: 2.5, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: c.bg, textAlign: 'center' }}>
+              <Typography variant="caption" color="text.secondary" fontWeight={700} textTransform="uppercase" letterSpacing={0.5}>
+                {c.label}
+              </Typography>
+              <Typography variant="h5" fontWeight={800} sx={{ color: c.color, my: 0.5 }}>{c.value}</Typography>
+              <Typography variant="caption" color="text.secondary">{c.note}</Typography>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* Gastos totales por área */}
+      <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', mb: 3 }}>
+        <Box sx={{ px: 2.5, py: 1.5, bgcolor: '#1a237e' }}>
+          <Typography variant="subtitle2" fontWeight={700} color="white">Gastos Totales por Área</Typography>
+        </Box>
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                {['Área','Licencias','Mensual equiv.','Costo anual','% del total','Distribución'].map(h => (
+                  <TableCell key={h} sx={{ fontWeight: 700, fontSize: 12 }}>{h}</TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {areaRows.map((a, i) => {
+                const pct   = totalAnual > 0 ? (a.anual / totalAnual * 100) : 0;
+                const color = AREA_COLOR[a.area] || '#666';
+                return (
+                  <TableRow key={a.area} sx={{ bgcolor: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                    <TableCell>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: color }} />
+                        <Typography variant="body2" fontWeight={700}>{a.area}</Typography>
+                      </Stack>
+                    </TableCell>
+                    <TableCell sx={{ fontSize: 13 }}>{a.count}</TableCell>
+                    <TableCell sx={{ fontSize: 13 }}>{fmt$(a.mensual)}</TableCell>
+                    <TableCell sx={{ fontSize: 13, fontWeight: 700 }}>{fmt$(a.anual)}</TableCell>
+                    <TableCell sx={{ fontSize: 13, fontWeight: 600 }}>{pct.toFixed(1)}%</TableCell>
+                    <TableCell sx={{ minWidth: 120 }}>
+                      <Box sx={{ height: 10, bgcolor: '#e0e0e0', borderRadius: 1, overflow: 'hidden' }}>
+                        <Box sx={{ width: `${pct.toFixed(0)}%`, height: '100%', bgcolor: color, borderRadius: 1, transition: 'width 0.4s' }} />
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              <TableRow sx={{ bgcolor: '#e8eaf6' }}>
+                <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>TOTAL</TableCell>
+                <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>{activas.length}</TableCell>
+                <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>{fmt$(totalMensual)}</TableCell>
+                <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>{fmt$(totalAnual)}</TableCell>
+                <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>100%</TableCell>
+                <TableCell />
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+
+      {/* Gastos mensuales del año */}
+      <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', mb: 3 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 2.5, py: 1.5, bgcolor: '#1a237e' }}>
+          <Typography variant="subtitle2" fontWeight={700} color="white">
+            Gastos Mensuales {viewYear}
+          </Typography>
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <IconButton size="small" sx={{ color: 'white' }} onClick={() => setViewYear(y => y - 1)}>
+              <ChevronLeftIcon fontSize="small" />
+            </IconButton>
+            <Typography variant="caption" color="white" fontWeight={700}>{viewYear}</Typography>
+            <IconButton size="small" sx={{ color: 'white' }} onClick={() => setViewYear(y => y + 1)}>
+              <ChevronRightIcon fontSize="small" />
+            </IconButton>
+          </Stack>
+        </Stack>
+        <Box sx={{ p: 2.5 }}>
+          <Stack spacing={1}>
+            {monthlyData.map(({ month, total, count }) => {
+              const isNow = today.getFullYear() === viewYear && today.getMonth() === month;
+              const barPct = maxMonthly > 0 ? (total / maxMonthly * 100) : 0;
+              return (
+                <Stack key={month} direction="row" spacing={2} alignItems="center">
+                  <Typography
+                    variant="caption" fontWeight={isNow ? 800 : 600}
+                    sx={{ width: 90, color: isNow ? 'primary.main' : 'text.secondary' }}
+                  >
+                    {MESES[month]}
+                  </Typography>
+                  <Box sx={{ flex: 1, height: 20, bgcolor: '#f0f0f0', borderRadius: 1, overflow: 'hidden' }}>
+                    <Box sx={{
+                      width: `${barPct}%`, height: '100%',
+                      bgcolor: isNow ? '#1565c0' : '#90a4d4',
+                      borderRadius: 1, transition: 'width 0.5s',
+                    }} />
+                  </Box>
+                  <Typography variant="caption" fontWeight={700} sx={{ width: 100, textAlign: 'right', color: isNow ? 'primary.main' : 'text.primary' }}>
+                    {total > 0 ? fmt$(total) : '—'}
+                  </Typography>
+                  <Typography variant="caption" color="text.disabled" sx={{ width: 55 }}>
+                    {count > 0 ? `${count} lic.` : ''}
+                  </Typography>
+                </Stack>
+              );
+            })}
+          </Stack>
+        </Box>
+      </Paper>
+
+      {/* Detalle por área */}
+      {areaRows.map(a => (
+        <Paper key={a.area} elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', mb: 2 }}>
+          <Box sx={{ px: 2.5, py: 1.3, bgcolor: AREA_COLOR[a.area] || '#424242' }}>
+            <Typography variant="subtitle2" fontWeight={700} color="white">
+              {a.area} — {fmt$(a.anual)} / año &nbsp;·&nbsp; {fmt$(a.mensual)} / mes equiv.
+            </Typography>
+          </Box>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: AREA_BG[a.area] || '#f5f5f5' }}>
+                  {['Plataforma','Frecuencia','Monto por periodo','Equiv. mensual','Costo anual'].map(h => (
+                    <TableCell key={h} sx={{ fontWeight: 700, fontSize: 12 }}>{h}</TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {activas.filter(l => l.area === a.area).map((l, i) => (
+                  <TableRow key={l.id} sx={{ bgcolor: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                    <TableCell sx={{ fontSize: 13, fontWeight: 600 }}>{l.plataforma}</TableCell>
+                    <TableCell sx={{ fontSize: 12 }}>{l.frecuenciaPago}</TableCell>
+                    <TableCell sx={{ fontSize: 12 }}>{fmt$(l.costoMXN)}</TableCell>
+                    <TableCell sx={{ fontSize: 12 }}>{fmt$(costoMensualNorm(l))}</TableCell>
+                    <TableCell sx={{ fontSize: 12, fontWeight: 700 }}>{fmt$(l.costoAnualMXN)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      ))}
+    </Box>
+  );
+}
+
+// ── CalendarioSection ─────────────────────────────────────────────────────────
+function CalendarioSection({ licencias }) {
+  const today = new Date();
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+
+  const activas = licencias.filter(l => l.estado !== 'Cancelada');
+
+  const months = Array.from({ length: 12 }, (_, m) => {
+    const items = activas.filter(l => hasPaymentInMonth(l, viewYear, m));
+    const total = items.reduce((s, l) => s + l.costoMXN, 0);
+    return { month: m, items, total };
+  });
+
+  const yearTotal = months.reduce((s, m) => s + m.total, 0);
+
+  return (
+    <Box>
+      {/* Encabezado del calendario */}
+      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} mb={2.5} spacing={1}>
+        <Box>
+          <Typography variant="subtitle1" fontWeight={800}>Calendario de Pagos {viewYear}</Typography>
+          <Typography variant="caption" color="text.secondary">
+            Total proyectado: <strong>{fmt$(yearTotal)}</strong>
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Button size="small" variant="outlined" startIcon={<ChevronLeftIcon />} onClick={() => setViewYear(y => y - 1)}>
+            {viewYear - 1}
+          </Button>
+          <Button size="small" variant="outlined" endIcon={<ChevronRightIcon />} onClick={() => setViewYear(y => y + 1)}>
+            {viewYear + 1}
+          </Button>
+        </Stack>
+      </Stack>
+
+      {/* Leyenda de áreas */}
+      <Stack direction="row" spacing={2} mb={2.5} flexWrap="wrap" gap={1}>
+        {AREAS.map(a => (
+          <Stack key={a} direction="row" spacing={0.5} alignItems="center">
+            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: AREA_COLOR[a] || '#666' }} />
+            <Typography variant="caption" fontWeight={600}>{a}</Typography>
+          </Stack>
+        ))}
+      </Stack>
+
+      {/* Grid de meses */}
+      <Grid container spacing={2} mb={3}>
+        {months.map(({ month, items, total }) => {
+          const isNow  = today.getFullYear() === viewYear && today.getMonth() === month;
+          const isPast = viewYear < today.getFullYear() ||
+                         (viewYear === today.getFullYear() && month < today.getMonth());
+          return (
+            <Grid item xs={12} sm={6} md={4} key={month}>
+              <Paper elevation={0} sx={{
+                p: 2, borderRadius: 3,
+                border: '2px solid',
+                borderColor: isNow ? 'primary.main' : 'divider',
+                bgcolor: isPast && !isNow ? '#fafafa' : 'white',
+                opacity: isPast && !isNow ? 0.82 : 1,
+                minHeight: 120,
+              }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1.5}>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Typography variant="subtitle2" fontWeight={800} color={isNow ? 'primary.main' : 'text.primary'}>
+                      {MESES[month]}
+                    </Typography>
+                    {isNow && <Chip label="Hoy" size="small" color="primary" sx={{ height: 18, fontSize: 10 }} />}
+                  </Stack>
+                  {total > 0 ? (
+                    <Chip
+                      label={fmt$(total)} size="small"
+                      color={isNow ? 'primary' : 'default'}
+                      sx={{ fontWeight: 700, fontSize: 11 }}
+                    />
+                  ) : (
+                    <Typography variant="caption" color="text.disabled">—</Typography>
+                  )}
+                </Stack>
+
+                {items.length === 0 ? (
+                  <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
+                    Sin pagos programados
+                  </Typography>
+                ) : (
+                  <Stack spacing={0.5}>
+                    {items.map(l => (
+                      <Stack key={l.id} direction="row" justifyContent="space-between" alignItems="center"
+                        sx={{
+                          px: 1, py: 0.4, borderRadius: 1.5, bgcolor: '#f5f5f5',
+                          borderLeft: `3px solid ${AREA_COLOR[l.area] || '#ccc'}`,
+                        }}
+                      >
+                        <Typography variant="caption" fontWeight={600} noWrap sx={{ maxWidth: 140 }}>
+                          {l.plataforma}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', ml: 0.5 }}>
+                          {fmt$(l.costoMXN)}
+                        </Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                )}
+              </Paper>
+            </Grid>
+          );
+        })}
+      </Grid>
+
+      {/* Tabla resumen anual */}
+      <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+        <Box sx={{ px: 2.5, py: 1.5, bgcolor: '#1a237e' }}>
+          <Typography variant="subtitle2" fontWeight={700} color="white">Resumen Anual {viewYear}</Typography>
+        </Box>
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                {['Mes','Pagos programados','Gasto del mes','Gasto acumulado'].map(h => (
+                  <TableCell key={h} sx={{ fontWeight: 700, fontSize: 12 }}>{h}</TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {months.map(({ month, items, total }, _, arr) => {
+                const acum  = arr.slice(0, month + 1).reduce((s, m) => s + m.total, 0);
+                const isNow = today.getFullYear() === viewYear && today.getMonth() === month;
+                return (
+                  <TableRow key={month} sx={{ bgcolor: isNow ? '#e3f2fd' : month % 2 === 0 ? 'white' : '#fafafa' }}>
+                    <TableCell sx={{ fontSize: 13, fontWeight: isNow ? 800 : 400 }}>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        {MESES[month]}
+                        {isNow && <Chip label="actual" size="small" color="primary" sx={{ height: 16, fontSize: 10 }} />}
+                      </Stack>
+                    </TableCell>
+                    <TableCell sx={{ fontSize: 13 }}>
+                      {items.length > 0 ? `${items.length} licencia${items.length > 1 ? 's' : ''}` : '—'}
+                    </TableCell>
+                    <TableCell sx={{ fontSize: 13, fontWeight: 600 }}>
+                      {total > 0 ? fmt$(total) : '—'}
+                    </TableCell>
+                    <TableCell sx={{ fontSize: 13 }}>{fmt$(acum)}</TableCell>
+                  </TableRow>
+                );
+              })}
+              <TableRow sx={{ bgcolor: '#e8eaf6' }}>
+                <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>TOTAL</TableCell>
+                <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>
+                  {months.reduce((s, m) => s + m.items.length, 0)} pagos
+                </TableCell>
+                <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>{fmt$(yearTotal)}</TableCell>
+                <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>{fmt$(yearTotal)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+    </Box>
+  );
+}
+
 // ── componente principal ──────────────────────────────────────────────────────
 export default function Licencias() {
   const { isAdmin } = useAuth();
+  const [tab, setTab] = useState(0);
 
   const [dashboard, setDashboard] = useState(null);
   const [alertas,   setAlertas]   = useState([]);
@@ -53,23 +416,18 @@ export default function Licencias() {
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState(null);
 
-  // filtros
   const [filtroArea,   setFiltroArea]   = useState('');
   const [filtroEstado, setFiltroEstado] = useState('');
   const [busqueda,     setBusqueda]     = useState('');
 
-  // dialog
-  const [dialog,   setDialog]   = useState({ open: false, mode: 'create', data: EMPTY_FORM });
-  const [saving,   setSaving]   = useState(false);
-  const [saveErr,  setSaveErr]  = useState(null);
+  const [dialog,     setDialog]     = useState({ open: false, mode: 'create', data: EMPTY_FORM });
+  const [saving,     setSaving]     = useState(false);
+  const [saveErr,    setSaveErr]    = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
-
-  // exportar
-  const [exporting, setExporting] = useState(false);
+  const [exporting,  setExporting]  = useState(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const [dash, alert, lista] = await Promise.all([
         licenciasApi.dashboard(),
@@ -92,7 +450,6 @@ export default function Licencias() {
     !busqueda || l.plataforma.toLowerCase().includes(busqueda.toLowerCase())
   );
 
-  // ── Acciones ────────────────────────────────────────────────────────────────
   const openCreate = () => setDialog({ open: true, mode: 'create', data: { ...EMPTY_FORM } });
 
   const openEdit = (l) => setDialog({
@@ -159,20 +516,20 @@ export default function Licencias() {
     onChange: (e) => setDialog(d => ({ ...d, data: { ...d.data, [key]: e.target.value } })),
   });
 
-  // ── Render ──────────────────────────────────────────────────────────────────
   if (loading) return (
     <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
       <CircularProgress />
     </Box>
   );
 
-  const { stats, areas } = dashboard ?? { stats: {}, areas: [] };
+  const { stats } = dashboard ?? { stats: {} };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1300, mx: 'auto' }}>
+    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1400, mx: 'auto' }}>
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} mb={3} spacing={2}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between"
+        alignItems={{ sm: 'center' }} mb={3} spacing={2}>
         <Box>
           <Typography variant="h5" fontWeight={800}>Control de Licencias</Typography>
           <Typography variant="body2" color="text.secondary">iMET — Plataformas y servicios activos</Typography>
@@ -184,7 +541,8 @@ export default function Licencias() {
             </Button>
           )}
           <Button
-            size="small" variant="outlined" startIcon={exporting ? <CircularProgress size={16} /> : <DownloadIcon />}
+            size="small" variant="outlined"
+            startIcon={exporting ? <CircularProgress size={16} /> : <DownloadIcon />}
             onClick={handleExportar} disabled={exporting}
           >
             Exportar Excel
@@ -199,36 +557,7 @@ export default function Licencias() {
 
       {error && <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>{error}</Alert>}
 
-      {/* ── Tarjetas de resumen ──────────────────────────────────────────────── */}
-      <Grid container spacing={2} mb={3}>
-        {[
-          { label: 'Total licencias',  value: stats.total,     icon: <AssignmentIcon />,         color: '#1a237e', bg: '#e8eaf6' },
-          { label: 'Activas',          value: stats.activas,   icon: <CheckCircleOutlineIcon />,  color: '#2e7d32', bg: '#e8f5e9' },
-          { label: 'Por vencer',       value: stats.porVencer, icon: <WarningAmberIcon />,        color: '#e65100', bg: '#fff3e0' },
-          { label: 'Vencidas',         value: stats.vencidas,  icon: <ErrorOutlineIcon />,        color: '#c62828', bg: '#ffebee' },
-          { label: 'Canceladas',       value: stats.canceladas,icon: <CancelIcon />,              color: '#616161', bg: '#f5f5f5' },
-          { label: 'Costo mensual',    value: fmt$(stats.totalMensualMXN ?? 0), icon: <AttachMoneyIcon />, color: '#1565c0', bg: '#e3f2fd', wide: true },
-          { label: 'Costo anual total',value: fmt$(stats.totalAnualMXN   ?? 0), icon: <AttachMoneyIcon />, color: '#4a148c', bg: '#f3e5f5', wide: true },
-        ].map(({ label, value, icon, color, bg, wide }) => (
-          <Grid item xs={6} sm={wide ? 4 : 4} md={wide ? 3 : 2} key={label}>
-            <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: bg, height: '100%' }}>
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <Box sx={{ color, fontSize: 28 }}>{icon}</Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase" letterSpacing={0.5} display="block">
-                    {label}
-                  </Typography>
-                  <Typography variant="h6" fontWeight={800} sx={{ color }}>
-                    {value ?? 0}
-                  </Typography>
-                </Box>
-              </Stack>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* ── Alertas ──────────────────────────────────────────────────────────── */}
+      {/* ── Alertas (siempre visibles) ───────────────────────────────────────── */}
       {alertas.length > 0 && (
         <Paper elevation={0} sx={{ p: 2.5, mb: 3, borderRadius: 3, border: '2px solid', borderColor: 'warning.main', bgcolor: '#fffde7' }}>
           <Stack direction="row" spacing={1} alignItems="center" mb={1.5}>
@@ -241,7 +570,8 @@ export default function Licencias() {
             {alertas.map(a => {
               const urgente = a.diasRestantes <= 5;
               return (
-                <Stack key={a.id} direction={{ xs: 'column', sm: 'row' }} spacing={1}
+                <Stack key={a.id}
+                  direction={{ xs: 'column', sm: 'row' }} spacing={1}
                   alignItems={{ sm: 'center' }} justifyContent="space-between"
                   sx={{
                     px: 2, py: 1, borderRadius: 2,
@@ -256,16 +586,17 @@ export default function Licencias() {
                     }
                     <Box>
                       <Typography variant="body2" fontWeight={700}>{a.plataforma}</Typography>
-                      <Typography variant="caption" color="text.secondary">{a.area} · {a.frecuenciaPago} · {fmt$(a.costoMXN)}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {a.area} · {a.frecuenciaPago} · {fmt$(a.costoMXN)}
+                      </Typography>
                     </Box>
                   </Stack>
                   <Chip
                     size="small"
-                    label={a.diasRestantes < 0
-                      ? `Venció hace ${Math.abs(a.diasRestantes)} día${Math.abs(a.diasRestantes) !== 1 ? 's' : ''}`
-                      : a.diasRestantes === 0
-                        ? 'Vence HOY'
-                        : `${a.diasRestantes} día${a.diasRestantes !== 1 ? 's' : ''} restantes`
+                    label={
+                      a.diasRestantes < 0  ? `Venció hace ${Math.abs(a.diasRestantes)} día${Math.abs(a.diasRestantes) !== 1 ? 's' : ''}` :
+                      a.diasRestantes === 0 ? 'Vence HOY' :
+                      `${a.diasRestantes} día${a.diasRestantes !== 1 ? 's' : ''} restantes`
                     }
                     color={urgente ? 'error' : 'warning'}
                     sx={{ fontWeight: 700 }}
@@ -277,113 +608,146 @@ export default function Licencias() {
         </Paper>
       )}
 
-      {/* ── Resumen por área ─────────────────────────────────────────────────── */}
-      {areas.length > 0 && (
-        <Paper elevation={0} sx={{ p: 2.5, mb: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="subtitle2" fontWeight={700} mb={1.5}>Costo anual por área</Typography>
-          <Stack direction="row" spacing={2} flexWrap="wrap" gap={1}>
-            {areas.map(a => (
-              <Box key={a.area} sx={{ px: 2, py: 1, borderRadius: 2, bgcolor: '#f5f5f5', minWidth: 140 }}>
-                <Typography variant="caption" color="text.secondary" fontWeight={600} textTransform="uppercase">{a.area}</Typography>
-                <Typography variant="body2" fontWeight={700}>{fmt$(a.costoAnual)}</Typography>
-                <Typography variant="caption" color="text.secondary">{a.total} licencias</Typography>
-              </Box>
+      {/* ── Tabs ────────────────────────────────────────────────────────────── */}
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} textColor="primary" indicatorColor="primary">
+          <Tab icon={<AssignmentIcon fontSize="small" />} iconPosition="start" label="Licencias" sx={{ fontWeight: 700, minHeight: 48 }} />
+          <Tab icon={<AttachMoneyIcon fontSize="small" />} iconPosition="start" label="Gastos" sx={{ fontWeight: 700, minHeight: 48 }} />
+          <Tab icon={<CalendarMonthIcon fontSize="small" />} iconPosition="start" label="Calendario" sx={{ fontWeight: 700, minHeight: 48 }} />
+        </Tabs>
+      </Box>
+
+      {/* ── Tab 0: Licencias ─────────────────────────────────────────────────── */}
+      {tab === 0 && (
+        <>
+          {/* Tarjetas de resumen */}
+          <Grid container spacing={2} mb={3}>
+            {[
+              { label: 'Total',       value: stats.total,      icon: <AssignmentIcon />,        color: '#1a237e', bg: '#e8eaf6' },
+              { label: 'Activas',     value: stats.activas,    icon: <CheckCircleOutlineIcon />, color: '#2e7d32', bg: '#e8f5e9' },
+              { label: 'Por vencer',  value: stats.porVencer,  icon: <WarningAmberIcon />,       color: '#e65100', bg: '#fff3e0' },
+              { label: 'Vencidas',    value: stats.vencidas,   icon: <ErrorOutlineIcon />,       color: '#c62828', bg: '#ffebee' },
+              { label: 'Canceladas',  value: stats.canceladas, icon: <CancelIcon />,             color: '#616161', bg: '#f5f5f5' },
+              { label: 'Costo mensual', value: fmt$(stats.totalMensualMXN), icon: <AttachMoneyIcon />, color: '#1565c0', bg: '#e3f2fd', wide: true },
+              { label: 'Costo anual',   value: fmt$(stats.totalAnualMXN),   icon: <AttachMoneyIcon />, color: '#4a148c', bg: '#f3e5f5', wide: true },
+            ].map(({ label, value, icon, color, bg, wide }) => (
+              <Grid item xs={6} sm={wide ? 4 : 4} md={wide ? 3 : 2} key={label}>
+                <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: bg, height: '100%' }}>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box sx={{ color, fontSize: 28 }}>{icon}</Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" fontWeight={600}
+                        textTransform="uppercase" letterSpacing={0.5} display="block">
+                        {label}
+                      </Typography>
+                      <Typography variant="h6" fontWeight={800} sx={{ color }}>
+                        {value ?? 0}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Paper>
+              </Grid>
             ))}
+          </Grid>
+
+          {/* Filtros */}
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
+            <TextField
+              size="small" placeholder="Buscar plataforma…" value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+              sx={{ minWidth: 220 }}
+            />
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>Área</InputLabel>
+              <Select value={filtroArea} label="Área" onChange={e => setFiltroArea(e.target.value)}>
+                <MenuItem value="">Todas</MenuItem>
+                {AREAS.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>Estado</InputLabel>
+              <Select value={filtroEstado} label="Estado" onChange={e => setFiltroEstado(e.target.value)}>
+                <MenuItem value="">Todos</MenuItem>
+                {ESTADOS.map(e => <MenuItem key={e} value={e}>{e}</MenuItem>)}
+              </Select>
+            </FormControl>
           </Stack>
-        </Paper>
+
+          {/* Tabla */}
+          <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: '#1a237e' }}>
+                    {['#','Plataforma','Área','Frecuencia','Próximo Pago','Días','Costo','Anual','Estado',''].map(h => (
+                      <TableCell key={h} sx={{ color: 'white', fontWeight: 700, fontSize: 12, py: 1.2 }}>{h}</TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {licenciasFiltradas.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={10} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                        No hay licencias registradas.
+                      </TableCell>
+                    </TableRow>
+                  ) : licenciasFiltradas.map((l, idx) => {
+                    const chip = ESTADO_CHIP[l.estado] ?? { color: 'default' };
+                    return (
+                      <TableRow key={l.id} sx={{ bgcolor: idx % 2 === 0 ? 'white' : '#fafafa', '&:hover': { bgcolor: '#f0f4ff' } }}>
+                        <TableCell sx={{ fontSize: 12, fontWeight: 600 }}>{l.numero}</TableCell>
+                        <TableCell sx={{ fontSize: 13, fontWeight: 600 }}>{l.plataforma}</TableCell>
+                        <TableCell>
+                          <Chip label={l.area} size="small" variant="outlined"
+                            sx={{ fontSize: 11, borderColor: AREA_COLOR[l.area], color: AREA_COLOR[l.area] }} />
+                        </TableCell>
+                        <TableCell sx={{ fontSize: 12 }}>{l.frecuenciaPago}</TableCell>
+                        <TableCell sx={{ fontSize: 12 }}>{l.proximoPago}</TableCell>
+                        <TableCell sx={{
+                          fontSize: 12, fontWeight: 600,
+                          color: l.diasRestantes <= 0 ? 'error.main'
+                               : l.diasRestantes <= 5  ? 'error.main'
+                               : l.diasRestantes <= 10 ? 'warning.dark' : 'inherit',
+                        }}>
+                          {l.diasRestantes < 0 ? `−${Math.abs(l.diasRestantes)}` : l.diasRestantes}
+                        </TableCell>
+                        <TableCell sx={{ fontSize: 12 }}>{fmt$(l.costoMXN)}</TableCell>
+                        <TableCell sx={{ fontSize: 12 }}>{fmt$(l.costoAnualMXN)}</TableCell>
+                        <TableCell>
+                          <Chip label={l.estado} color={chip.color} size="small" sx={{ fontWeight: 600, fontSize: 11 }} />
+                        </TableCell>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          {isAdmin && (
+                            <>
+                              <Tooltip title="Editar">
+                                <IconButton size="small" onClick={() => openEdit(l)}>
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Eliminar">
+                                <IconButton size="small" color="error" onClick={() => setConfirmDel(l)}>
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </>
       )}
 
-      {/* ── Filtros ───────────────────────────────────────────────────────────── */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
-        <TextField
-          size="small" placeholder="Buscar plataforma..." value={busqueda}
-          onChange={e => setBusqueda(e.target.value)}
-          InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
-          sx={{ minWidth: 220 }}
-        />
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Área</InputLabel>
-          <Select value={filtroArea} label="Área" onChange={e => setFiltroArea(e.target.value)}>
-            <MenuItem value="">Todas</MenuItem>
-            {AREAS.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
-          </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Estado</InputLabel>
-          <Select value={filtroEstado} label="Estado" onChange={e => setFiltroEstado(e.target.value)}>
-            <MenuItem value="">Todos</MenuItem>
-            {ESTADOS.map(e => <MenuItem key={e} value={e}>{e}</MenuItem>)}
-          </Select>
-        </FormControl>
-      </Stack>
+      {/* ── Tab 1: Gastos ────────────────────────────────────────────────────── */}
+      {tab === 1 && <GastosSection licencias={licencias} />}
 
-      {/* ── Tabla de licencias ───────────────────────────────────────────────── */}
-      <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: '#1a237e' }}>
-                {['#','Plataforma','Área','Frecuencia','Próximo Pago','Días','Costo','Anual','Estado',''].map(h => (
-                  <TableCell key={h} sx={{ color: 'white', fontWeight: 700, fontSize: 12, py: 1.2 }}>{h}</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {licenciasFiltradas.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                    No hay licencias registradas.
-                  </TableCell>
-                </TableRow>
-              ) : licenciasFiltradas.map((l, idx) => {
-                const rowBg = idx % 2 === 0 ? 'white' : '#fafafa';
-                const chip  = ESTADO_CHIP[l.estado] ?? { color: 'default', label: l.estado };
-                return (
-                  <TableRow key={l.id} sx={{ bgcolor: rowBg, '&:hover': { bgcolor: '#f0f4ff' } }}>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 600 }}>{l.numero}</TableCell>
-                    <TableCell sx={{ fontSize: 13, fontWeight: 600 }}>{l.plataforma}</TableCell>
-                    <TableCell sx={{ fontSize: 12 }}>
-                      <Chip label={l.area} size="small" variant="outlined" sx={{ fontSize: 11 }} />
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12 }}>{l.frecuenciaPago}</TableCell>
-                    <TableCell sx={{ fontSize: 12 }}>{l.proximoPago}</TableCell>
-                    <TableCell sx={{ fontSize: 12, fontWeight: 600,
-                      color: l.diasRestantes <= 0 ? 'error.main'
-                           : l.diasRestantes <= 5 ? 'error.main'
-                           : l.diasRestantes <= 10 ? 'warning.dark' : 'inherit'
-                    }}>
-                      {l.diasRestantes < 0
-                        ? `−${Math.abs(l.diasRestantes)}`
-                        : l.diasRestantes}
-                    </TableCell>
-                    <TableCell sx={{ fontSize: 12 }}>{fmt$(l.costoMXN)}</TableCell>
-                    <TableCell sx={{ fontSize: 12 }}>{fmt$(l.costoAnualMXN)}</TableCell>
-                    <TableCell>
-                      <Chip label={chip.label} color={chip.color} size="small" sx={{ fontWeight: 600, fontSize: 11 }} />
-                    </TableCell>
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                      {isAdmin && (
-                        <>
-                          <Tooltip title="Editar">
-                            <IconButton size="small" onClick={() => openEdit(l)}>
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Eliminar">
-                            <IconButton size="small" color="error" onClick={() => setConfirmDel(l)}>
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+      {/* ── Tab 2: Calendario ────────────────────────────────────────────────── */}
+      {tab === 2 && <CalendarioSection licencias={licencias} />}
 
       {/* ── Dialog: Crear / Editar ───────────────────────────────────────────── */}
       <Dialog open={dialog.open} onClose={() => setDialog(d => ({ ...d, open: false }))} maxWidth="sm" fullWidth>
@@ -415,10 +779,12 @@ export default function Licencias() {
               </FormControl>
             </Grid>
             <Grid item xs={6}>
-              <TextField label="Fecha de inicio" size="small" fullWidth type="date" InputLabelProps={{ shrink: true }} {...field('fechaInicio')} />
+              <TextField label="Fecha de inicio" size="small" fullWidth type="date"
+                InputLabelProps={{ shrink: true }} {...field('fechaInicio')} />
             </Grid>
             <Grid item xs={6}>
-              <TextField label="Próximo pago" size="small" fullWidth type="date" InputLabelProps={{ shrink: true }} {...field('proximoPago')} />
+              <TextField label="Próximo pago" size="small" fullWidth type="date"
+                InputLabelProps={{ shrink: true }} {...field('proximoPago')} />
             </Grid>
             <Grid item xs={6}>
               <TextField label="Costo MXN" size="small" fullWidth type="number"
@@ -432,6 +798,9 @@ export default function Licencias() {
                   {ESTADOS.map(e => <MenuItem key={e} value={e}>{e}</MenuItem>)}
                 </Select>
               </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField label="Responsable" size="small" fullWidth {...field('responsable')} />
             </Grid>
             <Grid item xs={12}>
               <TextField label="Notas / Observaciones" size="small" fullWidth multiline rows={2} {...field('notas')} />
