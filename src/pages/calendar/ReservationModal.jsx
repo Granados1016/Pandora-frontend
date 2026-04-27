@@ -10,7 +10,6 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import VideoCallIcon from '@mui/icons-material/VideoCall';
 import RepeatIcon from '@mui/icons-material/Repeat';
 import { calendarApi } from '../../api/pandoraApi';
-import { apiError } from '../../api/apiError';
 
 const FREQ_OPTIONS = [
   { value: 'FREQ=DAILY',   label: 'Diario' },
@@ -24,7 +23,12 @@ const DAYS = [
   { code: 'SU', label: 'D' },
 ];
 
-const toLocal = (dt) => dt ? new Date(dt).toISOString().slice(0, 16) : '';
+const toLocal = (dt) => {
+  if (!dt) return '';
+  const d = new Date(dt);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 const EMPTY_FORM = {
   title: '', description: '', roomId: '',
   start: '', end: '',
@@ -132,7 +136,11 @@ export default function ReservationModal({ open, onClose, onSaved, rooms, employ
       onSaved();
       onClose();
     } catch (e) {
-      setError(apiError(e, 'Error al guardar la reserva.'));
+      const status = e.response?.status;
+      const msg    = typeof e.response?.data === 'string'
+        ? e.response.data
+        : e.response?.data?.message || 'Error al guardar la reserva.';
+      setError(status === 409 ? `⚠️ Conflicto de horario: ${msg}` : msg);
     } finally {
       setSaving(false);
     }
@@ -146,7 +154,7 @@ export default function ReservationModal({ open, onClose, onSaved, rooms, employ
       onSaved();
       onClose();
     } catch (e) {
-      setError(apiError(e, 'Error al eliminar.'));
+      setError(e.response?.data || 'Error al eliminar.');
     }
   };
 
