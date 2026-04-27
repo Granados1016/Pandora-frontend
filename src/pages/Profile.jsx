@@ -13,7 +13,9 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ShieldIcon from '@mui/icons-material/Shield';
-import { userApi } from '../api/pandoraApi';
+import BackupIcon from '@mui/icons-material/Backup';
+import DownloadIcon from '@mui/icons-material/Download';
+import { userApi, adminApi } from '../api/pandoraApi';
 import { useAuth } from '../hooks/useAuth.jsx';
 
 export default function Profile() {
@@ -118,6 +120,23 @@ export default function Profile() {
       setSmtpMsg({ type: 'error', text: 'Error: ' + (err.response?.data || err.message) });
     } finally {
       setSmtpSaving(false);
+    }
+  };
+
+  // ── Backup ────────────────────────────────────────────────────────────────
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupMsg, setBackupMsg]         = useState(null);
+
+  const handleDownloadBackup = async () => {
+    setBackupLoading(true);
+    setBackupMsg(null);
+    try {
+      await adminApi.downloadBackup();
+      setBackupMsg({ type: 'success', text: 'Backup descargado correctamente.' });
+    } catch (err) {
+      setBackupMsg({ type: 'error', text: 'Error al descargar el backup: ' + err.message });
+    } finally {
+      setBackupLoading(false);
     }
   };
 
@@ -389,6 +408,47 @@ export default function Profile() {
             </Stack>
           </Paper>
         </Grid>
+
+        {/* Backup de base de datos — solo admins */}
+        {isAdmin && (
+          <Grid item xs={12} md={5}>
+            <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', height: '100%' }}>
+              <Stack direction="row" spacing={1.5} alignItems="center" mb={1}>
+                <BackupIcon color="primary" />
+                <Box>
+                  <Typography variant="h6" fontWeight={700}>Respaldo de Base de Datos</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Descarga un backup completo de la base de datos SQL.
+                  </Typography>
+                </Box>
+              </Stack>
+              <Divider sx={{ mb: 2.5 }} />
+
+              <Alert severity="warning" sx={{ mb: 2.5, borderRadius: 2 }} icon={false}>
+                <Typography variant="caption">
+                  <strong>Solo administradores.</strong> El archivo generado contiene todos los datos del sistema.
+                  Guárdalo en un lugar seguro.
+                </Typography>
+              </Alert>
+
+              {backupMsg && (
+                <Alert severity={backupMsg.type} onClose={() => setBackupMsg(null)} sx={{ mb: 2, borderRadius: 2 }}>
+                  {backupMsg.text}
+                </Alert>
+              )}
+
+              <Button
+                variant="contained"
+                startIcon={backupLoading ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon />}
+                onClick={handleDownloadBackup}
+                disabled={backupLoading}
+                fullWidth
+              >
+                {backupLoading ? 'Generando backup...' : 'Descargar Backup'}
+              </Button>
+            </Paper>
+          </Grid>
+        )}
 
       </Grid>
     </Box>
