@@ -29,6 +29,12 @@ import Employees          from './pages/catalogs/Employees';
 // ── Licencias ─────────────────────────────────────────────────────────────────
 import Licencias from './pages/Licencias';
 
+// ── Tickets ───────────────────────────────────────────────────────────────────
+import TicketTemplateBuilder from './pages/tickets/TicketTemplateBuilder';
+import TicketsListPage       from './pages/tickets/TicketsListPage';
+import TicketFormPage        from './pages/tickets/TicketFormPage';
+import TicketDetailPage      from './pages/tickets/TicketDetailPage';
+
 // ── Calendario ────────────────────────────────────────────────────────────────
 import CalendarPage        from './pages/calendar/CalendarPage';
 import RoomsManager        from './pages/calendar/RoomsManager';
@@ -134,6 +140,28 @@ function AppRoutes() {
               <Route path="/catalogs/employees" element={
                 <ProtectedRoute requiredModule={MODULES.INVENTARIO}>
                   <Employees />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Tickets ─────────────────────────────────────────────── */}
+              <Route path="/tickets/template" element={
+                <ProtectedRoute adminOnly>
+                  <TicketTemplateBuilder />
+                </ProtectedRoute>
+              } />
+              <Route path="/tickets/new" element={
+                <ProtectedRoute requiredModule={MODULES.HELPDESK}>
+                  <TicketFormPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/tickets/:id" element={
+                <ProtectedRoute requiredModule={MODULES.HELPDESK}>
+                  <TicketDetailPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/tickets" element={
+                <ProtectedRoute requiredModule={MODULES.HELPDESK}>
+                  <TicketsListPage />
                 </ProtectedRoute>
               } />
 

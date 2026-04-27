@@ -28,6 +28,9 @@ import BarChartOutlinedIcon     from '@mui/icons-material/BarChartOutlined';
 import ChevronLeftIcon          from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon         from '@mui/icons-material/ChevronRight';
 import VpnKeyIcon               from '@mui/icons-material/VpnKey';
+import ConfirmationNumberIcon   from '@mui/icons-material/ConfirmationNumber';
+import AddTaskIcon              from '@mui/icons-material/AddTask';
+import TuneIcon                 from '@mui/icons-material/Tune';
 
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 
@@ -130,6 +133,15 @@ export default function Layout({ children }) {
       items: [
         { label: 'Departamentos', icon: <ApartmentIcon />, path: '/catalogs/departments', show: hasModule(MODULES.INVENTARIO) },
         { label: 'Personal',      icon: <PeopleIcon />,    path: '/catalogs/employees',   show: hasModule(MODULES.INVENTARIO) },
+      ],
+    },
+    {
+      label: 'Tickets',
+      show: hasModule(MODULES.HELPDESK) || isAdmin,
+      items: [
+        { label: 'Mis Tickets',    icon: <ConfirmationNumberIcon />, path: '/tickets',          show: hasModule(MODULES.HELPDESK) || isAdmin },
+        { label: 'Nuevo Ticket',   icon: <AddTaskIcon />,            path: '/tickets/new',      show: hasModule(MODULES.HELPDESK) || isAdmin },
+        { label: 'Configurar',     icon: <TuneIcon />,               path: '/tickets/template', show: isAdmin },
       ],
     },
     {
