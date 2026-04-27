@@ -27,6 +27,7 @@ import AssessmentIcon           from '@mui/icons-material/Assessment';
 import BarChartOutlinedIcon     from '@mui/icons-material/BarChartOutlined';
 import ChevronLeftIcon          from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon         from '@mui/icons-material/ChevronRight';
+import VpnKeyIcon               from '@mui/icons-material/VpnKey';
 
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 
@@ -129,6 +130,13 @@ export default function Layout({ children }) {
       items: [
         { label: 'Departamentos', icon: <ApartmentIcon />, path: '/catalogs/departments', show: hasModule(MODULES.INVENTARIO) },
         { label: 'Personal',      icon: <PeopleIcon />,    path: '/catalogs/employees',   show: hasModule(MODULES.INVENTARIO) },
+      ],
+    },
+    {
+      label: 'Licencias',
+      show: hasModule(MODULES.LICENCIAS) || isAdmin,
+      items: [
+        { label: 'Control de Licencias', icon: <VpnKeyIcon />, path: '/licencias', show: hasModule(MODULES.LICENCIAS) || isAdmin },
       ],
     },
     {

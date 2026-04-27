@@ -26,6 +26,9 @@ import InventoryTypes     from './pages/inventory/InventoryTypes';
 import Departments        from './pages/catalogs/Departments';
 import Employees          from './pages/catalogs/Employees';
 
+// ── Licencias ─────────────────────────────────────────────────────────────────
+import Licencias from './pages/Licencias';
+
 // ── Calendario ────────────────────────────────────────────────────────────────
 import CalendarPage        from './pages/calendar/CalendarPage';
 import RoomsManager        from './pages/calendar/RoomsManager';
@@ -131,6 +134,13 @@ function AppRoutes() {
               <Route path="/catalogs/employees" element={
                 <ProtectedRoute requiredModule={MODULES.INVENTARIO}>
                   <Employees />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Licencias ───────────────────────────────────────────── */}
+              <Route path="/licencias" element={
+                <ProtectedRoute requiredModule={MODULES.LICENCIAS}>
+                  <Licencias />
                 </ProtectedRoute>
               } />
 
