@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
-  AppBar, Toolbar, Typography, IconButton, Divider, Avatar, Tooltip,
+  AppBar, Toolbar, Typography, IconButton, Divider, Avatar, Tooltip, Collapse,
 } from '@mui/material';
 
 // ── Íconos de navegación ──────────────────────────────────────────────────────
@@ -31,6 +31,8 @@ import VpnKeyIcon               from '@mui/icons-material/VpnKey';
 import ConfirmationNumberIcon   from '@mui/icons-material/ConfirmationNumber';
 import AddTaskIcon              from '@mui/icons-material/AddTask';
 import TuneIcon                 from '@mui/icons-material/Tune';
+import ExpandLessIcon           from '@mui/icons-material/ExpandLess';
+import ExpandMoreIcon           from '@mui/icons-material/ExpandMore';
 
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 
@@ -53,6 +55,13 @@ export default function Layout({ children }) {
   );
   // Drawer temporal en móvil
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Secciones colapsadas (por label)
+  const [collapsedSections, setCollapsedSections] = useState({});
+
+  const toggleSection = useCallback((label) => {
+    setCollapsedSections(prev => ({ ...prev, [label]: !prev[label] }));
+  }, []);
 
   // Foto y puesto del usuario
   const [profilePhoto, setProfilePhoto] = useState(
@@ -280,34 +289,56 @@ export default function Layout({ children }) {
           '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.15)', borderRadius: 2 },
         }}
       >
-        {navSections.map((section, si) =>
-          section.show !== false && (
+        {navSections.map((section, si) => {
+          if (section.show === false) return null;
+          const isSectionCollapsed = section.label ? !!collapsedSections[section.label] : false;
+          const visibleItems = section.items.filter(i => i.show !== false);
+
+          return (
             <React.Fragment key={si}>
-              {/* Etiqueta de sección — solo cuando expandido */}
+              {/* Encabezado de sección — solo cuando expandido, clickeable */}
               {section.label && (open || isDrawer) && (
-                <Typography
-                  variant="caption"
+                <ListItemButton
+                  onClick={() => toggleSection(section.label)}
                   sx={{
-                    px: 3, pt: si === 0 ? 0 : 1.5, pb: 0.5,
-                    display: 'block',
-                    color: 'rgba(255,255,255,0.3)',
-                    fontWeight: 700, letterSpacing: 1, fontSize: 10,
-                    textTransform: 'uppercase',
+                    px: 3, pt: si === 0 ? 0.5 : 1.5, pb: 0.5,
+                    minHeight: 'unset',
+                    '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' },
+                    borderRadius: 1,
+                    mx: 1,
                   }}
                 >
-                  {section.label}
-                </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      flex: 1,
+                      color: 'rgba(255,255,255,0.4)',
+                      fontWeight: 700, letterSpacing: 1, fontSize: 10,
+                      textTransform: 'uppercase',
+                      userSelect: 'none',
+                    }}
+                  >
+                    {section.label}
+                  </Typography>
+                  {isSectionCollapsed
+                    ? <ExpandMoreIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.3)' }} />
+                    : <ExpandLessIcon sx={{ fontSize: 14, color: 'rgba(255,255,255,0.3)' }} />
+                  }
+                </ListItemButton>
               )}
-              {/* Separador cuando colapsado */}
+              {/* Separador cuando sidebar colapsado */}
               {section.label && !open && !isDrawer && si > 0 && (
                 <Divider sx={{ borderColor: 'rgba(255,255,255,0.08)', my: 0.5, mx: 1 }} />
               )}
-              {section.items.filter(i => i.show !== false).map(item => (
-                <NavItem key={item.path} {...item} />
-              ))}
+              {/* Items con animación de colapso */}
+              <Collapse in={!isSectionCollapsed || !open && !isDrawer} timeout={200} unmountOnExit>
+                {visibleItems.map(item => (
+                  <NavItem key={item.path} {...item} />
+                ))}
+              </Collapse>
             </React.Fragment>
-          )
-        )}
+          );
+        })}
       </List>
 
       <Divider sx={{ borderColor: 'rgba(255,255,255,0.12)' }} />
