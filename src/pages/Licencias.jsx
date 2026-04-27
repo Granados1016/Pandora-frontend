@@ -4,7 +4,7 @@ import {
   CircularProgress, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Tooltip, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Select, MenuItem,
-  FormControl, InputLabel, InputAdornment, Tabs, Tab,
+  FormControl, InputLabel, InputAdornment, Tabs, Tab, Badge,
 } from '@mui/material';
 import AssignmentIcon          from '@mui/icons-material/Assignment';
 import WarningAmberIcon        from '@mui/icons-material/WarningAmber';
@@ -22,6 +22,8 @@ import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import CalendarMonthIcon       from '@mui/icons-material/CalendarMonth';
 import ChevronLeftIcon         from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon        from '@mui/icons-material/ChevronRight';
+import FilterListIcon          from '@mui/icons-material/FilterList';
+import ClearIcon               from '@mui/icons-material/Clear';
 import { licenciasApi } from '../api/pandoraApi';
 import { useAuth }      from '../hooks/useAuth.jsx';
 
@@ -62,6 +64,27 @@ const EMPTY_FORM = {
   costoMXN: '', estado: 'Activa', notas: '',
 };
 
+// ── YearPicker ────────────────────────────────────────────────────────────────
+function YearPicker({ value, onChange, light = false }) {
+  const clr = light ? 'white' : 'text.primary';
+  return (
+    <Stack direction="row" alignItems="center" spacing={0.5}>
+      <IconButton size="small" onClick={() => onChange(value - 1)} sx={{ color: clr }}>
+        <ChevronLeftIcon fontSize="small" />
+      </IconButton>
+      <Typography
+        variant="subtitle1" fontWeight={900}
+        sx={{ minWidth: 56, textAlign: 'center', userSelect: 'none', color: clr }}
+      >
+        {value}
+      </Typography>
+      <IconButton size="small" onClick={() => onChange(value + 1)} sx={{ color: clr }}>
+        <ChevronRightIcon fontSize="small" />
+      </IconButton>
+    </Stack>
+  );
+}
+
 // ── GastosSection ─────────────────────────────────────────────────────────────
 function GastosSection({ licencias }) {
   const today    = new Date();
@@ -76,11 +99,9 @@ function GastosSection({ licencias }) {
     areaMap[l.area].mensual += costoMensualNorm(l);
     areaMap[l.area].anual   += (l.costoAnualMXN ?? 0);
   });
-  const areaRows = Object.entries(areaMap)
-    .map(([area, v]) => ({ area, ...v }))
-    .sort((a, b) => b.anual - a.anual);
-  const totalAnual   = areaRows.reduce((s, a) => s + a.anual, 0);
-  const totalMensual = areaRows.reduce((s, a) => s + a.mensual, 0);
+  const areaRows   = Object.entries(areaMap).map(([area, v]) => ({ area, ...v })).sort((a, b) => b.anual - a.anual);
+  const totalAnual = areaRows.reduce((s, a) => s + a.anual, 0);
+  const totalMens  = areaRows.reduce((s, a) => s + a.mensual, 0);
 
   const monthlyData = Array.from({ length: 12 }, (_, m) => {
     const items = activas.filter(l => hasPaymentInMonth(l, viewYear, m));
@@ -93,9 +114,9 @@ function GastosSection({ licencias }) {
       {/* Tarjetas resumen */}
       <Grid container spacing={2} mb={3}>
         {[
-          { label: 'Gasto Mensual',   value: fmt$(totalMensual), note: 'Promedio normalizado',      bg: '#e3f2fd', color: '#1565c0' },
-          { label: 'Gasto Anual',     value: fmt$(totalAnual),   note: 'Todas las áreas activas',   bg: '#f3e5f5', color: '#6a1b9a' },
-          { label: 'Áreas cubiertas', value: areaRows.length,    note: `${activas.length} licencias activas`, bg: '#e8f5e9', color: '#2e7d32' },
+          { label: 'Gasto Mensual',   value: fmt$(totalMens),  note: 'Promedio normalizado',    bg: '#e3f2fd', color: '#1565c0' },
+          { label: 'Gasto Anual',     value: fmt$(totalAnual), note: 'Licencias activas',        bg: '#f3e5f5', color: '#6a1b9a' },
+          { label: 'Áreas cubiertas', value: areaRows.length,  note: `${activas.length} licencias activas`, bg: '#e8f5e9', color: '#2e7d32' },
         ].map(c => (
           <Grid item xs={12} sm={4} key={c.label}>
             <Paper elevation={0} sx={{ p: 2.5, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: c.bg, textAlign: 'center' }}>
@@ -109,7 +130,7 @@ function GastosSection({ licencias }) {
         ))}
       </Grid>
 
-      {/* Gastos totales por área */}
+      {/* Tabla por área */}
       <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', mb: 3 }}>
         <Box sx={{ px: 2.5, py: 1.5, bgcolor: '#1a237e' }}>
           <Typography variant="subtitle2" fontWeight={700} color="white">Gastos Totales por Área</Typography>
@@ -118,7 +139,7 @@ function GastosSection({ licencias }) {
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                {['Área','Licencias','Mensual equiv.','Costo anual','% del total','Distribución'].map(h => (
+                {['Área','Licencias activas','Mensual equiv.','Costo anual','% del total','Distribución'].map(h => (
                   <TableCell key={h} sx={{ fontWeight: 700, fontSize: 12 }}>{h}</TableCell>
                 ))}
               </TableRow>
@@ -150,7 +171,7 @@ function GastosSection({ licencias }) {
               <TableRow sx={{ bgcolor: '#e8eaf6' }}>
                 <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>TOTAL</TableCell>
                 <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>{activas.length}</TableCell>
-                <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>{fmt$(totalMensual)}</TableCell>
+                <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>{fmt$(totalMens)}</TableCell>
                 <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>{fmt$(totalAnual)}</TableCell>
                 <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>100%</TableCell>
                 <TableCell />
@@ -162,31 +183,19 @@ function GastosSection({ licencias }) {
 
       {/* Gastos mensuales del año */}
       <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden', mb: 3 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 2.5, py: 1.5, bgcolor: '#1a237e' }}>
-          <Typography variant="subtitle2" fontWeight={700} color="white">
-            Gastos Mensuales {viewYear}
-          </Typography>
-          <Stack direction="row" spacing={0.5} alignItems="center">
-            <IconButton size="small" sx={{ color: 'white' }} onClick={() => setViewYear(y => y - 1)}>
-              <ChevronLeftIcon fontSize="small" />
-            </IconButton>
-            <Typography variant="caption" color="white" fontWeight={700}>{viewYear}</Typography>
-            <IconButton size="small" sx={{ color: 'white' }} onClick={() => setViewYear(y => y + 1)}>
-              <ChevronRightIcon fontSize="small" />
-            </IconButton>
-          </Stack>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 2.5, py: 1.2, bgcolor: '#1a237e' }}>
+          <Typography variant="subtitle2" fontWeight={700} color="white">Gastos Mensuales</Typography>
+          <YearPicker value={viewYear} onChange={setViewYear} light />
         </Stack>
         <Box sx={{ p: 2.5 }}>
-          <Stack spacing={1}>
+          <Stack spacing={0.8}>
             {monthlyData.map(({ month, total, count }) => {
-              const isNow = today.getFullYear() === viewYear && today.getMonth() === month;
+              const isNow  = today.getFullYear() === viewYear && today.getMonth() === month;
               const barPct = maxMonthly > 0 ? (total / maxMonthly * 100) : 0;
               return (
                 <Stack key={month} direction="row" spacing={2} alignItems="center">
-                  <Typography
-                    variant="caption" fontWeight={isNow ? 800 : 600}
-                    sx={{ width: 90, color: isNow ? 'primary.main' : 'text.secondary' }}
-                  >
+                  <Typography variant="caption" fontWeight={isNow ? 800 : 600}
+                    sx={{ width: 90, color: isNow ? 'primary.main' : 'text.secondary' }}>
                     {MESES[month]}
                   </Typography>
                   <Box sx={{ flex: 1, height: 20, bgcolor: '#f0f0f0', borderRadius: 1, overflow: 'hidden' }}>
@@ -196,7 +205,8 @@ function GastosSection({ licencias }) {
                       borderRadius: 1, transition: 'width 0.5s',
                     }} />
                   </Box>
-                  <Typography variant="caption" fontWeight={700} sx={{ width: 100, textAlign: 'right', color: isNow ? 'primary.main' : 'text.primary' }}>
+                  <Typography variant="caption" fontWeight={700}
+                    sx={{ width: 100, textAlign: 'right', color: isNow ? 'primary.main' : 'text.primary' }}>
                     {total > 0 ? fmt$(total) : '—'}
                   </Typography>
                   <Typography variant="caption" color="text.disabled" sx={{ width: 55 }}>
@@ -262,25 +272,19 @@ function CalendarioSection({ licencias }) {
 
   return (
     <Box>
-      {/* Encabezado del calendario */}
-      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ sm: 'center' }} mb={2.5} spacing={1}>
+      {/* Encabezado */}
+      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between"
+        alignItems={{ sm: 'center' }} mb={2.5} spacing={1}>
         <Box>
-          <Typography variant="subtitle1" fontWeight={800}>Calendario de Pagos {viewYear}</Typography>
+          <Typography variant="subtitle1" fontWeight={800}>Calendario de Pagos</Typography>
           <Typography variant="caption" color="text.secondary">
-            Total proyectado: <strong>{fmt$(yearTotal)}</strong>
+            Total proyectado {viewYear}: <strong>{fmt$(yearTotal)}</strong>
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Button size="small" variant="outlined" startIcon={<ChevronLeftIcon />} onClick={() => setViewYear(y => y - 1)}>
-            {viewYear - 1}
-          </Button>
-          <Button size="small" variant="outlined" endIcon={<ChevronRightIcon />} onClick={() => setViewYear(y => y + 1)}>
-            {viewYear + 1}
-          </Button>
-        </Stack>
+        <YearPicker value={viewYear} onChange={setViewYear} />
       </Stack>
 
-      {/* Leyenda de áreas */}
+      {/* Leyenda */}
       <Stack direction="row" spacing={2} mb={2.5} flexWrap="wrap" gap={1}>
         {AREAS.map(a => (
           <Stack key={a} direction="row" spacing={0.5} alignItems="center">
@@ -313,40 +317,33 @@ function CalendarioSection({ licencias }) {
                     </Typography>
                     {isNow && <Chip label="Hoy" size="small" color="primary" sx={{ height: 18, fontSize: 10 }} />}
                   </Stack>
-                  {total > 0 ? (
-                    <Chip
-                      label={fmt$(total)} size="small"
-                      color={isNow ? 'primary' : 'default'}
-                      sx={{ fontWeight: 700, fontSize: 11 }}
-                    />
-                  ) : (
-                    <Typography variant="caption" color="text.disabled">—</Typography>
-                  )}
+                  {total > 0
+                    ? <Chip label={fmt$(total)} size="small" color={isNow ? 'primary' : 'default'} sx={{ fontWeight: 700, fontSize: 11 }} />
+                    : <Typography variant="caption" color="text.disabled">—</Typography>
+                  }
                 </Stack>
-
-                {items.length === 0 ? (
-                  <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>
-                    Sin pagos programados
-                  </Typography>
-                ) : (
-                  <Stack spacing={0.5}>
-                    {items.map(l => (
-                      <Stack key={l.id} direction="row" justifyContent="space-between" alignItems="center"
-                        sx={{
-                          px: 1, py: 0.4, borderRadius: 1.5, bgcolor: '#f5f5f5',
-                          borderLeft: `3px solid ${AREA_COLOR[l.area] || '#ccc'}`,
-                        }}
-                      >
-                        <Typography variant="caption" fontWeight={600} noWrap sx={{ maxWidth: 140 }}>
-                          {l.plataforma}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', ml: 0.5 }}>
-                          {fmt$(l.costoMXN)}
-                        </Typography>
-                      </Stack>
-                    ))}
-                  </Stack>
-                )}
+                {items.length === 0
+                  ? <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>Sin pagos programados</Typography>
+                  : (
+                    <Stack spacing={0.5}>
+                      {items.map(l => (
+                        <Stack key={l.id} direction="row" justifyContent="space-between" alignItems="center"
+                          sx={{
+                            px: 1, py: 0.4, borderRadius: 1.5, bgcolor: '#f5f5f5',
+                            borderLeft: `3px solid ${AREA_COLOR[l.area] || '#ccc'}`,
+                          }}
+                        >
+                          <Typography variant="caption" fontWeight={600} noWrap sx={{ maxWidth: 140 }}>
+                            {l.plataforma}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', ml: 0.5 }}>
+                            {fmt$(l.costoMXN)}
+                          </Typography>
+                        </Stack>
+                      ))}
+                    </Stack>
+                  )
+                }
               </Paper>
             </Grid>
           );
@@ -391,9 +388,7 @@ function CalendarioSection({ licencias }) {
               })}
               <TableRow sx={{ bgcolor: '#e8eaf6' }}>
                 <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>TOTAL</TableCell>
-                <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>
-                  {months.reduce((s, m) => s + m.items.length, 0)} pagos
-                </TableCell>
+                <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>{months.reduce((s, m) => s + m.items.length, 0)} pagos</TableCell>
                 <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>{fmt$(yearTotal)}</TableCell>
                 <TableCell sx={{ fontWeight: 800, fontSize: 13 }}>{fmt$(yearTotal)}</TableCell>
               </TableRow>
@@ -416,23 +411,28 @@ export default function Licencias() {
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState(null);
 
-  const [filtroArea,   setFiltroArea]   = useState('');
-  const [filtroEstado, setFiltroEstado] = useState('');
-  const [busqueda,     setBusqueda]     = useState('');
+  // ── Filtros (todos client-side para respuesta instantánea) ────────────────
+  const [busqueda,         setBusqueda]         = useState('');
+  const [filtroArea,       setFiltroArea]       = useState('');
+  const [filtroEstado,     setFiltroEstado]     = useState('');
+  const [filtroFrecuencia, setFiltroFrecuencia] = useState('');
+  const [filtroDias,       setFiltroDias]       = useState('');   // 'vence7' | 'vence30' | 'vencidas'
 
+  // ── CRUD dialog ───────────────────────────────────────────────────────────
   const [dialog,     setDialog]     = useState({ open: false, mode: 'create', data: EMPTY_FORM });
   const [saving,     setSaving]     = useState(false);
   const [saveErr,    setSaveErr]    = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
   const [exporting,  setExporting]  = useState(false);
 
+  // ── Carga ─────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
       const [dash, alert, lista] = await Promise.all([
         licenciasApi.dashboard(),
         licenciasApi.alertas(),
-        licenciasApi.getAll({ area: filtroArea || undefined, estado: filtroEstado || undefined }),
+        licenciasApi.getAll(),          // sin filtros → todo client-side
       ]);
       setDashboard(dash.data);
       setAlertas(alert.data);
@@ -442,14 +442,38 @@ export default function Licencias() {
     } finally {
       setLoading(false);
     }
-  }, [filtroArea, filtroEstado]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const licenciasFiltradas = licencias.filter(l =>
-    !busqueda || l.plataforma.toLowerCase().includes(busqueda.toLowerCase())
-  );
+  // ── Filtrado client-side ──────────────────────────────────────────────────
+  const licenciasFiltradas = licencias.filter(l => {
+    if (busqueda) {
+      const q = busqueda.toLowerCase();
+      if (
+        !l.plataforma.toLowerCase().includes(q) &&
+        !l.area.toLowerCase().includes(q) &&
+        !(l.responsable?.toLowerCase().includes(q)) &&
+        !(l.notas?.toLowerCase().includes(q))
+      ) return false;
+    }
+    if (filtroArea       && l.area           !== filtroArea)       return false;
+    if (filtroEstado     && l.estado         !== filtroEstado)     return false;
+    if (filtroFrecuencia && l.frecuenciaPago !== filtroFrecuencia) return false;
+    if (filtroDias === 'vence7'   && !(l.diasRestantes >= 0 && l.diasRestantes <= 7))   return false;
+    if (filtroDias === 'vence30'  && !(l.diasRestantes >= 0 && l.diasRestantes <= 30))  return false;
+    if (filtroDias === 'vencidas' && l.diasRestantes >= 0)                               return false;
+    return true;
+  });
 
+  const filtrosActivos = [busqueda, filtroArea, filtroEstado, filtroFrecuencia, filtroDias].filter(Boolean).length;
+
+  const limpiarFiltros = () => {
+    setBusqueda(''); setFiltroArea(''); setFiltroEstado('');
+    setFiltroFrecuencia(''); setFiltroDias('');
+  };
+
+  // ── Acciones ──────────────────────────────────────────────────────────────
   const openCreate = () => setDialog({ open: true, mode: 'create', data: { ...EMPTY_FORM } });
 
   const openEdit = (l) => setDialog({
@@ -490,13 +514,8 @@ export default function Licencias() {
   };
 
   const handleDelete = async () => {
-    try {
-      await licenciasApi.delete(confirmDel.id);
-      setConfirmDel(null);
-      load();
-    } catch (e) {
-      setError('Error al eliminar: ' + (e.response?.data || e.message));
-    }
+    try { await licenciasApi.delete(confirmDel.id); setConfirmDel(null); load(); }
+    catch (e) { setError('Error al eliminar: ' + (e.response?.data || e.message)); }
   };
 
   const handleExportar = async () => {
@@ -516,6 +535,7 @@ export default function Licencias() {
     onChange: (e) => setDialog(d => ({ ...d, data: { ...d.data, [key]: e.target.value } })),
   });
 
+  // ── Render ────────────────────────────────────────────────────────────────
   if (loading) return (
     <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
       <CircularProgress />
@@ -557,7 +577,7 @@ export default function Licencias() {
 
       {error && <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2 }}>{error}</Alert>}
 
-      {/* ── Alertas (siempre visibles) ───────────────────────────────────────── */}
+      {/* ── Alertas ──────────────────────────────────────────────────────────── */}
       {alertas.length > 0 && (
         <Paper elevation={0} sx={{ p: 2.5, mb: 3, borderRadius: 3, border: '2px solid', borderColor: 'warning.main', bgcolor: '#fffde7' }}>
           <Stack direction="row" spacing={1} alignItems="center" mb={1.5}>
@@ -570,8 +590,7 @@ export default function Licencias() {
             {alertas.map(a => {
               const urgente = a.diasRestantes <= 5;
               return (
-                <Stack key={a.id}
-                  direction={{ xs: 'column', sm: 'row' }} spacing={1}
+                <Stack key={a.id} direction={{ xs: 'column', sm: 'row' }} spacing={1}
                   alignItems={{ sm: 'center' }} justifyContent="space-between"
                   sx={{
                     px: 2, py: 1, borderRadius: 2,
@@ -580,10 +599,7 @@ export default function Licencias() {
                   }}
                 >
                   <Stack direction="row" spacing={1.5} alignItems="center">
-                    {urgente
-                      ? <ErrorOutlineIcon color="error" fontSize="small" />
-                      : <WarningAmberIcon color="warning" fontSize="small" />
-                    }
+                    {urgente ? <ErrorOutlineIcon color="error" fontSize="small" /> : <WarningAmberIcon color="warning" fontSize="small" />}
                     <Box>
                       <Typography variant="body2" fontWeight={700}>{a.plataforma}</Typography>
                       <Typography variant="caption" color="text.secondary">
@@ -592,14 +608,12 @@ export default function Licencias() {
                     </Box>
                   </Stack>
                   <Chip
-                    size="small"
+                    size="small" color={urgente ? 'error' : 'warning'} sx={{ fontWeight: 700 }}
                     label={
                       a.diasRestantes < 0  ? `Venció hace ${Math.abs(a.diasRestantes)} día${Math.abs(a.diasRestantes) !== 1 ? 's' : ''}` :
                       a.diasRestantes === 0 ? 'Vence HOY' :
                       `${a.diasRestantes} día${a.diasRestantes !== 1 ? 's' : ''} restantes`
                     }
-                    color={urgente ? 'error' : 'warning'}
-                    sx={{ fontWeight: 700 }}
                   />
                 </Stack>
               );
@@ -608,7 +622,7 @@ export default function Licencias() {
         </Paper>
       )}
 
-      {/* ── Tabs ────────────────────────────────────────────────────────────── */}
+      {/* ── Tabs ─────────────────────────────────────────────────────────────── */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tab} onChange={(_, v) => setTab(v)} textColor="primary" indicatorColor="primary">
           <Tab icon={<AssignmentIcon fontSize="small" />} iconPosition="start" label="Licencias" sx={{ fontWeight: 700, minHeight: 48 }} />
@@ -617,7 +631,9 @@ export default function Licencias() {
         </Tabs>
       </Box>
 
-      {/* ── Tab 0: Licencias ─────────────────────────────────────────────────── */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
+      {/* Tab 0: Licencias                                                      */}
+      {/* ══════════════════════════════════════════════════════════════════════ */}
       {tab === 0 && (
         <>
           {/* Tarjetas de resumen */}
@@ -637,12 +653,9 @@ export default function Licencias() {
                     <Box sx={{ color, fontSize: 28 }}>{icon}</Box>
                     <Box>
                       <Typography variant="caption" color="text.secondary" fontWeight={600}
-                        textTransform="uppercase" letterSpacing={0.5} display="block">
-                        {label}
+                        textTransform="uppercase" letterSpacing={0.5} display="block">{label}
                       </Typography>
-                      <Typography variant="h6" fontWeight={800} sx={{ color }}>
-                        {value ?? 0}
-                      </Typography>
+                      <Typography variant="h6" fontWeight={800} sx={{ color }}>{value ?? 0}</Typography>
                     </Box>
                   </Stack>
                 </Paper>
@@ -650,31 +663,82 @@ export default function Licencias() {
             ))}
           </Grid>
 
-          {/* Filtros */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={2}>
-            <TextField
-              size="small" placeholder="Buscar plataforma…" value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-              InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
-              sx={{ minWidth: 220 }}
-            />
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-              <InputLabel>Área</InputLabel>
-              <Select value={filtroArea} label="Área" onChange={e => setFiltroArea(e.target.value)}>
-                <MenuItem value="">Todas</MenuItem>
-                {AREAS.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel>Estado</InputLabel>
-              <Select value={filtroEstado} label="Estado" onChange={e => setFiltroEstado(e.target.value)}>
-                <MenuItem value="">Todos</MenuItem>
-                {ESTADOS.map(e => <MenuItem key={e} value={e}>{e}</MenuItem>)}
-              </Select>
-            </FormControl>
-          </Stack>
+          {/* ── Filtros ────────────────────────────────────────────────────── */}
+          <Paper elevation={0} sx={{ p: 2, mb: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
+            <Stack direction="row" spacing={1} alignItems="center" mb={1.5}>
+              <FilterListIcon fontSize="small" color="action" />
+              <Typography variant="subtitle2" fontWeight={700}>Filtros</Typography>
+              {filtrosActivos > 0 && (
+                <Chip
+                  label={`${filtrosActivos} activo${filtrosActivos > 1 ? 's' : ''}`}
+                  size="small" color="primary" variant="outlined"
+                />
+              )}
+              {filtrosActivos > 0 && (
+                <Button size="small" startIcon={<ClearIcon fontSize="small" />} onClick={limpiarFiltros}
+                  sx={{ ml: 'auto' }}>
+                  Limpiar
+                </Button>
+              )}
+            </Stack>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} flexWrap="wrap" gap={1.5}>
+              {/* Búsqueda libre */}
+              <TextField
+                size="small" placeholder="Buscar por plataforma, área, responsable…"
+                value={busqueda} onChange={e => setBusqueda(e.target.value)}
+                InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
+                sx={{ minWidth: 280, flex: 1 }}
+              />
+              {/* Área */}
+              <FormControl size="small" sx={{ minWidth: 140 }}>
+                <InputLabel>Área</InputLabel>
+                <Select value={filtroArea} label="Área" onChange={e => setFiltroArea(e.target.value)}>
+                  <MenuItem value="">Todas</MenuItem>
+                  {AREAS.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
+                </Select>
+              </FormControl>
+              {/* Estado */}
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>Estado</InputLabel>
+                <Select value={filtroEstado} label="Estado" onChange={e => setFiltroEstado(e.target.value)}>
+                  <MenuItem value="">Todos</MenuItem>
+                  {ESTADOS.map(e => <MenuItem key={e} value={e}>{e}</MenuItem>)}
+                </Select>
+              </FormControl>
+              {/* Frecuencia */}
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>Frecuencia</InputLabel>
+                <Select value={filtroFrecuencia} label="Frecuencia" onChange={e => setFiltroFrecuencia(e.target.value)}>
+                  <MenuItem value="">Todas</MenuItem>
+                  {FRECUENCIAS.map(f => <MenuItem key={f} value={f}>{f}</MenuItem>)}
+                </Select>
+              </FormControl>
+              {/* Próximo vencimiento */}
+              <FormControl size="small" sx={{ minWidth: 180 }}>
+                <InputLabel>Próximo vencimiento</InputLabel>
+                <Select value={filtroDias} label="Próximo vencimiento" onChange={e => setFiltroDias(e.target.value)}>
+                  <MenuItem value="">Todos</MenuItem>
+                  <MenuItem value="vence7">Vence en 7 días</MenuItem>
+                  <MenuItem value="vence30">Vence en 30 días</MenuItem>
+                  <MenuItem value="vencidas">Ya vencidas</MenuItem>
+                </Select>
+              </FormControl>
+            </Stack>
 
-          {/* Tabla */}
+            {/* Indicador de resultados */}
+            <Stack direction="row" spacing={1} alignItems="center" mt={1.5}>
+              <Typography variant="caption" color="text.secondary">
+                Mostrando <strong>{licenciasFiltradas.length}</strong> de <strong>{licencias.length}</strong> licencias
+              </Typography>
+              {licenciasFiltradas.length > 0 && (
+                <Typography variant="caption" color="text.secondary">
+                  · Costo anual filtrado: <strong>{fmt$(licenciasFiltradas.reduce((s, l) => s + (l.costoAnualMXN ?? 0), 0))}</strong>
+                </Typography>
+              )}
+            </Stack>
+          </Paper>
+
+          {/* ── Tabla ──────────────────────────────────────────────────────── */}
           <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
             <TableContainer>
               <Table size="small">
@@ -688,8 +752,14 @@ export default function Licencias() {
                 <TableBody>
                   {licenciasFiltradas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                        No hay licencias registradas.
+                      <TableCell colSpan={10} align="center" sx={{ py: 5, color: 'text.secondary' }}>
+                        <Stack alignItems="center" spacing={1}>
+                          <FilterListIcon sx={{ fontSize: 40, color: 'text.disabled' }} />
+                          <Typography variant="body2">No hay licencias que coincidan con los filtros.</Typography>
+                          {filtrosActivos > 0 && (
+                            <Button size="small" onClick={limpiarFiltros}>Limpiar filtros</Button>
+                          )}
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   ) : licenciasFiltradas.map((l, idx) => {
@@ -697,7 +767,14 @@ export default function Licencias() {
                     return (
                       <TableRow key={l.id} sx={{ bgcolor: idx % 2 === 0 ? 'white' : '#fafafa', '&:hover': { bgcolor: '#f0f4ff' } }}>
                         <TableCell sx={{ fontSize: 12, fontWeight: 600 }}>{l.numero}</TableCell>
-                        <TableCell sx={{ fontSize: 13, fontWeight: 600 }}>{l.plataforma}</TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2" fontWeight={600} fontSize={13}>{l.plataforma}</Typography>
+                            {l.responsable && (
+                              <Typography variant="caption" color="text.secondary">{l.responsable}</Typography>
+                            )}
+                          </Box>
+                        </TableCell>
                         <TableCell>
                           <Chip label={l.area} size="small" variant="outlined"
                             sx={{ fontSize: 11, borderColor: AREA_COLOR[l.area], color: AREA_COLOR[l.area] }} />
@@ -706,7 +783,7 @@ export default function Licencias() {
                         <TableCell sx={{ fontSize: 12 }}>{l.proximoPago}</TableCell>
                         <TableCell sx={{
                           fontSize: 12, fontWeight: 600,
-                          color: l.diasRestantes <= 0 ? 'error.main'
+                          color: l.diasRestantes <  0  ? 'error.main'
                                : l.diasRestantes <= 5  ? 'error.main'
                                : l.diasRestantes <= 10 ? 'warning.dark' : 'inherit',
                         }}>
@@ -743,10 +820,10 @@ export default function Licencias() {
         </>
       )}
 
-      {/* ── Tab 1: Gastos ────────────────────────────────────────────────────── */}
+      {/* Tab 1: Gastos */}
       {tab === 1 && <GastosSection licencias={licencias} />}
 
-      {/* ── Tab 2: Calendario ────────────────────────────────────────────────── */}
+      {/* Tab 2: Calendario */}
       {tab === 2 && <CalendarioSection licencias={licencias} />}
 
       {/* ── Dialog: Crear / Editar ───────────────────────────────────────────── */}
