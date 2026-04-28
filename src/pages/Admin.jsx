@@ -11,7 +11,10 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import PersonIcon from '@mui/icons-material/Person';
-import { userApi } from '../api/pandoraApi';
+import BackupIcon from '@mui/icons-material/Backup';
+import SaveIcon from '@mui/icons-material/Save';
+import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
+import { userApi, adminApi, ticketApi } from '../api/pandoraApi';
 import { MODULE_LABELS, MODULES, useAuth } from '../hooks/useAuth.jsx';
 
 const ALL_MODULES = Object.entries(MODULE_LABELS).map(([value, label]) => ({
@@ -38,6 +41,52 @@ export default function Admin() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+
+  // ── Backup ────────────────────────────────────────────────────────────────
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupMsg,     setBackupMsg]     = useState('');
+
+  const handleBackup = async () => {
+    setBackupLoading(true);
+    setBackupMsg('');
+    try {
+      await adminApi.downloadBackup();
+      setBackupMsg('✅ Backup descargado correctamente.');
+    } catch (e) {
+      setBackupMsg(`❌ Error: ${e.message}`);
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  // ── Emails de áreas de tickets ────────────────────────────────────────────
+  const [areaConfigs,      setAreaConfigs]      = useState([]);
+  const [areaConfigsLoading, setAreaConfigsLoading] = useState(false);
+  const [areaConfigsSaving,  setAreaConfigsSaving]  = useState(false);
+  const [areaConfigsMsg,     setAreaConfigsMsg]     = useState('');
+
+  const loadAreaConfigs = () => {
+    setAreaConfigsLoading(true);
+    ticketApi.getAreaConfigs()
+      .then(r => setAreaConfigs(r.data))
+      .catch(() => setAreaConfigsMsg('Error al cargar configuración de áreas.'))
+      .finally(() => setAreaConfigsLoading(false));
+  };
+
+  React.useEffect(() => { loadAreaConfigs(); }, []);
+
+  const saveAreaConfigs = async () => {
+    setAreaConfigsSaving(true);
+    setAreaConfigsMsg('');
+    try {
+      await ticketApi.updateAreaConfigs(areaConfigs);
+      setAreaConfigsMsg('✅ Correos de áreas guardados.');
+    } catch {
+      setAreaConfigsMsg('❌ Error al guardar.');
+    } finally {
+      setAreaConfigsSaving(false);
+    }
+  };
 
   const load = () =>
     userApi.getAll()
@@ -138,12 +187,90 @@ export default function Admin() {
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
           <AdminPanelSettingsIcon color="primary" sx={{ fontSize: 32 }} />
-          <Typography variant="h4" fontWeight={800} color="primary.main">Administración de Usuarios</Typography>
+          <Typography variant="h4" fontWeight={800} color="primary.main">Administración</Typography>
         </Stack>
         <Button variant="contained" startIcon={<AddIcon />} onClick={openNew}>Nuevo Usuario</Button>
       </Stack>
 
       {error && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>{error}</Alert>}
+
+      {/* ── Backup de base de datos ──────────────────────────────────────── */}
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Stack direction="row" alignItems="center" spacing={1.5} mb={2}>
+            <BackupIcon color="primary" sx={{ fontSize: 26 }} />
+            <Typography variant="h6" fontWeight={700}>Backup de Base de Datos</Typography>
+          </Stack>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Descarga una copia de seguridad completa de la base de datos en formato <strong>.bak</strong> (SQL Server) o <strong>.sql</strong> (LocalDB).
+          </Typography>
+          {backupMsg && (
+            <Alert severity={backupMsg.startsWith('✅') ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setBackupMsg('')}>
+              {backupMsg}
+            </Alert>
+          )}
+          <Button
+            variant="contained" startIcon={backupLoading ? <CircularProgress size={18} color="inherit" /> : <BackupIcon />}
+            onClick={handleBackup} disabled={backupLoading}
+            sx={{ borderRadius: 2 }}
+          >
+            {backupLoading ? 'Generando backup...' : 'Descargar Backup'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* ── Correos de notificación por área (Tickets) ──────────────────── */}
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Stack direction="row" alignItems="center" spacing={1.5} mb={1}>
+            <MarkEmailReadIcon color="primary" sx={{ fontSize: 26 }} />
+            <Typography variant="h6" fontWeight={700}>Correos de Notificación — Áreas HelpDesk</Typography>
+          </Stack>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Cuando se crea un ticket, se notifica automáticamente al correo configurado para el área seleccionada.
+          </Typography>
+          {areaConfigsMsg && (
+            <Alert severity={areaConfigsMsg.startsWith('✅') ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setAreaConfigsMsg('')}>
+              {areaConfigsMsg}
+            </Alert>
+          )}
+          {areaConfigsLoading ? (
+            <Box textAlign="center" py={3}><CircularProgress /></Box>
+          ) : (
+            <Stack spacing={1.5}>
+              {areaConfigs.map((cfg, idx) => (
+                <Stack key={cfg.area ?? idx} direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems={{ sm: 'center' }}>
+                  <Typography variant="body2" fontWeight={600} sx={{ minWidth: 180 }}>{cfg.area}</Typography>
+                  <TextField
+                    size="small" fullWidth
+                    placeholder={`correo-${cfg.area?.toLowerCase().replace(/\s/g, '')}@imet.edu.mx`}
+                    value={cfg.notificationEmail ?? ''}
+                    type="email"
+                    onChange={e => setAreaConfigs(prev =>
+                      prev.map((c, i) => i === idx ? { ...c, notificationEmail: e.target.value } : c)
+                    )}
+                  />
+                </Stack>
+              ))}
+              <Box pt={1}>
+                <Button
+                  variant="contained" startIcon={areaConfigsSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                  onClick={saveAreaConfigs} disabled={areaConfigsSaving}
+                  sx={{ borderRadius: 2 }}
+                >
+                  {areaConfigsSaving ? 'Guardando...' : 'Guardar correos'}
+                </Button>
+              </Box>
+            </Stack>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Usuarios ──────────────────────────────────────────────────────── */}
+      <Stack direction="row" alignItems="center" spacing={1.5} mb={2}>
+        <PersonIcon color="primary" sx={{ fontSize: 26 }} />
+        <Typography variant="h6" fontWeight={700}>Gestión de Usuarios</Typography>
+      </Stack>
 
       <Card>
         <CardContent sx={{ p: 0 }}>

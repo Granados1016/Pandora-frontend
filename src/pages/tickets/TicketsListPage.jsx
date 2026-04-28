@@ -53,8 +53,9 @@ function PriorityChip({ priority }) {
   );
 }
 
-const STATUSES  = ['Abierto', 'En Progreso', 'En Espera', 'Resuelto', 'Cerrado'];
+const STATUSES   = ['Abierto', 'En Progreso', 'En Espera', 'Resuelto', 'Cerrado'];
 const PRIORITIES = ['Baja', 'Media', 'Alta', 'Crítica'];
+const AREAS      = ['Administración', 'Comercial', 'TI', 'MKT', 'Programas Académicos'];
 
 // ── Columnas del DataGrid ─────────────────────────────────────────────────────
 
@@ -86,6 +87,14 @@ function buildColumns(navigate) {
     {
       field: 'priority', headerName: 'Prioridad', width: 110,
       renderCell: ({ value }) => <PriorityChip priority={value} />,
+    },
+    {
+      field: 'area', headerName: 'Área', width: 160,
+      renderCell: ({ value }) => (
+        <Typography variant="body2" color={value ? 'text.primary' : 'text.disabled'} noWrap>
+          {value ?? '—'}
+        </Typography>
+      ),
     },
     {
       field: 'assignedTo', headerName: 'Asignado a', width: 150,
@@ -121,6 +130,7 @@ export default function TicketsListPage() {
   const [search,    setSearch]    = useState('');
   const [statusF,   setStatusF]   = useState('');
   const [priorityF, setPriorityF] = useState('');
+  const [areaF,     setAreaF]     = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -129,6 +139,7 @@ export default function TicketsListPage() {
       const params = {};
       if (statusF)   params.status   = statusF;
       if (priorityF) params.priority = priorityF;
+      if (areaF)     params.area     = areaF;
       if (search)    params.search   = search;
       const { data } = await ticketApi.getAll(params);
       setTickets(data);
@@ -137,7 +148,7 @@ export default function TicketsListPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusF, priorityF, search]);
+  }, [statusF, priorityF, areaF, search]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -218,6 +229,13 @@ export default function TicketsListPage() {
           >
             <MenuItem value="">Todas</MenuItem>
             {PRIORITIES.map(p => <MenuItem key={p} value={p}>{p}</MenuItem>)}
+          </TextField>
+          <TextField
+            select size="small" label="Área" value={areaF}
+            onChange={e => setAreaF(e.target.value)} sx={{ minWidth: 160 }}
+          >
+            <MenuItem value="">Todas</MenuItem>
+            {AREAS.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
           </TextField>
           <Tooltip title="Recargar">
             <IconButton onClick={load} disabled={loading}>

@@ -268,19 +268,22 @@ export const licenciasApi = {
 
 export const ticketApi = {
   // Template
-  getTemplate:    ()           => api.get('/tickets/template'),
-  updateTemplate: (data)       => api.put('/tickets/template', data),
-  addField:       (data)       => api.post('/tickets/template/fields', data),
-  updateField:    (id, data)   => api.put(`/tickets/template/fields/${id}`, data),
-  deleteField:    (id)         => api.delete(`/tickets/template/fields/${id}`),
-  reorderFields:  (items)      => api.put('/tickets/template/fields/reorder', items),
+  getTemplate:      ()           => api.get('/tickets/template'),
+  updateTemplate:   (data)       => api.put('/tickets/template', data),
+  addField:         (data)       => api.post('/tickets/template/fields', data),
+  updateField:      (id, data)   => api.put(`/tickets/template/fields/${id}`, data),
+  deleteField:      (id)         => api.delete(`/tickets/template/fields/${id}`),
+  reorderFields:    (items)      => api.put('/tickets/template/fields/reorder', items),
+  // Area configs (correos de notificación)
+  getAreaConfigs:   ()           => api.get('/tickets/area-configs'),
+  updateAreaConfigs:(configs)    => api.put('/tickets/area-configs', configs),
   // Tickets
-  getAll:         (params)     => api.get('/tickets', { params }),
-  getById:        (id)         => api.get(`/tickets/${id}`),
-  create:         (formData)   => api.post('/tickets', formData),
-  updateStatus:   (id, data)   => api.put(`/tickets/${id}/status`, data),
-  addComment:     (id, data)   => api.post(`/tickets/${id}/comments`, data),
-  delete:         (id)         => api.delete(`/tickets/${id}`),
+  getAll:           (params)     => api.get('/tickets', { params }),
+  getById:          (id)         => api.get(`/tickets/${id}`),
+  create:           (formData)   => api.post('/tickets', formData),
+  updateStatus:     (id, data)   => api.put(`/tickets/${id}/status`, data),
+  addComment:       (id, data)   => api.post(`/tickets/${id}/comments`, data),
+  delete:           (id)         => api.delete(`/tickets/${id}`),
 };
 
 export const adminApi = {

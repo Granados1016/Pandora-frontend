@@ -19,6 +19,14 @@ import { useAuth }            from '../../hooks/useAuth.jsx';
 
 const PRIORITIES = ['Baja', 'Media', 'Alta', 'Crítica'];
 
+const AREAS = [
+  'Administración',
+  'Comercial',
+  'TI',
+  'MKT',
+  'Programas Académicos',
+];
+
 const PRIORITY_COLOR = {
   Baja:    '#616161',
   Media:   '#1565c0',
@@ -303,6 +311,7 @@ export default function TicketFormPage() {
       const formData = new FormData();
       formData.append('title',            title.trim());
       formData.append('priority',         priority);
+      formData.append('area',             department.trim());
       formData.append('department',       department.trim());
       formData.append('submittedByEmail', email.trim());
       formData.append('fieldValuesJson',  JSON.stringify(fieldValues));
@@ -417,12 +426,13 @@ export default function TicketFormPage() {
               </Grid>
               <Grid item xs={12} sm={4}>
                 <TextField
-                  fullWidth size="small" label="Departamento"
+                  select fullWidth size="small" label="Área *"
                   value={department}
                   onChange={e => setDepartment(e.target.value)}
-                  placeholder="Tu área o departamento"
-                  inputProps={{ maxLength: 200 }}
-                />
+                >
+                  <MenuItem value=""><em>— Selecciona tu área —</em></MenuItem>
+                  {AREAS.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
+                </TextField>
               </Grid>
               <Grid item xs={12} sm={4}>
                 <TextField
