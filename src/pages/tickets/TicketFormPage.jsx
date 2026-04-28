@@ -20,11 +20,20 @@ import { useAuth }            from '../../hooks/useAuth.jsx';
 const PRIORITIES = ['Baja', 'Media', 'Alta', 'Crítica'];
 
 const AREAS = [
-  'Administración',
-  'Comercial',
-  'TI',
-  'MKT',
-  'Programas Académicos',
+  'Dirección General',
+  'Dirección Administración',
+  'Dirección de programas académicos',
+  'Dirección comercial',
+  'Coordinación de TI',
+  'Coordinación de Mercadotecnia',
+  'Coordinación de Innovación',
+  'Coordinación de Control escolar',
+  'Diseño',
+  'Community Manager',
+  'Audio Visual',
+  'Asesor 1',
+  'Asesor 2',
+  'Asesor 3',
 ];
 
 const PRIORITY_COLOR = {
@@ -426,11 +435,11 @@ export default function TicketFormPage() {
               </Grid>
               <Grid item xs={12} sm={4}>
                 <TextField
-                  select fullWidth size="small" label="Área *"
+                  select fullWidth size="small" label="Puesto *"
                   value={department}
                   onChange={e => setDepartment(e.target.value)}
                 >
-                  <MenuItem value=""><em>— Selecciona tu área —</em></MenuItem>
+                  <MenuItem value=""><em>— Selecciona tu puesto —</em></MenuItem>
                   {AREAS.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
                 </TextField>
               </Grid>
