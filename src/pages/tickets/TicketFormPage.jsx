@@ -19,23 +19,6 @@ import { useAuth }            from '../../hooks/useAuth.jsx';
 
 const PRIORITIES = ['Baja', 'Media', 'Alta', 'Crítica'];
 
-const AREAS = [
-  'Dirección General',
-  'Dirección Administración',
-  'Dirección de programas académicos',
-  'Dirección comercial',
-  'Coordinación de TI',
-  'Coordinación de Mercadotecnia',
-  'Coordinación de Innovación',
-  'Coordinación de Control escolar',
-  'Diseño',
-  'Community Manager',
-  'Audio Visual',
-  'Asesor 1',
-  'Asesor 2',
-  'Asesor 3',
-];
-
 const PRIORITY_COLOR = {
   Baja:    '#616161',
   Media:   '#1565c0',
@@ -263,6 +246,7 @@ export default function TicketFormPage() {
 
   const [template,     setTemplate]     = useState(null);
   const [fields,       setFields]       = useState([]);
+  const [areas,        setAreas]        = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [saving,       setSaving]       = useState(false);
   const [success,      setSuccess]      = useState(null); // { id, ticketNumber }
@@ -280,12 +264,16 @@ export default function TicketFormPage() {
   // Attachments
   const [files,        setFiles]        = useState([]);
 
-  // Load template
+  // Load template + puestos
   const load = useCallback(async () => {
     try {
-      const { data } = await ticketApi.getTemplate();
+      const [{ data }, { data: positions }] = await Promise.all([
+        ticketApi.getTemplate(),
+        ticketApi.getPositions(),
+      ]);
       setTemplate(data.template);
       setFields(data.fields ?? []);
+      setAreas(positions ?? []);
     } catch (e) {
       setError(apiError(e, 'No se pudo cargar el formulario. Intenta de nuevo.'));
     } finally {
@@ -440,7 +428,7 @@ export default function TicketFormPage() {
                   onChange={e => setDepartment(e.target.value)}
                 >
                   <MenuItem value=""><em>— Selecciona tu puesto —</em></MenuItem>
-                  {AREAS.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
+                  {areas.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
                 </TextField>
               </Grid>
               <Grid item xs={12} sm={4}>

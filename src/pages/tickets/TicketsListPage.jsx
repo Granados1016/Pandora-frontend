@@ -55,22 +55,6 @@ function PriorityChip({ priority }) {
 
 const STATUSES   = ['Abierto', 'En Progreso', 'En Espera', 'Resuelto', 'Cerrado'];
 const PRIORITIES = ['Baja', 'Media', 'Alta', 'Crítica'];
-const AREAS      = [
-  'Dirección General',
-  'Dirección Administración',
-  'Dirección de programas académicos',
-  'Dirección comercial',
-  'Coordinación de TI',
-  'Coordinación de Mercadotecnia',
-  'Coordinación de Innovación',
-  'Coordinación de Control escolar',
-  'Diseño',
-  'Community Manager',
-  'Audio Visual',
-  'Asesor 1',
-  'Asesor 2',
-  'Asesor 3',
-];
 
 // ── Columnas del DataGrid ─────────────────────────────────────────────────────
 
@@ -140,12 +124,20 @@ export default function TicketsListPage() {
   const navigate             = useNavigate();
   const { isAdmin }          = useAuth();
   const [tickets,   setTickets]   = useState([]);
+  const [areas,     setAreas]     = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState('');
   const [search,    setSearch]    = useState('');
   const [statusF,   setStatusF]   = useState('');
   const [priorityF, setPriorityF] = useState('');
   const [areaF,     setAreaF]     = useState('');
+
+  // Cargar puestos del catálogo una sola vez al montar
+  useEffect(() => {
+    ticketApi.getPositions()
+      .then(r => setAreas(r.data ?? []))
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -246,11 +238,11 @@ export default function TicketsListPage() {
             {PRIORITIES.map(p => <MenuItem key={p} value={p}>{p}</MenuItem>)}
           </TextField>
           <TextField
-            select size="small" label="Área" value={areaF}
-            onChange={e => setAreaF(e.target.value)} sx={{ minWidth: 160 }}
+            select size="small" label="Puesto" value={areaF}
+            onChange={e => setAreaF(e.target.value)} sx={{ minWidth: 200 }}
           >
-            <MenuItem value="">Todas</MenuItem>
-            {AREAS.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
+            <MenuItem value="">Todos</MenuItem>
+            {areas.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
           </TextField>
           <Tooltip title="Recargar">
             <IconButton onClick={load} disabled={loading}>

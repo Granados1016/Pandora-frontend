@@ -274,7 +274,11 @@ export const ticketApi = {
   updateField:      (id, data)   => api.put(`/tickets/template/fields/${id}`, data),
   deleteField:      (id)         => api.delete(`/tickets/template/fields/${id}`),
   reorderFields:    (items)      => api.put('/tickets/template/fields/reorder', items),
-  // Area configs (correos de notificación)
+  // Puestos — catálogo
+  getPositions:     ()           => api.get('/tickets/positions'),
+  createPosition:   (area)       => api.post('/tickets/area-configs', { area }),
+  deletePosition:   (id)         => api.delete(`/tickets/area-configs/${id}`),
+  // Area configs (correos de notificación + gestión admin)
   getAreaConfigs:   ()           => api.get('/tickets/area-configs'),
   updateAreaConfigs:(configs)    => api.put('/tickets/area-configs', configs),
   // Tickets
