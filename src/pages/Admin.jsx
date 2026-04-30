@@ -20,7 +20,7 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import BlockIcon from '@mui/icons-material/Block';
 import { userApi, adminApi, ticketApi } from '../api/pandoraApi';
-import { MODULE_LABELS, MODULES, useAuth } from '../hooks/useAuth.jsx';
+import { MODULE_LABELS, MODULES, SUB_MODULES, useAuth } from '../hooks/useAuth.jsx';
 
 const ALL_MODULES = Object.entries(MODULE_LABELS).map(([value, label]) => ({
   value: parseInt(value),
@@ -616,47 +616,93 @@ export default function Admin() {
                   {ALL_MODULES.filter(m => m.value !== MODULES.ADMIN).map(m => {
                     const access = getModuleAccess(m.value, form.modules, form.modulesViewOnly);
                     const canBeViewOnly = MODULES_WITH_WRITE.has(m.value);
+                    const subs = SUB_MODULES.filter(s => s.parent === m.value);
                     return (
-                      <Stack key={m.value} direction="row" alignItems="center"
-                        justifyContent="space-between"
-                        sx={{
-                          px: 1.5, py: 0.75, borderRadius: 1,
-                          border: '1px solid',
-                          borderColor: access === 'none' ? 'divider'
-                            : access === 'view' ? 'info.light' : 'success.light',
-                          bgcolor: access === 'none' ? 'transparent'
-                            : access === 'view' ? 'info.50' : 'success.50',
-                        }}
-                      >
-                        <Typography variant="body2" color={access === 'none' ? 'text.disabled' : 'text.primary'}>
-                          {m.label}
-                        </Typography>
-                        <ToggleButtonGroup
-                          value={access}
-                          exclusive
-                          size="small"
-                          onChange={(_, v) => v && setModuleAccess(m.value, v)}
-                          sx={{ '& .MuiToggleButton-root': { py: 0.25, px: 1, fontSize: 11 } }}
+                      <Box key={m.value} sx={{
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: access === 'none' ? 'divider'
+                          : access === 'view' ? 'info.light' : 'success.light',
+                        bgcolor: access === 'none' ? 'transparent'
+                          : access === 'view' ? 'info.50' : 'success.50',
+                        overflow: 'hidden',
+                      }}>
+                        {/* Fila principal del módulo */}
+                        <Stack direction="row" alignItems="center"
+                          justifyContent="space-between"
+                          sx={{ px: 1.5, py: 0.75 }}
                         >
-                          <ToggleButton value="none">
-                            <Tooltip title="Sin acceso">
-                              <BlockIcon sx={{ fontSize: 14 }} />
-                            </Tooltip>
-                          </ToggleButton>
-                          {canBeViewOnly && (
-                            <ToggleButton value="view" sx={{ color: access === 'view' ? 'info.main' : undefined }}>
-                              <Tooltip title="Solo vista">
-                                <VisibilityIcon sx={{ fontSize: 14 }} />
+                          <Typography variant="body2" color={access === 'none' ? 'text.disabled' : 'text.primary'}>
+                            {m.label}
+                          </Typography>
+                          <ToggleButtonGroup
+                            value={access}
+                            exclusive
+                            size="small"
+                            onChange={(_, v) => v && setModuleAccess(m.value, v)}
+                            sx={{ '& .MuiToggleButton-root': { py: 0.25, px: 1, fontSize: 11 } }}
+                          >
+                            <ToggleButton value="none">
+                              <Tooltip title="Sin acceso">
+                                <BlockIcon sx={{ fontSize: 14 }} />
                               </Tooltip>
                             </ToggleButton>
-                          )}
-                          <ToggleButton value="write" sx={{ color: access === 'write' ? 'success.main' : undefined }}>
-                            <Tooltip title={canBeViewOnly ? 'Escritura completa' : 'Acceso'}>
-                              <EditNoteIcon sx={{ fontSize: 14 }} />
-                            </Tooltip>
-                          </ToggleButton>
-                        </ToggleButtonGroup>
-                      </Stack>
+                            {canBeViewOnly && (
+                              <ToggleButton value="view" sx={{ color: access === 'view' ? 'info.main' : undefined }}>
+                                <Tooltip title="Solo vista">
+                                  <VisibilityIcon sx={{ fontSize: 14 }} />
+                                </Tooltip>
+                              </ToggleButton>
+                            )}
+                            <ToggleButton value="write" sx={{ color: access === 'write' ? 'success.main' : undefined }}>
+                              <Tooltip title={canBeViewOnly ? 'Escritura completa' : 'Acceso'}>
+                                <EditNoteIcon sx={{ fontSize: 14 }} />
+                              </Tooltip>
+                            </ToggleButton>
+                          </ToggleButtonGroup>
+                        </Stack>
+
+                        {/* Sub-permisos (solo cuando el módulo tiene acceso y tiene secciones) */}
+                        {access !== 'none' && subs.length > 0 && (
+                          <Box sx={{
+                            px: 2, py: 0.75,
+                            borderTop: '1px dashed',
+                            borderColor: access === 'view' ? 'info.light' : 'success.light',
+                            bgcolor: 'background.paper',
+                          }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={700}
+                              sx={{ display: 'block', mb: 0.5, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                              Secciones adicionales
+                            </Typography>
+                            <FormGroup row sx={{ gap: 0 }}>
+                              {subs.map(s => (
+                                <FormControlLabel
+                                  key={s.bit}
+                                  control={
+                                    <Checkbox
+                                      size="small"
+                                      checked={(form.modules & s.bit) !== 0}
+                                      onChange={e => setForm(f => ({
+                                        ...f,
+                                        modules: e.target.checked
+                                          ? f.modules | s.bit
+                                          : f.modules & ~s.bit,
+                                      }))}
+                                      sx={{ py: 0.25 }}
+                                    />
+                                  }
+                                  label={
+                                    <Typography variant="caption" color="text.secondary">
+                                      {s.label}
+                                    </Typography>
+                                  }
+                                  sx={{ mr: 2, mb: 0 }}
+                                />
+                              ))}
+                            </FormGroup>
+                          </Box>
+                        )}
+                      </Box>
                     );
                   })}
                 </Stack>

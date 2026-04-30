@@ -47,7 +47,7 @@ const TRANSITION = 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
 export default function Layout({ children }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { username, fullName, isAdmin, hasModule, hasModuleWrite, logout } = useAuth();
+  const { username, fullName, isAdmin, hasModule, hasSubModule, hasModuleWrite, logout } = useAuth();
 
   // Estado del sidebar (desktop)
   const [open, setOpen] = useState(
@@ -131,24 +131,24 @@ export default function Layout({ children }) {
       label: 'Inventario',
       show: hasModule(MODULES.INVENTARIO),
       items: [
-        { label: 'Dashboard',  icon: <BarChartIcon />,  path: '/inventory',       show: hasModule(MODULES.INVENTARIO) },
+        { label: 'Dashboard',  icon: <BarChartIcon />,  path: '/inventory',       show: hasSubModule(MODULES.INV_DASHBOARD) || isAdmin },
         { label: 'Equipos',    icon: <InventoryIcon />, path: '/inventory/items', show: hasModule(MODULES.INVENTARIO) },
-        { label: 'Categorías', icon: <CategoryIcon />,  path: '/inventory/types', show: hasModule(MODULES.INVENTARIO) },
+        { label: 'Categorías', icon: <CategoryIcon />,  path: '/inventory/types', show: hasSubModule(MODULES.INV_TYPES) || isAdmin },
       ],
     },
     {
       label: 'Catálogos',
-      show: hasModule(MODULES.INVENTARIO),
+      show: hasSubModule(MODULES.INV_CATALOGS) || isAdmin,
       items: [
-        { label: 'Departamentos', icon: <ApartmentIcon />, path: '/catalogs/departments', show: hasModule(MODULES.INVENTARIO) },
-        { label: 'Personal',      icon: <PeopleIcon />,    path: '/catalogs/employees',   show: hasModule(MODULES.INVENTARIO) },
+        { label: 'Departamentos', icon: <ApartmentIcon />, path: '/catalogs/departments', show: hasSubModule(MODULES.INV_CATALOGS) || isAdmin },
+        { label: 'Personal',      icon: <PeopleIcon />,    path: '/catalogs/employees',   show: hasSubModule(MODULES.INV_CATALOGS) || isAdmin },
       ],
     },
     {
       label: 'Tickets',
       show: hasModule(MODULES.HELPDESK) || isAdmin,
       items: [
-        { label: 'Mis Tickets',  icon: <ConfirmationNumberIcon />, path: '/tickets',          show: hasModule(MODULES.HELPDESK) || isAdmin },
+        { label: hasSubModule(MODULES.HD_GLOBAL) || isAdmin ? 'Todos los Tickets' : 'Mis Tickets', icon: <ConfirmationNumberIcon />, path: '/tickets', show: hasModule(MODULES.HELPDESK) || isAdmin },
         { label: 'Nuevo Ticket', icon: <AddTaskIcon />,            path: '/tickets/new',      show: hasModuleWrite(MODULES.HELPDESK) || isAdmin },
         { label: 'Configurar',   icon: <TuneIcon />,               path: '/tickets/template', show: isAdmin },
       ],

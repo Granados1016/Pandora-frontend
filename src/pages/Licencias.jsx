@@ -402,8 +402,9 @@ function CalendarioSection({ licencias }) {
 
 // ── componente principal ──────────────────────────────────────────────────────
 export default function Licencias() {
-  const { isAdmin, hasModuleWrite } = useAuth();
-  const canWrite = hasModuleWrite(MODULES.LICENCIAS);
+  const { isAdmin, hasModuleWrite, hasSubModule } = useAuth();
+  const canWrite   = hasModuleWrite(MODULES.LICENCIAS);
+  const canSeeStats = hasSubModule(MODULES.LIC_STATS) || isAdmin;
   const [tab, setTab] = useState(0);
 
   const [dashboard, setDashboard] = useState(null);
@@ -625,10 +626,10 @@ export default function Licencias() {
 
       {/* ── Tabs ─────────────────────────────────────────────────────────────── */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} textColor="primary" indicatorColor="primary">
+        <Tabs value={canSeeStats ? tab : 0} onChange={(_, v) => canSeeStats && setTab(v)} textColor="primary" indicatorColor="primary">
           <Tab icon={<AssignmentIcon fontSize="small" />} iconPosition="start" label="Licencias" sx={{ fontWeight: 700, minHeight: 48 }} />
-          <Tab icon={<AttachMoneyIcon fontSize="small" />} iconPosition="start" label="Gastos" sx={{ fontWeight: 700, minHeight: 48 }} />
-          <Tab icon={<CalendarMonthIcon fontSize="small" />} iconPosition="start" label="Calendario" sx={{ fontWeight: 700, minHeight: 48 }} />
+          {canSeeStats && <Tab icon={<AttachMoneyIcon fontSize="small" />} iconPosition="start" label="Gastos" sx={{ fontWeight: 700, minHeight: 48 }} />}
+          {canSeeStats && <Tab icon={<CalendarMonthIcon fontSize="small" />} iconPosition="start" label="Calendario" sx={{ fontWeight: 700, minHeight: 48 }} />}
         </Tabs>
       </Box>
 
@@ -645,8 +646,10 @@ export default function Licencias() {
               { label: 'Por vencer',  value: stats.porVencer,  icon: <WarningAmberIcon />,       color: '#e65100', bg: '#fff3e0' },
               { label: 'Vencidas',    value: stats.vencidas,   icon: <ErrorOutlineIcon />,       color: '#c62828', bg: '#ffebee' },
               { label: 'Canceladas',  value: stats.canceladas, icon: <CancelIcon />,             color: '#616161', bg: '#f5f5f5' },
-              { label: 'Costo mensual', value: fmt$(stats.totalMensualMXN), icon: <AttachMoneyIcon />, color: '#1565c0', bg: '#e3f2fd', wide: true },
-              { label: 'Costo anual',   value: fmt$(stats.totalAnualMXN),   icon: <AttachMoneyIcon />, color: '#4a148c', bg: '#f3e5f5', wide: true },
+              ...(canSeeStats ? [
+                { label: 'Costo mensual', value: fmt$(stats.totalMensualMXN), icon: <AttachMoneyIcon />, color: '#1565c0', bg: '#e3f2fd', wide: true },
+                { label: 'Costo anual',   value: fmt$(stats.totalAnualMXN),   icon: <AttachMoneyIcon />, color: '#4a148c', bg: '#f3e5f5', wide: true },
+              ] : []),
             ].map(({ label, value, icon, color, bg, wide }) => (
               <Grid item xs={6} sm={wide ? 4 : 4} md={wide ? 3 : 2} key={label}>
                 <Paper elevation={0} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: bg, height: '100%' }}>

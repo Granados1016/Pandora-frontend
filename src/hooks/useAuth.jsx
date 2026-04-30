@@ -2,13 +2,26 @@ import { createContext, useContext, useState, useCallback, useMemo, useEffect } 
 import api, { registerTokenUpdater } from '../api/pandoraApi';
 
 export const MODULES = {
+  // ── Módulos principales ──────────────────────────────────────────────────
   MAIL_PLUS:        1,
   INVENTARIO:       2,
   LICENCIAS:        4,
   HELPDESK:         8,
   ADMIN:            16,
   CALENDARIO:       32,
-  CALENDARIO_ADMIN: 128,   // Puede reservar salas y gestionar solicitudes
+  // bit 64 libre
+  CALENDARIO_ADMIN: 128,
+
+  // ── Sub-módulos de Inventario ────────────────────────────────────────────
+  INV_DASHBOARD:    256,   // Ver dashboard/resumen de inventario
+  INV_TYPES:        512,   // Ver y gestionar categorías de equipo
+  INV_CATALOGS:     1024,  // Ver departamentos y personal
+
+  // ── Sub-módulos de HelpDesk ──────────────────────────────────────────────
+  HD_GLOBAL:        2048,  // Ver TODOS los tickets (sin esto = solo los propios)
+
+  // ── Sub-módulos de Licencias ─────────────────────────────────────────────
+  LIC_STATS:        4096,  // Ver dashboard de gastos y estadísticas
 };
 
 export const MODULE_LABELS = {
@@ -20,6 +33,15 @@ export const MODULE_LABELS = {
   32:  'Pandora Calendar (solo vista)',
   128: 'Pandora Calendar — Reservas y Gestión',
 };
+
+// Sub-módulos agrupados por módulo padre — se usan en Admin.jsx
+export const SUB_MODULES = [
+  { bit: MODULES.INV_DASHBOARD, parent: MODULES.INVENTARIO, label: 'Dashboard (resumen general)' },
+  { bit: MODULES.INV_TYPES,     parent: MODULES.INVENTARIO, label: 'Categorías de equipo' },
+  { bit: MODULES.INV_CATALOGS,  parent: MODULES.INVENTARIO, label: 'Departamentos y Personal' },
+  { bit: MODULES.HD_GLOBAL,     parent: MODULES.HELPDESK,   label: 'Ver todos los tickets (sin marcar = solo los propios)' },
+  { bit: MODULES.LIC_STATS,     parent: MODULES.LICENCIAS,  label: 'Dashboard de gastos y estadísticas' },
+];
 
 // ── Roles del sistema ────────────────────────────────────────────────────────
 // Para agregar nuevos roles actualizar también:
@@ -72,8 +94,11 @@ export function AuthProvider({ children }) {
   const modules   = parseInt(claims.modules || '0', 10);
   const isAdmin   = role === 'Admin';
 
-  // Devuelve true si el usuario tiene acceso al módulo (vista o escritura)
+  // Devuelve true si el usuario tiene acceso al módulo/sub-módulo (vista o escritura)
   const hasModule = useCallback((mod) => isAdmin || (modules & mod) !== 0, [isAdmin, modules]);
+
+  // Alias semántico para sub-módulos (misma lógica, nombre más claro)
+  const hasSubModule = useCallback((bit) => isAdmin || (modules & bit) !== 0, [isAdmin, modules]);
 
   // Devuelve true si el usuario tiene acceso de ESCRITURA al módulo.
   // Admin siempre tiene escritura. Si el bit está en modulesViewOnly → solo vista.
@@ -129,7 +154,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       token, username, fullName, role, modules, modulesViewOnly, isAdmin,
-      hasModule, hasModuleWrite, hasRole, login, logout, isAuthenticated: !!token,
+      hasModule, hasSubModule, hasModuleWrite, hasRole, login, logout, isAuthenticated: !!token,
     }}>
       {children}
     </AuthContext.Provider>

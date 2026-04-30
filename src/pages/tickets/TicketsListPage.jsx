@@ -122,8 +122,9 @@ function buildColumns(navigate) {
 
 export default function TicketsListPage() {
   const navigate             = useNavigate();
-  const { isAdmin, hasModuleWrite } = useAuth();
-  const canWrite = hasModuleWrite(MODULES.HELPDESK);
+  const { isAdmin, hasModuleWrite, hasSubModule } = useAuth();
+  const canWrite     = hasModuleWrite(MODULES.HELPDESK);
+  const canSeeAll    = hasSubModule(MODULES.HD_GLOBAL) || isAdmin;
   const [tickets,   setTickets]   = useState([]);
   const [areas,     setAreas]     = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -182,7 +183,7 @@ export default function TicketsListPage() {
             <Box>
               <Typography variant="h5" fontWeight={800}>Tickets de Soporte</Typography>
               <Typography variant="body2" color="text.secondary">
-                {isAdmin ? 'Gestión completa de incidencias' : 'Mis solicitudes de soporte'}
+                {canSeeAll ? 'Gestión completa de incidencias' : 'Mis solicitudes de soporte'}
               </Typography>
             </Box>
           </Stack>

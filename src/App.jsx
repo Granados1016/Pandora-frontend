@@ -118,7 +118,7 @@ function AppRoutes() {
 
               {/* ── Inventario ──────────────────────────────────────────── */}
               <Route path="/inventory" element={
-                <ProtectedRoute requiredModule={MODULES.INVENTARIO}>
+                <ProtectedRoute requiredModule={MODULES.INV_DASHBOARD}>
                   <InventoryDashboard />
                 </ProtectedRoute>
               } />
@@ -128,17 +128,17 @@ function AppRoutes() {
                 </ProtectedRoute>
               } />
               <Route path="/inventory/types" element={
-                <ProtectedRoute requiredModule={MODULES.INVENTARIO}>
+                <ProtectedRoute requiredModule={MODULES.INV_TYPES}>
                   <InventoryTypes />
                 </ProtectedRoute>
               } />
               <Route path="/catalogs/departments" element={
-                <ProtectedRoute requiredModule={MODULES.INVENTARIO}>
+                <ProtectedRoute requiredModule={MODULES.INV_CATALOGS}>
                   <Departments />
                 </ProtectedRoute>
               } />
               <Route path="/catalogs/employees" element={
-                <ProtectedRoute requiredModule={MODULES.INVENTARIO}>
+                <ProtectedRoute requiredModule={MODULES.INV_CATALOGS}>
                   <Employees />
                 </ProtectedRoute>
               } />
