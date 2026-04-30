@@ -284,7 +284,7 @@ export const ticketApi = {
   // Tickets
   getAll:           (params)     => api.get('/tickets', { params }),
   getById:          (id)         => api.get(`/tickets/${id}`),
-  create:           (formData)   => api.post('/tickets', formData),
+  create:           (formData)   => api.post('/tickets', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   updateStatus:     (id, data)   => api.put(`/tickets/${id}/status`, data),
   addComment:       (id, data)   => api.post(`/tickets/${id}/comments`, data),
   delete:           (id)         => api.delete(`/tickets/${id}`),
