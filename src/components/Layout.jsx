@@ -47,7 +47,7 @@ const TRANSITION = 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
 export default function Layout({ children }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { username, fullName, isAdmin, hasModule, logout } = useAuth();
+  const { username, fullName, isAdmin, hasModule, hasModuleWrite, logout } = useAuth();
 
   // Estado del sidebar (desktop)
   const [open, setOpen] = useState(
@@ -122,7 +122,7 @@ export default function Layout({ children }) {
       label: 'Mail+',
       show: hasModule(MODULES.MAIL_PLUS),
       items: [
-        { label: 'Nueva Campaña', icon: <SendIcon />,    path: '/campaigns/new', show: hasModule(MODULES.MAIL_PLUS) },
+        { label: 'Nueva Campaña', icon: <SendIcon />,    path: '/campaigns/new', show: hasModuleWrite(MODULES.MAIL_PLUS) },
         { label: 'Campañas',      icon: <EmailIcon />,   path: '/campaigns',     show: hasModule(MODULES.MAIL_PLUS) },
         { label: 'Plantillas',    icon: <ArticleIcon />, path: '/templates',     show: hasModule(MODULES.MAIL_PLUS) },
       ],
@@ -148,9 +148,9 @@ export default function Layout({ children }) {
       label: 'Tickets',
       show: hasModule(MODULES.HELPDESK) || isAdmin,
       items: [
-        { label: 'Mis Tickets',    icon: <ConfirmationNumberIcon />, path: '/tickets',          show: hasModule(MODULES.HELPDESK) || isAdmin },
-        { label: 'Nuevo Ticket',   icon: <AddTaskIcon />,            path: '/tickets/new',      show: hasModule(MODULES.HELPDESK) || isAdmin },
-        { label: 'Configurar',     icon: <TuneIcon />,               path: '/tickets/template', show: isAdmin },
+        { label: 'Mis Tickets',  icon: <ConfirmationNumberIcon />, path: '/tickets',          show: hasModule(MODULES.HELPDESK) || isAdmin },
+        { label: 'Nuevo Ticket', icon: <AddTaskIcon />,            path: '/tickets/new',      show: hasModuleWrite(MODULES.HELPDESK) || isAdmin },
+        { label: 'Configurar',   icon: <TuneIcon />,               path: '/tickets/template', show: isAdmin },
       ],
     },
     {
@@ -166,7 +166,7 @@ export default function Layout({ children }) {
       items: [
         { label: 'Pandora Calendar',  icon: <CalendarMonthIcon />,   path: '/calendar',             show: hasModule(MODULES.CALENDARIO) || hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
         { label: 'Salas',             icon: <MeetingRoomIcon />,      path: '/calendar/rooms',       show: hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
-        { label: 'Nueva Solicitud',   icon: <AddCircleOutlineIcon />, path: '/calendar/solicitud',   show: hasModule(MODULES.CALENDARIO) || hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
+        { label: 'Nueva Solicitud',   icon: <AddCircleOutlineIcon />, path: '/calendar/solicitud',   show: hasModuleWrite(MODULES.CALENDARIO_ADMIN) || hasModule(MODULES.CALENDARIO) || isAdmin },
         { label: 'Solicitudes',       icon: <PendingActionsIcon />,   path: '/calendar/solicitudes', show: hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
         { label: 'Reportes',          icon: <BarChartOutlinedIcon />, path: '/calendar/reports',     show: hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
       ],
