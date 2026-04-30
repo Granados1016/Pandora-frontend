@@ -12,7 +12,7 @@ import RefreshIcon       from '@mui/icons-material/Refresh';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import { ticketApi }     from '../../api/pandoraApi';
 import { apiError }      from '../../api/apiError';
-import { useAuth }       from '../../hooks/useAuth.jsx';
+import { useAuth, MODULES } from '../../hooks/useAuth.jsx';
 import { format }        from 'date-fns';
 import { es }            from 'date-fns/locale';
 
@@ -122,7 +122,8 @@ function buildColumns(navigate) {
 
 export default function TicketsListPage() {
   const navigate             = useNavigate();
-  const { isAdmin }          = useAuth();
+  const { isAdmin, hasModuleWrite } = useAuth();
+  const canWrite = hasModuleWrite(MODULES.HELPDESK);
   const [tickets,   setTickets]   = useState([]);
   const [areas,     setAreas]     = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -191,9 +192,11 @@ export default function TicketsListPage() {
                 Configurar formulario
               </Button>
             )}
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/tickets/new')} sx={{ borderRadius: 2 }}>
-              Nuevo ticket
-            </Button>
+            {canWrite && (
+              <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/tickets/new')} sx={{ borderRadius: 2 }}>
+                Nuevo ticket
+              </Button>
+            )}
           </Stack>
         </Stack>
       </Paper>

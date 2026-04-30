@@ -10,10 +10,13 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { inventoryApi } from '../../api/pandoraApi';
 import { apiError } from '../../api/apiError';
+import { useAuth, MODULES } from '../../hooks/useAuth.jsx';
 
 const EMPTY = { name: '', description: '', department: '', isActive: true };
 
 export default function InventoryTypes() {
+  const { hasModuleWrite } = useAuth();
+  const canWrite = hasModuleWrite(MODULES.INVENTARIO);
   const [types, setTypes]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
@@ -77,9 +80,11 @@ export default function InventoryTypes() {
           <Typography variant="h5" fontWeight={700}>Categorías de Inventario</Typography>
           <Typography variant="body2" color="text.secondary">Tipos de equipos registrados en el sistema</Typography>
         </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openNew} sx={{ borderRadius: 2 }}>
-          Nueva categoría
-        </Button>
+        {canWrite && (
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openNew} sx={{ borderRadius: 2 }}>
+            Nueva categoría
+          </Button>
+        )}
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
@@ -122,22 +127,24 @@ export default function InventoryTypes() {
                     />
                   </TableCell>
                   <TableCell align="right">
-                    <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(t)}><EditIcon fontSize="small" /></IconButton>
-                      </Tooltip>
-                      <Tooltip title={t.itemCount > 0 ? 'Tiene equipos asociados' : 'Eliminar'}>
-                        <span>
-                          <IconButton
-                            size="small" color="error"
-                            disabled={t.itemCount > 0 || deleting === t.id}
-                            onClick={() => handleDelete(t.id)}
-                          >
-                            {deleting === t.id ? <CircularProgress size={16} /> : <DeleteIcon fontSize="small" />}
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    </Stack>
+                    {canWrite && (
+                      <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                        <Tooltip title="Editar">
+                          <IconButton size="small" onClick={() => openEdit(t)}><EditIcon fontSize="small" /></IconButton>
+                        </Tooltip>
+                        <Tooltip title={t.itemCount > 0 ? 'Tiene equipos asociados' : 'Eliminar'}>
+                          <span>
+                            <IconButton
+                              size="small" color="error"
+                              disabled={t.itemCount > 0 || deleting === t.id}
+                              onClick={() => handleDelete(t.id)}
+                            >
+                              {deleting === t.id ? <CircularProgress size={16} /> : <DeleteIcon fontSize="small" />}
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </Stack>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

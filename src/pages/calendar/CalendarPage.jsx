@@ -35,8 +35,8 @@ const toFcEvent = (r) => ({
 });
 
 export default function CalendarPage() {
-  const { hasModule, isAdmin } = useAuth();
-  const canManage = isAdmin || hasModule(MODULES.CALENDARIO_ADMIN);
+  const { hasModule, hasModuleWrite, isAdmin } = useAuth();
+  const canManage = hasModuleWrite(MODULES.CALENDARIO_ADMIN);
 
   const calRef = useRef(null);
   const [view, setView]           = useState('timeGridWeek');

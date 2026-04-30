@@ -25,7 +25,7 @@ import ChevronRightIcon        from '@mui/icons-material/ChevronRight';
 import FilterListIcon          from '@mui/icons-material/FilterList';
 import ClearIcon               from '@mui/icons-material/Clear';
 import { licenciasApi } from '../api/pandoraApi';
-import { useAuth }      from '../hooks/useAuth.jsx';
+import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const fmt$ = (n) =>
@@ -402,7 +402,8 @@ function CalendarioSection({ licencias }) {
 
 // ── componente principal ──────────────────────────────────────────────────────
 export default function Licencias() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, hasModuleWrite } = useAuth();
+  const canWrite = hasModuleWrite(MODULES.LICENCIAS);
   const [tab, setTab] = useState(0);
 
   const [dashboard, setDashboard] = useState(null);
@@ -567,7 +568,7 @@ export default function Licencias() {
           >
             Exportar Excel
           </Button>
-          {isAdmin && (
+          {canWrite && (
             <Button size="small" variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
               Nueva licencia
             </Button>
@@ -795,7 +796,7 @@ export default function Licencias() {
                           <Chip label={l.estado} color={chip.color} size="small" sx={{ fontWeight: 600, fontSize: 11 }} />
                         </TableCell>
                         <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                          {isAdmin && (
+                          {canWrite && (
                             <>
                               <Tooltip title="Editar">
                                 <IconButton size="small" onClick={() => openEdit(l)}>

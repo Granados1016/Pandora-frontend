@@ -17,9 +17,12 @@ import PeopleIcon from '@mui/icons-material/People';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import { campaignApi } from '../api/pandoraApi';
 import { statusColor, statusLabel, programLabel } from '../utils/statusHelpers';
+import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 
 export default function Campaigns() {
   const navigate = useNavigate();
+  const { hasModuleWrite } = useAuth();
+  const canWrite = hasModuleWrite(MODULES.MAIL_PLUS);
   const [campaigns, setCampaigns]       = useState([]);
   const [deleted, setDeleted]           = useState([]);
   const [loading, setLoading]           = useState(true);
@@ -141,31 +144,35 @@ export default function Campaigns() {
                     <PeopleIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Duplicar campaña">
-                  <IconButton
-                    size="small"
-                    onClick={(e) => handleDuplicate(e, c.id)}
-                    disabled={duplicating === c.id}
-                    sx={{ ml: 0.5 }}
-                  >
-                    {duplicating === c.id
-                      ? <CircularProgress size={16} />
-                      : <ContentCopyIcon fontSize="small" />}
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Eliminar campaña">
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={(e) => { e.stopPropagation(); setConfirmId(c.id); }}
-                    disabled={deleting === c.id}
-                    sx={{ ml: 0 }}
-                  >
-                    {deleting === c.id
-                      ? <CircularProgress size={16} />
-                      : <DeleteIcon fontSize="small" />}
-                  </IconButton>
-                </Tooltip>
+                {canWrite && (
+                  <Tooltip title="Duplicar campaña">
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleDuplicate(e, c.id)}
+                      disabled={duplicating === c.id}
+                      sx={{ ml: 0.5 }}
+                    >
+                      {duplicating === c.id
+                        ? <CircularProgress size={16} />
+                        : <ContentCopyIcon fontSize="small" />}
+                    </IconButton>
+                  </Tooltip>
+                )}
+                {canWrite && (
+                  <Tooltip title="Eliminar campaña">
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={(e) => { e.stopPropagation(); setConfirmId(c.id); }}
+                      disabled={deleting === c.id}
+                      sx={{ ml: 0 }}
+                    >
+                      {deleting === c.id
+                        ? <CircularProgress size={16} />
+                        : <DeleteIcon fontSize="small" />}
+                    </IconButton>
+                  </Tooltip>
+                )}
               </>
             )}
           </Stack>
@@ -205,9 +212,11 @@ export default function Campaigns() {
     <Box sx={{ p: 4 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
         <Typography variant="h4" fontWeight={800} color="primary.main">Campañas</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/campaigns/new')}>
-          Nueva Campaña
-        </Button>
+        {canWrite && (
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/campaigns/new')}>
+            Nueva Campaña
+          </Button>
+        )}
       </Stack>
 
       {error && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>{error}</Alert>}
@@ -221,9 +230,11 @@ export default function Campaigns() {
             <Card>
               <CardContent sx={{ textAlign: 'center', py: 8 }}>
                 <Typography color="text.secondary" mb={2}>No hay campañas registradas.</Typography>
-                <Button variant="contained" onClick={() => navigate('/campaigns/new')} startIcon={<AddIcon />}>
-                  Crear Primera Campaña
-                </Button>
+                {canWrite && (
+                  <Button variant="contained" onClick={() => navigate('/campaigns/new')} startIcon={<AddIcon />}>
+                    Crear Primera Campaña
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (

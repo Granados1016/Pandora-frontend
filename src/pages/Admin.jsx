@@ -5,6 +5,7 @@ import {
   ToggleButton, ToggleButtonGroup, CircularProgress, Tooltip, Switch,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   FormGroup, FormControlLabel, Checkbox, Divider, Radio, RadioGroup,
+  ToggleButtonGroup as MuiTBG,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -15,6 +16,9 @@ import BackupIcon from '@mui/icons-material/Backup';
 import SaveIcon from '@mui/icons-material/Save';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import BadgeIcon from '@mui/icons-material/Badge';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import EditNoteIcon from '@mui/icons-material/EditNote';
+import BlockIcon from '@mui/icons-material/Block';
 import { userApi, adminApi, ticketApi } from '../api/pandoraApi';
 import { MODULE_LABELS, MODULES, useAuth } from '../hooks/useAuth.jsx';
 
@@ -23,14 +27,45 @@ const ALL_MODULES = Object.entries(MODULE_LABELS).map(([value, label]) => ({
   label,
 }));
 
+// Módulos donde "solo vista" tiene sentido (excluir Admin y Calendario básico
+// que ya es solo-vista por diseño)
+const MODULES_WITH_WRITE = new Set([
+  MODULES.MAIL_PLUS, MODULES.INVENTARIO, MODULES.LICENCIAS,
+  MODULES.HELPDESK, MODULES.CALENDARIO_ADMIN,
+]);
+
 const ALL_MODULES_VALUE = Object.entries(MODULE_LABELS)
   .filter(([v]) => parseInt(v) !== MODULES.ADMIN)
   .reduce((acc, [v]) => acc | parseInt(v), 0);
 
 const EMPTY_FORM = {
   username: '', fullName: '', email: '', position: '',
-  password: '', role: 'User', modules: 0, isActive: true,
+  password: '', role: 'User', modules: 0, modulesViewOnly: 0, isActive: true,
 };
+
+// Obtener el estado de acceso de un módulo: 'none' | 'view' | 'write'
+function getModuleAccess(mod, modules, modulesViewOnly) {
+  if ((modules & mod) === 0) return 'none';
+  if ((modulesViewOnly & mod) !== 0) return 'view';
+  return 'write';
+}
+
+// Aplicar cambio de estado a los bitmasks
+function applyModuleAccess(mod, access, modules, modulesViewOnly) {
+  let newModules = modules;
+  let newViewOnly = modulesViewOnly;
+  if (access === 'none') {
+    newModules  = modules & ~mod;
+    newViewOnly = modulesViewOnly & ~mod;
+  } else if (access === 'view') {
+    newModules  = modules | mod;
+    newViewOnly = modulesViewOnly | mod;
+  } else {
+    newModules  = modules | mod;
+    newViewOnly = modulesViewOnly & ~mod;
+  }
+  return { modules: newModules, modulesViewOnly: newViewOnly };
+}
 
 export default function Admin() {
   const { username: currentUser } = useAuth();
@@ -151,6 +186,7 @@ export default function Admin() {
       password: '',
       role: u.role,
       modules: u.modules,
+      modulesViewOnly: u.modulesViewOnly ?? 0,
       isActive: u.isActive,
     });
     setSaveError('');
@@ -159,6 +195,13 @@ export default function Admin() {
 
   const toggleModule = (mod) => {
     setForm(f => ({ ...f, modules: f.modules ^ mod }));
+  };
+
+  const setModuleAccess = (mod, access) => {
+    setForm(f => {
+      const result = applyModuleAccess(mod, access, f.modules, f.modulesViewOnly);
+      return { ...f, ...result };
+    });
   };
 
   const handleSave = async () => {
@@ -177,6 +220,7 @@ export default function Admin() {
           role: form.role,
           position: form.position || null,
           modules: form.modules,
+          modulesViewOnly: form.modulesViewOnly,
           isActive: form.isActive,
         });
       } else {
@@ -188,6 +232,7 @@ export default function Admin() {
           role: form.role,
           position: form.position || null,
           modules: form.modules,
+          modulesViewOnly: form.modulesViewOnly,
           isActive: form.isActive,
         });
       }
@@ -214,11 +259,21 @@ export default function Admin() {
     }
   };
 
-  const moduleChips = (modules) =>
-    ALL_MODULES.filter(m => modules & m.value).map(m => (
-      <Chip key={m.value} label={m.label} size="small" variant="outlined"
-        color={m.value === MODULES.ADMIN ? 'error' : 'primary'} sx={{ mr: 0.5, mb: 0.5 }} />
-    ));
+  const moduleChips = (user) =>
+    ALL_MODULES.filter(m => user.modules & m.value).map(m => {
+      const isViewOnly = (user.modulesViewOnly ?? 0) & m.value;
+      return (
+        <Chip
+          key={m.value}
+          label={isViewOnly ? `${m.label} (vista)` : m.label}
+          size="small"
+          variant="outlined"
+          color={m.value === MODULES.ADMIN ? 'error' : isViewOnly ? 'default' : 'primary'}
+          icon={isViewOnly ? <VisibilityIcon sx={{ fontSize: '14px !important' }} /> : undefined}
+          sx={{ mr: 0.5, mb: 0.5 }}
+        />
+      );
+    });
 
   return (
     <Box sx={{ p: 4 }}>
@@ -424,7 +479,7 @@ export default function Admin() {
                       <TableCell sx={{ maxWidth: 280 }}>
                         {u.role === 'Admin'
                           ? <Chip label="Acceso total" size="small" color="error" variant="outlined" />
-                          : <Box>{moduleChips(u.modules)}</Box>
+                          : <Box>{moduleChips(u)}</Box>
                         }
                       </TableCell>
                       <TableCell>
@@ -521,41 +576,90 @@ export default function Admin() {
             {form.role === 'User' && (
               <Box>
                 <Divider sx={{ mb: 1.5 }} />
-                <Typography variant="subtitle2" fontWeight={600} mb={0.5}>Acceso</Typography>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1.5}>
+                  <Typography variant="subtitle2" fontWeight={600}>Acceso por Módulo</Typography>
+                  <Stack direction="row" spacing={1}>
+                    <Button size="small" variant="outlined" color="inherit"
+                      onClick={() => setForm(f => ({ ...f, modules: 0, modulesViewOnly: 0 }))}>
+                      Ninguno
+                    </Button>
+                    <Button size="small" variant="outlined" color="primary"
+                      onClick={() => setForm(f => ({ ...f, modules: ALL_MODULES_VALUE, modulesViewOnly: ALL_MODULES_VALUE & ~MODULES.ADMIN }))}>
+                      Solo vista
+                    </Button>
+                    <Button size="small" variant="contained" color="primary"
+                      onClick={() => setForm(f => ({ ...f, modules: ALL_MODULES_VALUE, modulesViewOnly: 0 }))}>
+                      Escritura
+                    </Button>
+                  </Stack>
+                </Stack>
 
-                {/* Selector rápido */}
-                <RadioGroup
-                  row
-                  value={form.modules === ALL_MODULES_VALUE ? 'todos' : 'personalizado'}
-                  onChange={e => {
-                    if (e.target.value === 'todos') setForm(f => ({ ...f, modules: ALL_MODULES_VALUE }));
-                  }}
-                  sx={{ mb: 1 }}
-                >
-                  <FormControlLabel value="todos"       control={<Radio size="small" />} label="Todos los módulos" />
-                  <FormControlLabel value="personalizado" control={<Radio size="small" />} label="Personalizado" />
-                </RadioGroup>
+                {/* Leyenda */}
+                <Stack direction="row" spacing={2} mb={1.5}
+                  sx={{ p: 1, bgcolor: 'grey.50', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <BlockIcon sx={{ fontSize: 14, color: 'text.disabled' }} />
+                    <Typography variant="caption" color="text.secondary">Sin acceso</Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <VisibilityIcon sx={{ fontSize: 14, color: 'info.main' }} />
+                    <Typography variant="caption" color="info.main">Solo vista</Typography>
+                  </Stack>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <EditNoteIcon sx={{ fontSize: 14, color: 'success.main' }} />
+                    <Typography variant="caption" color="success.main">Escritura completa</Typography>
+                  </Stack>
+                </Stack>
 
-                {/* Checkboxes individuales */}
-                <Typography variant="caption" color="text.secondary" mb={0.5} display="block">
-                  Selección manual de módulos:
-                </Typography>
-                <FormGroup>
-                  {ALL_MODULES.filter(m => m.value !== MODULES.ADMIN).map(m => (
-                    <FormControlLabel
-                      key={m.value}
-                      control={
-                        <Checkbox
-                          checked={!!(form.modules & m.value)}
-                          onChange={() => toggleModule(m.value)}
-                          color="primary"
+                {/* Tabla de módulos */}
+                <Stack spacing={0.5}>
+                  {ALL_MODULES.filter(m => m.value !== MODULES.ADMIN).map(m => {
+                    const access = getModuleAccess(m.value, form.modules, form.modulesViewOnly);
+                    const canBeViewOnly = MODULES_WITH_WRITE.has(m.value);
+                    return (
+                      <Stack key={m.value} direction="row" alignItems="center"
+                        justifyContent="space-between"
+                        sx={{
+                          px: 1.5, py: 0.75, borderRadius: 1,
+                          border: '1px solid',
+                          borderColor: access === 'none' ? 'divider'
+                            : access === 'view' ? 'info.light' : 'success.light',
+                          bgcolor: access === 'none' ? 'transparent'
+                            : access === 'view' ? 'info.50' : 'success.50',
+                        }}
+                      >
+                        <Typography variant="body2" color={access === 'none' ? 'text.disabled' : 'text.primary'}>
+                          {m.label}
+                        </Typography>
+                        <ToggleButtonGroup
+                          value={access}
+                          exclusive
                           size="small"
-                        />
-                      }
-                      label={<Typography variant="body2">{m.label}</Typography>}
-                    />
-                  ))}
-                </FormGroup>
+                          onChange={(_, v) => v && setModuleAccess(m.value, v)}
+                          sx={{ '& .MuiToggleButton-root': { py: 0.25, px: 1, fontSize: 11 } }}
+                        >
+                          <ToggleButton value="none">
+                            <Tooltip title="Sin acceso">
+                              <BlockIcon sx={{ fontSize: 14 }} />
+                            </Tooltip>
+                          </ToggleButton>
+                          {canBeViewOnly && (
+                            <ToggleButton value="view" sx={{ color: access === 'view' ? 'info.main' : undefined }}>
+                              <Tooltip title="Solo vista">
+                                <VisibilityIcon sx={{ fontSize: 14 }} />
+                              </Tooltip>
+                            </ToggleButton>
+                          )}
+                          <ToggleButton value="write" sx={{ color: access === 'write' ? 'success.main' : undefined }}>
+                            <Tooltip title={canBeViewOnly ? 'Escritura completa' : 'Acceso'}>
+                              <EditNoteIcon sx={{ fontSize: 14 }} />
+                            </Tooltip>
+                          </ToggleButton>
+                        </ToggleButtonGroup>
+                      </Stack>
+                    );
+                  })}
+                </Stack>
               </Box>
             )}
 

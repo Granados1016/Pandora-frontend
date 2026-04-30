@@ -14,8 +14,11 @@ import TuneIcon from '@mui/icons-material/Tune';
 import EmailEditor from '../components/EmailEditor';
 import { templateApi } from '../api/pandoraApi';
 import { programLabel } from '../utils/statusHelpers';
+import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 
 export default function Templates() {
+  const { hasModuleWrite } = useAuth();
+  const canWrite = hasModuleWrite(MODULES.MAIL_PLUS);
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState('');
@@ -108,7 +111,7 @@ export default function Templates() {
     <Box sx={{ p: 4 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
         <Typography variant="h4" fontWeight={800} color="primary.main">Plantillas</Typography>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openNew}>Nueva Plantilla</Button>
+        {canWrite && <Button variant="contained" startIcon={<AddIcon />} onClick={openNew}>Nueva Plantilla</Button>}
       </Stack>
 
       {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
@@ -148,10 +151,12 @@ export default function Templates() {
                       </Stack>
                       <Typography variant="body2" color="text.secondary" noWrap>{t.subject}</Typography>
                     </Box>
-                    <Stack direction="row">
-                      <IconButton onClick={() => openEdit(t)} size="small"><EditIcon fontSize="small" /></IconButton>
-                      <IconButton onClick={() => handleDelete(t.id)} size="small" color="error"><DeleteIcon fontSize="small" /></IconButton>
-                    </Stack>
+                    {canWrite && (
+                      <Stack direction="row">
+                        <IconButton onClick={() => openEdit(t)} size="small"><EditIcon fontSize="small" /></IconButton>
+                        <IconButton onClick={() => handleDelete(t.id)} size="small" color="error"><DeleteIcon fontSize="small" /></IconButton>
+                      </Stack>
+                    )}
                   </Stack>
                 </CardContent>
               </Card>

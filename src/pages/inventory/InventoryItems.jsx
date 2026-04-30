@@ -19,6 +19,7 @@ import UploadIcon from '@mui/icons-material/Upload';
 import { inventoryApi, catalogApi } from '../../api/pandoraApi';
 import ExcelImportDialog from '../../components/inventory/ExcelImportDialog';
 import { apiError } from '../../api/apiError';
+import { useAuth, MODULES } from '../../hooks/useAuth.jsx';
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 const STATUS_OPTIONS = [
@@ -50,6 +51,9 @@ const toInputDate = (d) => d ? d.slice(0, 10) : '';
 
 // ─── Componente ──────────────────────────────────────────────────────────────
 export default function InventoryItems() {
+  const { hasModuleWrite } = useAuth();
+  const canWrite = hasModuleWrite(MODULES.INVENTARIO);
+
   const [items, setItems]       = useState([]);
   const [types, setTypes]       = useState([]);
   const [employees, setEmployees]   = useState([]);
@@ -280,18 +284,22 @@ export default function InventoryItems() {
               Exportar
             </Button>
           </Tooltip>
-          <Tooltip title="Importar desde Excel">
-            <Button
-              variant="outlined" color="success" startIcon={<UploadIcon />}
-              onClick={() => setOpenImport(true)}
-              sx={{ borderRadius: 2 }}
-            >
-              Importar
+          {canWrite && (
+            <Tooltip title="Importar desde Excel">
+              <Button
+                variant="outlined" color="success" startIcon={<UploadIcon />}
+                onClick={() => setOpenImport(true)}
+                sx={{ borderRadius: 2 }}
+              >
+                Importar
+              </Button>
+            </Tooltip>
+          )}
+          {canWrite && (
+            <Button variant="contained" startIcon={<AddIcon />} onClick={openNew} sx={{ borderRadius: 2 }}>
+              Nuevo equipo
             </Button>
-          </Tooltip>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openNew} sx={{ borderRadius: 2 }}>
-            Nuevo equipo
-          </Button>
+          )}
         </Stack>
       </Box>
 
@@ -382,21 +390,25 @@ export default function InventoryItems() {
                   </TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                      <Tooltip title="Historial / Transferir">
+                      <Tooltip title="Historial">
                         <IconButton size="small" color="primary" onClick={() => openHistoryDialog(item)}>
                           <HistoryIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(item)}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Eliminar">
-                        <IconButton size="small" color="error" onClick={() => handleDelete(item.id)}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {canWrite && (
+                        <Tooltip title="Editar">
+                          <IconButton size="small" onClick={() => openEdit(item)}>
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {canWrite && (
+                        <Tooltip title="Eliminar">
+                          <IconButton size="small" color="error" onClick={() => handleDelete(item.id)}>
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                     </Stack>
                   </TableCell>
                 </TableRow>
@@ -586,9 +598,11 @@ export default function InventoryItems() {
         <DialogTitle fontWeight={700}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <span>Historial: {historyItem?.inventoryNumber}</span>
-            <Button variant="outlined" size="small" startIcon={<SwapHorizIcon />} onClick={startTransfer}>
-              Transferir
-            </Button>
+            {canWrite && (
+              <Button variant="outlined" size="small" startIcon={<SwapHorizIcon />} onClick={startTransfer}>
+                Transferir
+              </Button>
+            )}
           </Stack>
         </DialogTitle>
         <DialogContent dividers>

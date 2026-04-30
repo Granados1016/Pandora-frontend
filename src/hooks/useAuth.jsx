@@ -43,6 +43,11 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('pandora_token'));
+  // modulesViewOnly: bitmask de módulos con permiso de solo lectura.
+  // Se obtiene de /api/users/me tras cada login (no viaja en el JWT).
+  const [modulesViewOnly, setModulesViewOnly] = useState(
+    () => parseInt(localStorage.getItem('pandora_mvo') || '0', 10)
+  );
 
   // Registrar el updater para que el interceptor de Axios pueda actualizar
   // el token en el estado React cuando hace un refresco silencioso.
@@ -52,6 +57,8 @@ export function AuthProvider({ children }) {
         localStorage.setItem('pandora_token', newToken);
       } else {
         localStorage.removeItem('pandora_token');
+        localStorage.removeItem('pandora_mvo');
+        setModulesViewOnly(0);
       }
       setToken(newToken);
     });
@@ -65,7 +72,16 @@ export function AuthProvider({ children }) {
   const modules   = parseInt(claims.modules || '0', 10);
   const isAdmin   = role === 'Admin';
 
+  // Devuelve true si el usuario tiene acceso al módulo (vista o escritura)
   const hasModule = useCallback((mod) => isAdmin || (modules & mod) !== 0, [isAdmin, modules]);
+
+  // Devuelve true si el usuario tiene acceso de ESCRITURA al módulo.
+  // Admin siempre tiene escritura. Si el bit está en modulesViewOnly → solo vista.
+  const hasModuleWrite = useCallback((mod) => {
+    if (isAdmin) return true;
+    if ((modules & mod) === 0) return false;          // sin acceso
+    return (modulesViewOnly & mod) === 0;             // false = solo vista
+  }, [isAdmin, modules, modulesViewOnly]);
 
   // Devuelve true si el usuario tiene al menos uno de los roles permitidos.
   // Admin siempre tiene acceso a todo.
@@ -78,11 +94,23 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (user, password) => {
     const { data } = await api.post('/auth/login', { username: user, password });
     localStorage.setItem('pandora_token', data.token);
-    // Guardar refresh token si el backend lo devuelve
     if (data.refreshToken) {
       localStorage.setItem('pandora_refresh_token', data.refreshToken);
     }
     setToken(data.token);
+    // Obtener modulesViewOnly del perfil (no viaja en el JWT)
+    try {
+      const me = await api.get('/users/me', {
+        headers: { Authorization: `Bearer ${data.token}` },
+      });
+      const mvo = me.data?.modulesViewOnly ?? 0;
+      localStorage.setItem('pandora_mvo', String(mvo));
+      setModulesViewOnly(mvo);
+    } catch {
+      // No crítico: si falla, el usuario queda sin restricciones de solo vista
+      localStorage.setItem('pandora_mvo', '0');
+      setModulesViewOnly(0);
+    }
   }, []);
 
   const logout = useCallback(() => {
@@ -93,13 +121,15 @@ export function AuthProvider({ children }) {
     }
     localStorage.removeItem('pandora_token');
     localStorage.removeItem('pandora_refresh_token');
+    localStorage.removeItem('pandora_mvo');
     setToken(null);
+    setModulesViewOnly(0);
   }, []);
 
   return (
     <AuthContext.Provider value={{
-      token, username, fullName, role, modules, isAdmin,
-      hasModule, hasRole, login, logout, isAuthenticated: !!token,
+      token, username, fullName, role, modules, modulesViewOnly, isAdmin,
+      hasModule, hasModuleWrite, hasRole, login, logout, isAuthenticated: !!token,
     }}>
       {children}
     </AuthContext.Provider>
