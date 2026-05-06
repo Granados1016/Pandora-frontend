@@ -49,9 +49,10 @@ import CalendarReports     from './pages/calendar/CalendarReports';
 //   requiredModule — constante de MODULES que el usuario debe tener habilitada
 function ProtectedRoute({
   children,
-  adminOnly    = false,
-  allowedRoles = null,
-  requiredModule = null,
+  adminOnly       = false,
+  allowedRoles    = null,
+  requiredModule  = null,
+  requiredAnyModules = null,
 }) {
   const { isAuthenticated, isAdmin, hasModule, hasRole } = useAuth();
   const location = useLocation();
@@ -70,6 +71,10 @@ function ProtectedRoute({
 
   // 4. Módulo requerido (Admin siempre pasa)
   if (requiredModule !== null && !isAdmin && !hasModule(requiredModule))
+    return <Navigate to="/unauthorized" replace />;
+
+  // 5. Al menos uno de varios módulos (Admin siempre pasa)
+  if (requiredAnyModules !== null && !isAdmin && !requiredAnyModules.some(m => hasModule(m)))
     return <Navigate to="/unauthorized" replace />;
 
   return children;
@@ -184,7 +189,7 @@ function AppRoutes() {
                 </ProtectedRoute>
               } />
               <Route path="/calendar/solicitud" element={
-                <ProtectedRoute requiredModule={MODULES.CALENDARIO}>
+                <ProtectedRoute requiredAnyModules={[MODULES.CAL_REQUEST, MODULES.CALENDARIO_ADMIN]}>
                   <RoomRequestForm />
                 </ProtectedRoute>
               } />

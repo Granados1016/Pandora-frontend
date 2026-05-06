@@ -166,7 +166,7 @@ export default function Layout({ children }) {
       items: [
         { label: 'Pandora Calendar',  icon: <CalendarMonthIcon />,   path: '/calendar',             show: hasModule(MODULES.CALENDARIO) || hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
         { label: 'Salas',             icon: <MeetingRoomIcon />,      path: '/calendar/rooms',       show: hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
-        { label: 'Nueva Solicitud',   icon: <AddCircleOutlineIcon />, path: '/calendar/solicitud',   show: hasModuleWrite(MODULES.CALENDARIO_ADMIN) || hasModule(MODULES.CALENDARIO) || isAdmin },
+        { label: 'Nueva Solicitud',   icon: <AddCircleOutlineIcon />, path: '/calendar/solicitud',   show: hasModule(MODULES.CALENDARIO_ADMIN) || hasModule(MODULES.CAL_REQUEST) || isAdmin },
         { label: 'Solicitudes',       icon: <PendingActionsIcon />,   path: '/calendar/solicitudes', show: hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
         { label: 'Reportes',          icon: <BarChartOutlinedIcon />, path: '/calendar/reports',     show: hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
       ],

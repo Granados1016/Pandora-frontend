@@ -19,9 +19,13 @@ export const MODULES = {
 
   // ── Sub-módulos de HelpDesk ──────────────────────────────────────────────
   HD_GLOBAL:        2048,  // Ver TODOS los tickets (sin esto = solo los propios)
+  HD_REQUEST:       8192,  // Puede solicitar/crear nuevos tickets
 
   // ── Sub-módulos de Licencias ─────────────────────────────────────────────
   LIC_STATS:        4096,  // Ver dashboard de gastos y estadísticas
+
+  // ── Sub-módulos de Calendario ────────────────────────────────────────────
+  CAL_REQUEST:      16384, // Puede solicitar salas (sub-módulo de CALENDARIO)
 };
 
 export const MODULE_LABELS = {
@@ -40,7 +44,9 @@ export const SUB_MODULES = [
   { bit: MODULES.INV_TYPES,     parent: MODULES.INVENTARIO, label: 'Categorías de equipo' },
   { bit: MODULES.INV_CATALOGS,  parent: MODULES.INVENTARIO, label: 'Departamentos y Personal' },
   { bit: MODULES.HD_GLOBAL,     parent: MODULES.HELPDESK,   label: 'Ver todos los tickets (sin marcar = solo los propios)' },
+  { bit: MODULES.HD_REQUEST,    parent: MODULES.HELPDESK,   label: 'Solicitar tickets' },
   { bit: MODULES.LIC_STATS,     parent: MODULES.LICENCIAS,  label: 'Dashboard de gastos y estadísticas' },
+  { bit: MODULES.CAL_REQUEST,   parent: MODULES.CALENDARIO, label: 'Solicitar salas' },
 ];
 
 // ── Roles del sistema ────────────────────────────────────────────────────────
