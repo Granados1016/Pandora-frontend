@@ -53,7 +53,7 @@ function ChartCard({ title, height = 260, children }) {
         <Typography variant="subtitle2" fontWeight={700} color="text.primary" mb={2}>
           {title}
         </Typography>
-        <Box sx={{ height }}>
+        <Box sx={{ height, minWidth: 0 }}>
           <ResponsiveContainer width="100%" height="100%">
             {children}
           </ResponsiveContainer>
