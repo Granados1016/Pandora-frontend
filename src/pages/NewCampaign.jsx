@@ -276,13 +276,15 @@ export default function NewCampaign() {
             {templates.length > 0 && (
               <Box mb={3}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>
+                  <InputLabel id="template-select-label">
                     <Stack direction="row" alignItems="center" spacing={0.5}>
                       <ArticleIcon fontSize="small" />
                       <span>Cargar desde plantilla guardada</span>
                     </Stack>
                   </InputLabel>
                   <Select
+                    labelId="template-select-label"
+                    id="template-select"
                     value={selectedTemplate}
                     label="Cargar desde plantilla guardada"
                     onChange={handleTemplateSelect}

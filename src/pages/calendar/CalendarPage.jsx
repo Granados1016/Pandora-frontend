@@ -121,8 +121,8 @@ export default function CalendarPage() {
           <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
             {/* Filtro sala */}
             <FormControl size="small" sx={{ minWidth: 160 }}>
-              <InputLabel>Sala</InputLabel>
-              <Select value={filterRoom} label="Sala" onChange={e => setFilterRoom(e.target.value)}>
+              <InputLabel id="filter-room-label">Sala</InputLabel>
+              <Select labelId="filter-room-label" id="filter-room" value={filterRoom} label="Sala" onChange={e => setFilterRoom(e.target.value)}>
                 <MenuItem value="">Todas las salas</MenuItem>
                 {rooms.map(r => (
                   <MenuItem key={r.id} value={r.id}>

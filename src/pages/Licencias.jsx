@@ -695,32 +695,32 @@ export default function Licencias() {
               />
               {/* Área */}
               <FormControl size="small" sx={{ minWidth: 140 }}>
-                <InputLabel>Área</InputLabel>
-                <Select value={filtroArea} label="Área" onChange={e => setFiltroArea(e.target.value)}>
+                <InputLabel id="filtro-area-label">Área</InputLabel>
+                <Select labelId="filtro-area-label" id="filtro-area" value={filtroArea} label="Área" onChange={e => setFiltroArea(e.target.value)}>
                   <MenuItem value="">Todas</MenuItem>
                   {AREAS.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
                 </Select>
               </FormControl>
               {/* Estado */}
               <FormControl size="small" sx={{ minWidth: 150 }}>
-                <InputLabel>Estado</InputLabel>
-                <Select value={filtroEstado} label="Estado" onChange={e => setFiltroEstado(e.target.value)}>
+                <InputLabel id="filtro-estado-label">Estado</InputLabel>
+                <Select labelId="filtro-estado-label" id="filtro-estado" value={filtroEstado} label="Estado" onChange={e => setFiltroEstado(e.target.value)}>
                   <MenuItem value="">Todos</MenuItem>
                   {ESTADOS.map(e => <MenuItem key={e} value={e}>{e}</MenuItem>)}
                 </Select>
               </FormControl>
               {/* Frecuencia */}
               <FormControl size="small" sx={{ minWidth: 150 }}>
-                <InputLabel>Frecuencia</InputLabel>
-                <Select value={filtroFrecuencia} label="Frecuencia" onChange={e => setFiltroFrecuencia(e.target.value)}>
+                <InputLabel id="filtro-freq-label">Frecuencia</InputLabel>
+                <Select labelId="filtro-freq-label" id="filtro-freq" value={filtroFrecuencia} label="Frecuencia" onChange={e => setFiltroFrecuencia(e.target.value)}>
                   <MenuItem value="">Todas</MenuItem>
                   {FRECUENCIAS.map(f => <MenuItem key={f} value={f}>{f}</MenuItem>)}
                 </Select>
               </FormControl>
               {/* Próximo vencimiento */}
               <FormControl size="small" sx={{ minWidth: 180 }}>
-                <InputLabel>Próximo vencimiento</InputLabel>
-                <Select value={filtroDias} label="Próximo vencimiento" onChange={e => setFiltroDias(e.target.value)}>
+                <InputLabel id="filtro-dias-label">Próximo vencimiento</InputLabel>
+                <Select labelId="filtro-dias-label" id="filtro-dias" value={filtroDias} label="Próximo vencimiento" onChange={e => setFiltroDias(e.target.value)}>
                   <MenuItem value="">Todos</MenuItem>
                   <MenuItem value="vence7">Vence en 7 días</MenuItem>
                   <MenuItem value="vence30">Vence en 30 días</MenuItem>
@@ -845,16 +845,16 @@ export default function Licencias() {
             </Grid>
             <Grid item xs={6}>
               <FormControl size="small" fullWidth>
-                <InputLabel>Área</InputLabel>
-                <Select label="Área" {...field('area')}>
+                <InputLabel id="form-area-label">Área</InputLabel>
+                <Select labelId="form-area-label" id="form-area" label="Área" {...field('area')}>
                   {AREAS.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={6}>
               <FormControl size="small" fullWidth>
-                <InputLabel>Frecuencia</InputLabel>
-                <Select label="Frecuencia" {...field('frecuenciaPago')}>
+                <InputLabel id="form-freq-label">Frecuencia</InputLabel>
+                <Select labelId="form-freq-label" id="form-freq" label="Frecuencia" {...field('frecuenciaPago')}>
                   {FRECUENCIAS.map(f => <MenuItem key={f} value={f}>{f}</MenuItem>)}
                 </Select>
               </FormControl>
@@ -874,8 +874,8 @@ export default function Licencias() {
             </Grid>
             <Grid item xs={6}>
               <FormControl size="small" fullWidth>
-                <InputLabel>Estado</InputLabel>
-                <Select label="Estado" {...field('estado')}>
+                <InputLabel id="form-estado-label">Estado</InputLabel>
+                <Select labelId="form-estado-label" id="form-estado" label="Estado" {...field('estado')}>
                   {ESTADOS.map(e => <MenuItem key={e} value={e}>{e}</MenuItem>)}
                 </Select>
               </FormControl>
