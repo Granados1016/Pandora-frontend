@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
   AppBar, Toolbar, Typography, IconButton, Divider, Avatar, Tooltip, Collapse,
-  Badge, InputBase, Paper, Chip, Stack, ClickAwayListener, Popper,
+  Badge, InputBase, Paper, Chip, Stack, ClickAwayListener, Popper, Dialog,
 } from '@mui/material';
 
 // ── Íconos de navegación ──────────────────────────────────────────────────────
@@ -698,78 +698,73 @@ export default function Layout({ children }) {
       </Popper>
 
       {/* ── Buscador global (modal Ctrl+K) ────────────────────────────────── */}
-      {searchOpen && (
-        <Box
-          sx={{
-            position: 'fixed', inset: 0, zIndex: 1500,
-            bgcolor: 'rgba(0,0,0,0.45)',
-            display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-            pt: { xs: 8, md: '12vh' }, px: 2,
-          }}
-          onClick={() => setSearchOpen(false)}
-        >
-          <Paper
-            elevation={16}
-            onClick={e => e.stopPropagation()}
-            sx={{ width: '100%', maxWidth: 600, borderRadius: 3, overflow: 'hidden' }}
-          >
-            {/* Input */}
-            <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
-              <SearchIcon sx={{ color: 'text.secondary', mr: 1.5 }} />
-              <InputBase
-                autoFocus
-                placeholder="Buscar en Pandora…"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                sx={{ flex: 1, fontSize: 16 }}
-                ref={searchRef}
-              />
-              {searchLoading && <Box sx={{ width: 16, height: 16, border: 2, borderColor: 'primary.main', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', '@keyframes spin': { to: { transform: 'rotate(360deg)' } } }} />}
-              <Typography variant="caption" color="text.disabled" sx={{ ml: 1, border: 1, borderColor: 'divider', borderRadius: 0.5, px: 0.5, lineHeight: 1.7 }}>Esc</Typography>
-            </Box>
-
-            {/* Resultados */}
-            {searchResults.length > 0 && (
-              <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
-                {searchResults.map((r, i) => {
-                  const typeInfo = TYPE_LABELS[r.type] || { label: r.type, color: 'default' };
-                  return (
-                    <Box
-                      key={i}
-                      onClick={() => { navigate(r.path); setSearchOpen(false); }}
-                      sx={{
-                        px: 2, py: 1.5, cursor: 'pointer',
-                        borderBottom: 1, borderColor: 'divider',
-                        display: 'flex', alignItems: 'center', gap: 1.5,
-                        '&:hover': { bgcolor: 'action.hover' },
-                      }}
-                    >
-                      <Chip label={typeInfo.label} size="small" color={typeInfo.color} sx={{ flexShrink: 0 }} />
-                      <Box flex={1} minWidth={0}>
-                        <Typography variant="body2" fontWeight={600} noWrap>{r.label}</Typography>
-                        {r.subtitle && <Typography variant="caption" color="text.secondary" noWrap display="block">{r.subtitle}</Typography>}
-                      </Box>
-                      <OpenInNewIcon sx={{ fontSize: 14, color: 'text.disabled', flexShrink: 0 }} />
-                    </Box>
-                  );
-                })}
-              </Box>
-            )}
-
-            {searchQuery.length >= 2 && !searchLoading && searchResults.length === 0 && (
-              <Box sx={{ p: 4, textAlign: 'center' }}>
-                <Typography color="text.secondary" variant="body2">Sin resultados para "<b>{searchQuery}</b>"</Typography>
-              </Box>
-            )}
-
-            {!searchQuery && (
-              <Box sx={{ p: 2 }}>
-                <Typography variant="caption" color="text.secondary">Escribe al menos 2 caracteres para buscar en procedimientos, comunicados, inventario, licencias y usuarios.</Typography>
-              </Box>
-            )}
-          </Paper>
+      <Dialog
+        open={searchOpen}
+        onClose={() => { setSearchOpen(false); setSearchQuery(''); setSearchResults([]); }}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          elevation: 16,
+          sx: { borderRadius: 3, overflow: 'hidden', mt: { xs: 8, md: '12vh' }, verticalAlign: 'top' },
+        }}
+        sx={{ '& .MuiDialog-container': { alignItems: 'flex-start' } }}
+        TransitionProps={{ onEntered: () => searchRef.current?.focus() }}
+      >
+        {/* Input */}
+        <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+          <SearchIcon sx={{ color: 'text.secondary', mr: 1.5 }} />
+          <InputBase
+            autoFocus
+            placeholder="Buscar en Pandora…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            sx={{ flex: 1, fontSize: 16 }}
+            inputRef={searchRef}
+          />
+          {searchLoading && <Box sx={{ width: 16, height: 16, border: 2, borderColor: 'primary.main', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', '@keyframes spin': { to: { transform: 'rotate(360deg)' } } }} />}
+          <Typography variant="caption" color="text.disabled" sx={{ ml: 1, border: 1, borderColor: 'divider', borderRadius: 0.5, px: 0.5, lineHeight: 1.7 }}>Esc</Typography>
         </Box>
-      )}
+
+        {/* Resultados */}
+        {searchResults.length > 0 && (
+          <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+            {searchResults.map((r, i) => {
+              const typeInfo = TYPE_LABELS[r.type] || { label: r.type, color: 'default' };
+              return (
+                <Box
+                  key={i}
+                  onClick={() => { navigate(r.path); setSearchOpen(false); }}
+                  sx={{
+                    px: 2, py: 1.5, cursor: 'pointer',
+                    borderBottom: 1, borderColor: 'divider',
+                    display: 'flex', alignItems: 'center', gap: 1.5,
+                    '&:hover': { bgcolor: 'action.hover' },
+                  }}
+                >
+                  <Chip label={typeInfo.label} size="small" color={typeInfo.color} sx={{ flexShrink: 0 }} />
+                  <Box flex={1} minWidth={0}>
+                    <Typography variant="body2" fontWeight={600} noWrap>{r.label}</Typography>
+                    {r.subtitle && <Typography variant="caption" color="text.secondary" noWrap display="block">{r.subtitle}</Typography>}
+                  </Box>
+                  <OpenInNewIcon sx={{ fontSize: 14, color: 'text.disabled', flexShrink: 0 }} />
+                </Box>
+              );
+            })}
+          </Box>
+        )}
+
+        {searchQuery.length >= 2 && !searchLoading && searchResults.length === 0 && (
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <Typography color="text.secondary" variant="body2">Sin resultados para "<b>{searchQuery}</b>"</Typography>
+          </Box>
+        )}
+
+        {!searchQuery && (
+          <Box sx={{ p: 2 }}>
+            <Typography variant="caption" color="text.secondary">Escribe al menos 2 caracteres para buscar en procedimientos, comunicados, inventario, licencias y usuarios.</Typography>
+          </Box>
+        )}
+      </Dialog>
     </Box>
   );
 }
