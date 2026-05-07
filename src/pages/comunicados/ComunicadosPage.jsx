@@ -30,6 +30,7 @@ import {
   Pagination,
   Switch,
   FormControlLabel,
+  Snackbar,
 } from '@mui/material';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import AddIcon from '@mui/icons-material/Add';
@@ -54,19 +55,28 @@ function PriorityChip({ priority }) {
   return <Chip size="small" color={cfg.color} label={cfg.label} />;
 }
 
+// ── Extraer mensaje de error de una respuesta Axios ─────────────────────────
+function extractError(err) {
+  const d = err?.response?.data;
+  if (!d) return err?.message ?? 'Error de red. Verifica tu conexión.';
+  // ASP.NET Core ProblemDetails usa "title", Flask/Express usan "message"
+  return d.title ?? d.message ?? d.error ?? (typeof d === 'string' ? d : 'Ocurrió un error inesperado.');
+}
+
 // ── Hook useComunicados ──────────────────────────────────────────────────────
 function useComunicados() {
   const [list, setList]             = useState([]);
   const [loading, setLoading]       = useState(false);
+  const [loadError, setLoadError]   = useState('');
   const [total, setTotal]           = useState(0);
   const [page, setPage]             = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
   const load = useCallback(async (currentPage) => {
     setLoading(true);
+    setLoadError('');
     try {
       const { data } = await comunicadosApi.getAll({ page: currentPage, pageSize: 10 });
-      // El backend puede devolver { items, total, totalPages } o un array directo
       if (Array.isArray(data)) {
         setList(data);
         setTotal(data.length);
@@ -76,7 +86,8 @@ function useComunicados() {
         setTotal(data.total ?? 0);
         setTotalPages(data.totalPages ?? 1);
       }
-    } catch {
+    } catch (err) {
+      setLoadError(extractError(err));
       setList([]);
     } finally {
       setLoading(false);
@@ -89,7 +100,7 @@ function useComunicados() {
 
   const reload = useCallback(() => load(page), [load, page]);
 
-  return { list, loading, total, page, setPage, totalPages, reload };
+  return { list, loading, loadError, total, page, setPage, totalPages, reload };
 }
 
 // ── Dialog de creación / edición ─────────────────────────────────────────────
@@ -104,61 +115,60 @@ function ComunicadoDialog({ open, onClose, onSaved, initial }) {
     expiresAt:   '',
   };
 
-  const [form, setForm]       = useState(emptyForm);
-  const [saving, setSaving]   = useState(false);
-  const [error, setError]     = useState('');
+  const [form, setForm]     = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState('');
 
+  // Resetear / cargar al abrir
   useEffect(() => {
-    if (open) {
-      if (initial) {
-        setForm({
-          title:       initial.title       ?? '',
-          content:     initial.content     ?? '',
-          priority:    initial.priority    ?? 'normal',
-          isPublished: initial.isPublished ?? true,
-          expiresAt:   initial.expiresAt
-            ? new Date(initial.expiresAt).toISOString().slice(0, 16)
-            : '',
-        });
-      } else {
-        setForm(emptyForm);
-      }
-      setError('');
-    }
+    if (!open) return;
+    setError('');
+    setForm(initial ? {
+      title:       initial.title       ?? '',
+      content:     initial.content     ?? '',
+      priority:    initial.priority    ?? 'normal',
+      isPublished: initial.isPublished ?? true,
+      expiresAt:   initial.expiresAt
+        ? new Date(initial.expiresAt).toISOString().slice(0, 16)
+        : '',
+    } : emptyForm);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initial]);
+  }, [open]);
 
-  const handleChange = (field) => (e) => {
-    const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-    setForm(prev => ({ ...prev, [field]: value }));
+  const set = (field) => (e) => {
+    const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setForm(prev => ({ ...prev, [field]: val }));
   };
 
   const handleSubmit = async () => {
-    if (!form.title.trim())   { setError('El título es obligatorio.');   return; }
+    if (!form.title.trim())   { setError('El título es obligatorio.');    return; }
     if (!form.content.trim()) { setError('El contenido es obligatorio.'); return; }
 
     setSaving(true);
     setError('');
     try {
       const payload = {
-        ...form,
-        expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
+        title:       form.title.trim(),
+        content:     form.content.trim(),
+        priority:    form.priority,
+        isPublished: form.isPublished,
+        expiresAt:   form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
       };
       if (isEdit) {
         await comunicadosApi.update(initial.id, payload);
       } else {
         await comunicadosApi.create(payload);
       }
-      onSaved();
+      onSaved(isEdit ? 'Comunicado actualizado.' : 'Comunicado creado correctamente.');
     } catch (err) {
-      setError(err?.response?.data?.message ?? 'Ocurrió un error al guardar.');
+      setError(extractError(err));
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={saving ? undefined : onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <AnnouncementIcon fontSize="small" />
         {isEdit ? 'Editar comunicado' : 'Nuevo comunicado'}
@@ -166,34 +176,39 @@ function ComunicadoDialog({ open, onClose, onSaved, initial }) {
 
       <DialogContent dividers>
         <Stack spacing={2} sx={{ mt: 1 }}>
-          {error && <Alert severity="error">{error}</Alert>}
+          {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
 
           <TextField
+            id="com-title"
             label="Título"
             required
             fullWidth
             value={form.title}
-            onChange={handleChange('title')}
+            onChange={set('title')}
             inputProps={{ maxLength: 200 }}
+            helperText={`${form.title.length}/200`}
           />
 
           <TextField
+            id="com-content"
             label="Contenido"
             required
             fullWidth
             multiline
             rows={6}
             value={form.content}
-            onChange={handleChange('content')}
+            onChange={set('content')}
+            placeholder="Escribe el contenido del comunicado…"
           />
 
           <FormControl fullWidth>
-            <InputLabel id="priority-label">Prioridad</InputLabel>
+            <InputLabel id="com-priority-label">Prioridad</InputLabel>
             <Select
-              labelId="priority-label"
+              labelId="com-priority-label"
+              id="com-priority"
               label="Prioridad"
               value={form.priority}
-              onChange={handleChange('priority')}
+              onChange={set('priority')}
             >
               <MenuItem value="low">⚪ Baja</MenuItem>
               <MenuItem value="normal">🔵 Normal</MenuItem>
@@ -203,19 +218,22 @@ function ComunicadoDialog({ open, onClose, onSaved, initial }) {
           </FormControl>
 
           <TextField
-            label="Fecha de vencimiento"
+            id="com-expires"
+            label="Fecha de vencimiento (opcional)"
             type="datetime-local"
             fullWidth
             value={form.expiresAt}
-            onChange={handleChange('expiresAt')}
+            onChange={set('expiresAt')}
             InputLabelProps={{ shrink: true }}
+            helperText="Si se deja vacío el comunicado no expira"
           />
 
           <FormControlLabel
             control={
               <Switch
+                id="com-published"
                 checked={form.isPublished}
-                onChange={handleChange('isPublished')}
+                onChange={set('isPublished')}
               />
             }
             label="Publicar inmediatamente"
@@ -233,7 +251,9 @@ function ComunicadoDialog({ open, onClose, onSaved, initial }) {
           disabled={saving}
           startIcon={saving ? <CircularProgress size={16} /> : undefined}
         >
-          {isEdit ? 'Guardar cambios' : 'Crear comunicado'}
+          {saving
+            ? (isEdit ? 'Guardando…' : 'Creando…')
+            : (isEdit ? 'Guardar cambios' : 'Crear comunicado')}
         </Button>
       </DialogActions>
     </Dialog>
@@ -243,15 +263,19 @@ function ComunicadoDialog({ open, onClose, onSaved, initial }) {
 // ── Página principal ─────────────────────────────────────────────────────────
 export default function ComunicadosPage() {
   const { isAdmin } = useAuth();
-  const { list, loading, page, setPage, totalPages, reload } = useComunicados();
+  const { list, loading, loadError, page, setPage, totalPages, reload } = useComunicados();
 
   // Estado de diálogos
-  const [dialogOpen, setDialogOpen]       = useState(false);
-  const [editTarget, setEditTarget]       = useState(null);
-  const [deleteTarget, setDeleteTarget]   = useState(null);
-  const [deleting, setDeleting]           = useState(false);
-  const [deleteError, setDeleteError]     = useState('');
-  const [viewTarget, setViewTarget]       = useState(null);
+  const [dialogOpen, setDialogOpen]     = useState(false);
+  const [editTarget, setEditTarget]     = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting]         = useState(false);
+  const [deleteError, setDeleteError]   = useState('');
+  const [viewTarget, setViewTarget]     = useState(null);
+
+  // Snackbar feedback
+  const [snack, setSnack] = useState({ open: false, msg: '', severity: 'success' });
+  const showSnack = (msg, severity = 'success') => setSnack({ open: true, msg, severity });
 
   const handleNew = () => {
     setEditTarget(null);
@@ -263,9 +287,10 @@ export default function ComunicadosPage() {
     setDialogOpen(true);
   };
 
-  const handleSaved = () => {
+  const handleSaved = (msg) => {
     setDialogOpen(false);
     reload();
+    showSnack(msg);
   };
 
   const handleDeleteConfirm = async () => {
@@ -276,8 +301,9 @@ export default function ComunicadosPage() {
       await comunicadosApi.remove(deleteTarget.id);
       setDeleteTarget(null);
       reload();
+      showSnack('Comunicado eliminado.');
     } catch (err) {
-      setDeleteError(err?.response?.data?.message ?? 'Error al eliminar.');
+      setDeleteError(extractError(err));
     } finally {
       setDeleting(false);
     }
@@ -321,6 +347,11 @@ export default function ComunicadosPage() {
 
       {/* Barra de progreso */}
       {loading && <LinearProgress sx={{ mb: 2, borderRadius: 1 }} />}
+
+      {/* Error de carga */}
+      {loadError && (
+        <Alert severity="error" sx={{ mb: 2 }}>{loadError}</Alert>
+      )}
 
       {/* Grid de cards */}
       <Grid container spacing={2}>
@@ -491,6 +522,22 @@ export default function ComunicadosPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar de feedback */}
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={4000}
+        onClose={() => setSnack(s => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity={snack.severity}
+          onClose={() => setSnack(s => ({ ...s, open: false }))}
+          sx={{ width: '100%' }}
+        >
+          {snack.msg}
+        </Alert>
+      </Snackbar>
 
       {/* Dialog "Ver más" — texto completo */}
       <Dialog
