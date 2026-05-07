@@ -290,6 +290,13 @@ export const ticketApi = {
   delete:           (id)         => api.delete(`/tickets/${id}`),
 };
 
+export const categoriasApi = {
+  getAll:  ()          => api.get('/procedimientos/categorias'),
+  create:  (data)      => api.post('/procedimientos/categorias', data),
+  update:  (id, data)  => api.put(`/procedimientos/categorias/${id}`, data),
+  remove:  (id)        => api.delete(`/procedimientos/categorias/${id}`),
+};
+
 export const procedimientosApi = {
   getAll: (params = {}) => api.get('/procedimientos', { params }),
   upload: (file, meta) => {

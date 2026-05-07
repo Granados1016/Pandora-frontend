@@ -3,13 +3,16 @@ import {
   Box, Typography, Paper, Tabs, Tab, Button, TextField, MenuItem,
   Grid, Card, CardContent, CardActions, Chip, IconButton, Tooltip,
   CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions,
-  InputAdornment, Stack, Divider, LinearProgress, Fade,
+  InputAdornment, Stack, Divider, LinearProgress, Fade, Table, TableBody,
+  TableCell, TableContainer, TableHead, TableRow,
 } from '@mui/material';
 import UploadFileIcon        from '@mui/icons-material/UploadFile';
 import SearchIcon            from '@mui/icons-material/Search';
 import DownloadIcon          from '@mui/icons-material/Download';
 import VisibilityIcon        from '@mui/icons-material/Visibility';
 import DeleteIcon            from '@mui/icons-material/Delete';
+import EditIcon              from '@mui/icons-material/Edit';
+import AddIcon               from '@mui/icons-material/Add';
 import InsertDriveFileIcon   from '@mui/icons-material/InsertDriveFile';
 import PictureAsPdfIcon      from '@mui/icons-material/PictureAsPdf';
 import ImageIcon             from '@mui/icons-material/Image';
@@ -17,51 +20,59 @@ import CloudUploadIcon       from '@mui/icons-material/CloudUpload';
 import FilterListIcon        from '@mui/icons-material/FilterList';
 import CloseIcon             from '@mui/icons-material/Close';
 import FolderOpenIcon        from '@mui/icons-material/FolderOpen';
+import CategoryIcon          from '@mui/icons-material/Category';
+import LabelIcon             from '@mui/icons-material/Label';
 
-import { procedimientosApi } from '../../api/pandoraApi';
+import { procedimientosApi, categoriasApi } from '../../api/pandoraApi';
 import { useAuth } from '../../hooks/useAuth';
 
-// ── Categorías disponibles ────────────────────────────────────────────────────
-const CATEGORIAS = [
-  'Académico',
-  'Administrativo',
-  'Recursos Humanos',
-  'Finanzas',
-  'Tecnología',
-  'Legal',
-  'Comunicaciones',
-  'Otros',
+// ── Opciones de color disponibles ─────────────────────────────────────────────
+const COLOR_OPTIONS = [
+  { value: 'default',   label: 'Gris' },
+  { value: 'primary',   label: 'Azul' },
+  { value: 'secondary', label: 'Morado' },
+  { value: 'success',   label: 'Verde' },
+  { value: 'warning',   label: 'Naranja' },
+  { value: 'error',     label: 'Rojo' },
+  { value: 'info',      label: 'Cyan' },
 ];
-
-// ── Colores por categoría ─────────────────────────────────────────────────────
-const CAT_COLORS = {
-  'Académico':       'primary',
-  'Administrativo':  'secondary',
-  'Recursos Humanos':'success',
-  'Finanzas':        'warning',
-  'Tecnología':      'info',
-  'Legal':           'error',
-  'Comunicaciones':  'default',
-  'Otros':           'default',
-};
 
 // ── Icono según tipo de archivo ───────────────────────────────────────────────
 function FileIcon({ contentType, fontSize = 'large' }) {
-  if (contentType?.includes('pdf'))  return <PictureAsPdfIcon fontSize={fontSize} color="error" />;
-  if (contentType?.startsWith('image/')) return <ImageIcon fontSize={fontSize} color="primary" />;
+  if (contentType?.includes('pdf'))       return <PictureAsPdfIcon fontSize={fontSize} color="error" />;
+  if (contentType?.startsWith('image/'))  return <ImageIcon fontSize={fontSize} color="primary" />;
   return <InsertDriveFileIcon fontSize={fontSize} color="action" />;
 }
 
-// ── Formatear tamaño ──────────────────────────────────────────────────────────
 function fmtSize(bytes) {
   if (!bytes) return '0 B';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+  if (bytes < 1024)        return `${bytes} B`;
+  if (bytes < 1048576)     return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1048576).toFixed(2)} MB`;
+}
+
+// ── Hook: carga y cachea categorías ──────────────────────────────────────────
+function useCategorias() {
+  const [categorias, setCategorias] = useState([]);
+  const [loading, setLoading]       = useState(true);
+
+  const reload = useCallback(async () => {
+    try {
+      const { data } = await categoriasApi.getAll();
+      setCategorias(data);
+    } catch {
+      setCategorias([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { reload(); }, [reload]);
+  return { categorias, loading, reload };
 }
 
 // ── Panel "Subir Archivo" ─────────────────────────────────────────────────────
-function UploadTab({ onUploaded }) {
+function UploadTab({ categorias, onUploaded }) {
   const [dragging, setDragging] = useState(false);
   const [file, setFile]         = useState(null);
   const [title, setTitle]       = useState('');
@@ -109,15 +120,11 @@ function UploadTab({ onUploaded }) {
     <Box sx={{ maxWidth: 700, mx: 'auto', mt: 3 }}>
       {success && (
         <Fade in>
-          <Alert severity="success" sx={{ mb: 2 }}>
-            Archivo subido correctamente.
-          </Alert>
+          <Alert severity="success" sx={{ mb: 2 }}>Archivo subido correctamente.</Alert>
         </Fade>
       )}
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
-          {error}
-        </Alert>
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>
       )}
 
       {/* Drop zone */}
@@ -160,28 +167,19 @@ function UploadTab({ onUploaded }) {
         <input ref={inputRef} type="file" hidden onChange={handleFile} />
       </Paper>
 
-      {/* Campos del formulario */}
       <Stack spacing={2} mt={3}>
+        <TextField label="Título del procedimiento *" value={title} onChange={e => setTitle(e.target.value)} fullWidth />
         <TextField
-          label="Título del procedimiento *"
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          fullWidth
+          label="Descripción" value={desc} onChange={e => setDesc(e.target.value)}
+          fullWidth multiline rows={3} placeholder="Breve descripción del contenido..."
         />
-        <TextField
-          label="Descripción"
-          value={desc}
-          onChange={e => setDesc(e.target.value)}
-          fullWidth multiline rows={3}
-          placeholder="Breve descripción del contenido..."
-        />
-        <TextField
-          select label="Categoría *"
-          value={cat} onChange={e => setCat(e.target.value)}
-          fullWidth
-        >
-          {CATEGORIAS.map(c => (
-            <MenuItem key={c} value={c}>{c}</MenuItem>
+        <TextField select label="Categoría *" value={cat} onChange={e => setCat(e.target.value)} fullWidth>
+          {categorias.map(c => (
+            <MenuItem key={c.id} value={c.name}>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Chip label={c.name} size="small" color={c.color || 'default'} />
+              </Stack>
+            </MenuItem>
           ))}
         </TextField>
       </Stack>
@@ -201,14 +199,14 @@ function UploadTab({ onUploaded }) {
 }
 
 // ── Panel "Buscar y Ver" ──────────────────────────────────────────────────────
-function SearchTab({ refresh }) {
+function SearchTab({ categorias, refresh }) {
   const { isAdmin } = useAuth();
   const [list,    setList]    = useState([]);
   const [loading, setLoading] = useState(true);
   const [search,  setSearch]  = useState('');
   const [catFilter, setCatFilter] = useState('');
-  const [viewer,  setViewer]  = useState(null);   // { url, contentType, title }
-  const [delConf, setDelConf] = useState(null);   // id to delete
+  const [viewer,  setViewer]  = useState(null);
+  const [delConf, setDelConf] = useState(null);
   const [delLoading, setDelLoading] = useState(false);
 
   const fetchList = useCallback(async () => {
@@ -225,39 +223,32 @@ function SearchTab({ refresh }) {
 
   useEffect(() => { fetchList(); }, [fetchList, refresh]);
 
-  const handleView = async (item) => {
-    try {
-      const url = procedimientosApi.viewUrl(item.id);
-      setViewer({ url, contentType: item.fileContentType, title: item.title });
-    } catch { /* ignore */ }
+  const catColor = (name) => categorias.find(c => c.name === name)?.color || 'default';
+
+  const handleView = (item) => {
+    const url = procedimientosApi.viewUrl(item.id);
+    setViewer({ url, contentType: item.fileContentType, title: item.title });
   };
 
   const handleDownload = (item) => {
-    const url = procedimientosApi.downloadUrl(item.id);
     const a = document.createElement('a');
-    a.href = url; a.download = item.fileName; a.click();
+    a.href = procedimientosApi.downloadUrl(item.id);
+    a.download = item.fileName;
+    a.click();
   };
 
   const handleDelete = async () => {
     if (!delConf) return;
     setDelLoading(true);
-    try {
-      await procedimientosApi.remove(delConf);
-      setDelConf(null);
-      fetchList();
-    } catch {
-      setDelConf(null);
-    } finally {
-      setDelLoading(false);
-    }
+    try { await procedimientosApi.remove(delConf); setDelConf(null); fetchList(); }
+    catch { setDelConf(null); }
+    finally { setDelLoading(false); }
   };
 
-  const isViewable = (ct) =>
-    ct?.includes('pdf') || ct?.startsWith('image/');
+  const isViewable = (ct) => ct?.includes('pdf') || ct?.startsWith('image/');
 
   return (
     <Box mt={3}>
-      {/* Filtros */}
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3}>
         <TextField
           placeholder="Buscar por título o descripción…"
@@ -265,9 +256,7 @@ function SearchTab({ refresh }) {
           onChange={e => setSearch(e.target.value)}
           sx={{ flex: 1 }}
           InputProps={{
-            startAdornment: (
-              <InputAdornment position="start"><SearchIcon color="action" /></InputAdornment>
-            ),
+            startAdornment: <InputAdornment position="start"><SearchIcon color="action" /></InputAdornment>,
           }}
         />
         <TextField
@@ -275,13 +264,15 @@ function SearchTab({ refresh }) {
           value={catFilter} onChange={e => setCatFilter(e.target.value)}
           sx={{ minWidth: 200 }}
           InputProps={{
-            startAdornment: (
-              <InputAdornment position="start"><FilterListIcon color="action" /></InputAdornment>
-            ),
+            startAdornment: <InputAdornment position="start"><FilterListIcon color="action" /></InputAdornment>,
           }}
         >
           <MenuItem value="">Todas</MenuItem>
-          {CATEGORIAS.map(c => <MenuItem key={c} value={c}>{c}</MenuItem>)}
+          {categorias.map(c => (
+            <MenuItem key={c.id} value={c.name}>
+              <Chip label={c.name} size="small" color={c.color || 'default'} />
+            </MenuItem>
+          ))}
         </TextField>
       </Stack>
 
@@ -300,29 +291,14 @@ function SearchTab({ refresh }) {
             <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <CardContent sx={{ flex: 1 }}>
                 <Stack direction="row" spacing={1} alignItems="flex-start">
-                  <Box mt={0.5}>
-                    <FileIcon contentType={item.fileContentType} fontSize="medium" />
-                  </Box>
+                  <Box mt={0.5}><FileIcon contentType={item.fileContentType} fontSize="medium" /></Box>
                   <Box flex={1} minWidth={0}>
-                    <Typography fontWeight={600} noWrap title={item.title}>
-                      {item.title}
-                    </Typography>
-                    <Chip
-                      label={item.category}
-                      size="small"
-                      color={CAT_COLORS[item.category] || 'default'}
-                      sx={{ mt: 0.5, mb: 1 }}
-                    />
+                    <Typography fontWeight={600} noWrap title={item.title}>{item.title}</Typography>
+                    <Chip label={item.category || '—'} size="small" color={catColor(item.category)} sx={{ mt: 0.5, mb: 1 }} />
                     {item.description && (
                       <Typography
                         variant="caption" color="text.secondary"
-                        display="block"
-                        sx={{
-                          overflow: 'hidden',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                        }}
+                        sx={{ overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}
                       >
                         {item.description}
                       </Typography>
@@ -360,41 +336,19 @@ function SearchTab({ refresh }) {
         ))}
       </Grid>
 
-      {/* Visor de archivo */}
-      <Dialog
-        open={!!viewer}
-        onClose={() => setViewer(null)}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{ sx: { height: '90vh' } }}
-      >
+      {/* Visor */}
+      <Dialog open={!!viewer} onClose={() => setViewer(null)} maxWidth="lg" fullWidth PaperProps={{ sx: { height: '90vh' } }}>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
           <Typography fontWeight={600} noWrap sx={{ flex: 1, mr: 2 }}>{viewer?.title}</Typography>
-          <IconButton size="small" onClick={() => setViewer(null)}>
-            <CloseIcon />
-          </IconButton>
+          <IconButton size="small" onClick={() => setViewer(null)}><CloseIcon /></IconButton>
         </DialogTitle>
         <DialogContent sx={{ p: 0, overflow: 'hidden' }}>
           {viewer?.contentType?.startsWith('image/') ? (
-            <Box
-              sx={{
-                height: '100%', display: 'flex',
-                alignItems: 'center', justifyContent: 'center',
-                bgcolor: 'grey.100', overflow: 'auto', p: 2,
-              }}
-            >
-              <img
-                src={viewer.url}
-                alt={viewer.title}
-                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-              />
+            <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.100', overflow: 'auto', p: 2 }}>
+              <img src={viewer.url} alt={viewer.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
             </Box>
           ) : (
-            <iframe
-              src={viewer?.url}
-              title={viewer?.title}
-              style={{ width: '100%', height: '100%', border: 'none' }}
-            />
+            <iframe src={viewer?.url} title={viewer?.title} style={{ width: '100%', height: '100%', border: 'none' }} />
           )}
         </DialogContent>
       </Dialog>
@@ -402,9 +356,7 @@ function SearchTab({ refresh }) {
       {/* Confirmar eliminación */}
       <Dialog open={!!delConf} onClose={() => setDelConf(null)} maxWidth="xs" fullWidth>
         <DialogTitle>¿Eliminar procedimiento?</DialogTitle>
-        <DialogContent>
-          <Typography>Esta acción no se puede deshacer.</Typography>
-        </DialogContent>
+        <DialogContent><Typography>Esta acción no se puede deshacer.</Typography></DialogContent>
         <DialogActions>
           <Button onClick={() => setDelConf(null)} disabled={delLoading}>Cancelar</Button>
           <Button color="error" variant="contained" onClick={handleDelete} disabled={delLoading}>
@@ -416,16 +368,234 @@ function SearchTab({ refresh }) {
   );
 }
 
+// ── Dialog de Crear/Editar Categoría ─────────────────────────────────────────
+function CategoriaDialog({ open, onClose, onSaved, initial }) {
+  const isEdit = !!initial;
+  const [name,      setName]      = useState(initial?.name      || '');
+  const [color,     setColor]     = useState(initial?.color     || 'default');
+  const [sortOrder, setSortOrder] = useState(initial?.sortOrder ?? 0);
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setName(initial?.name      || '');
+      setColor(initial?.color    || 'default');
+      setSortOrder(initial?.sortOrder ?? 0);
+      setError('');
+    }
+  }, [open, initial]);
+
+  const handleSave = async () => {
+    if (!name.trim()) { setError('El nombre es requerido.'); return; }
+    setLoading(true);
+    setError('');
+    try {
+      if (isEdit) {
+        await categoriasApi.update(initial.id, { name: name.trim(), color, sortOrder: Number(sortOrder) });
+      } else {
+        await categoriasApi.create({ name: name.trim(), color, sortOrder: Number(sortOrder) });
+      }
+      onSaved();
+      onClose();
+    } catch (e) {
+      const msg = e?.response?.data?.message || e?.response?.data;
+      setError(msg || 'Error al guardar la categoría.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>{isEdit ? 'Editar categoría' : 'Nueva categoría'}</DialogTitle>
+      <DialogContent>
+        <Stack spacing={2} mt={1}>
+          {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
+          <TextField
+            label="Nombre *"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            fullWidth
+            autoFocus
+          />
+          <TextField
+            select label="Color"
+            value={color} onChange={e => setColor(e.target.value)}
+            fullWidth
+          >
+            {COLOR_OPTIONS.map(o => (
+              <MenuItem key={o.value} value={o.value}>
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Chip label={o.label} size="small" color={o.value} />
+                </Stack>
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label="Orden"
+            type="number"
+            value={sortOrder}
+            onChange={e => setSortOrder(e.target.value)}
+            fullWidth
+            inputProps={{ min: 0 }}
+            helperText="Número menor aparece primero"
+          />
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={loading}>Cancelar</Button>
+        <Button variant="contained" onClick={handleSave} disabled={loading}>
+          {loading ? <CircularProgress size={18} /> : isEdit ? 'Guardar cambios' : 'Crear'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ── Panel "Categorías" (solo Admin) ──────────────────────────────────────────
+function CategoriasTab({ categorias, onReload }) {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing,    setEditing]    = useState(null);   // null = crear, object = editar
+  const [delConf,    setDelConf]    = useState(null);
+  const [delError,   setDelError]   = useState('');
+  const [delLoading, setDelLoading] = useState(false);
+
+  const handleDelete = async () => {
+    setDelLoading(true);
+    setDelError('');
+    try {
+      await categoriasApi.remove(delConf.id);
+      setDelConf(null);
+      onReload();
+    } catch (e) {
+      const msg = e?.response?.data?.message || e?.response?.data || 'Error al eliminar.';
+      setDelError(msg);
+      setDelLoading(false);
+    }
+  };
+
+  return (
+    <Box mt={3}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+        <Typography variant="body2" color="text.secondary">
+          Las categorías se usan para clasificar los procedimientos. Solo los administradores pueden gestionarlas.
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => { setEditing(null); setDialogOpen(true); }}
+        >
+          Nueva categoría
+        </Button>
+      </Stack>
+
+      <TableContainer component={Paper} variant="outlined">
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ bgcolor: 'grey.50' }}>
+              <TableCell sx={{ fontWeight: 700 }}>Nombre</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Color</TableCell>
+              <TableCell sx={{ fontWeight: 700 }} align="center">Orden</TableCell>
+              <TableCell sx={{ fontWeight: 700 }} align="center">Procedimientos</TableCell>
+              <TableCell sx={{ fontWeight: 700 }} align="right">Acciones</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {categorias.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                  No hay categorías.
+                </TableCell>
+              </TableRow>
+            )}
+            {categorias.map(cat => (
+              <TableRow key={cat.id} hover>
+                <TableCell>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <LabelIcon sx={{ fontSize: 16, color: 'action.active' }} />
+                    <Typography variant="body2" fontWeight={600}>{cat.name}</Typography>
+                  </Stack>
+                </TableCell>
+                <TableCell>
+                  <Chip label={COLOR_OPTIONS.find(o => o.value === cat.color)?.label || cat.color} size="small" color={cat.color || 'default'} />
+                </TableCell>
+                <TableCell align="center">
+                  <Typography variant="body2">{cat.sortOrder}</Typography>
+                </TableCell>
+                <TableCell align="center">
+                  <Chip label={cat.usageCount} size="small" variant="outlined" color={cat.usageCount > 0 ? 'primary' : 'default'} />
+                </TableCell>
+                <TableCell align="right">
+                  <Tooltip title="Editar">
+                    <IconButton
+                      size="small"
+                      onClick={() => { setEditing(cat); setDialogOpen(true); }}
+                    >
+                      <EditIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title={cat.usageCount > 0 ? `Tiene ${cat.usageCount} procedimiento(s)` : 'Eliminar'}>
+                    <span>
+                      <IconButton
+                        size="small" color="error"
+                        onClick={() => { setDelError(''); setDelConf(cat); }}
+                        disabled={cat.usageCount > 0}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Dialog crear/editar */}
+      <CategoriaDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSaved={onReload}
+        initial={editing}
+      />
+
+      {/* Confirmar eliminación */}
+      <Dialog open={!!delConf} onClose={() => setDelConf(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>¿Eliminar categoría?</DialogTitle>
+        <DialogContent>
+          {delError
+            ? <Alert severity="error">{delError}</Alert>
+            : <Typography>Se eliminará la categoría <b>"{delConf?.name}"</b>. Esta acción no se puede deshacer.</Typography>
+          }
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDelConf(null)} disabled={delLoading}>
+            {delError ? 'Cerrar' : 'Cancelar'}
+          </Button>
+          {!delError && (
+            <Button color="error" variant="contained" onClick={handleDelete} disabled={delLoading}>
+              {delLoading ? <CircularProgress size={18} /> : 'Eliminar'}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}
+
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function ProcedimientosPage() {
+  const { isAdmin } = useAuth();
   const [tab,     setTab]     = useState(0);
   const [refresh, setRefresh] = useState(0);
 
+  const { categorias, loading: catLoading, reload: reloadCats } = useCategorias();
+
   return (
     <Box sx={{ p: { xs: 2, md: 4 }, maxWidth: 1200, mx: 'auto' }}>
-      <Typography variant="h4" fontWeight={700} mb={0.5}>
-        Procedimientos
-      </Typography>
+      <Typography variant="h4" fontWeight={700} mb={0.5}>Procedimientos</Typography>
       <Typography variant="body2" color="text.secondary" mb={3}>
         Gestiona y consulta los procedimientos y documentos institucionales.
       </Typography>
@@ -436,16 +606,31 @@ export default function ProcedimientosPage() {
           onChange={(_, v) => setTab(v)}
           sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}
         >
-          <Tab icon={<CloudUploadIcon />} iconPosition="start" label="Subir Archivo"   />
-          <Tab icon={<SearchIcon />}      iconPosition="start" label="Buscar y Ver"   />
+          <Tab icon={<CloudUploadIcon />} iconPosition="start" label="Subir Archivo" />
+          <Tab icon={<SearchIcon />}      iconPosition="start" label="Buscar y Ver" />
+          {isAdmin && (
+            <Tab icon={<CategoryIcon />} iconPosition="start" label="Categorías" />
+          )}
         </Tabs>
 
         <Box sx={{ p: { xs: 2, md: 3 } }}>
           {tab === 0 && (
-            <UploadTab onUploaded={() => { setRefresh(r => r + 1); }} />
+            <UploadTab
+              categorias={categorias}
+              onUploaded={() => setRefresh(r => r + 1)}
+            />
           )}
           {tab === 1 && (
-            <SearchTab refresh={refresh} />
+            <SearchTab
+              categorias={categorias}
+              refresh={refresh}
+            />
+          )}
+          {tab === 2 && isAdmin && (
+            <CategoriasTab
+              categorias={categorias}
+              onReload={reloadCats}
+            />
           )}
         </Box>
       </Paper>
