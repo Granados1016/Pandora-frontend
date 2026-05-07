@@ -4,7 +4,7 @@ import {
   Grid, Card, CardContent, CardActions, Chip, IconButton, Tooltip,
   CircularProgress, Alert, Dialog, DialogTitle, DialogContent, DialogActions,
   InputAdornment, Stack, Divider, LinearProgress, Fade, Table, TableBody,
-  TableCell, TableContainer, TableHead, TableRow,
+  TableCell, TableContainer, TableHead, TableRow, Pagination,
 } from '@mui/material';
 import UploadFileIcon        from '@mui/icons-material/UploadFile';
 import SearchIcon            from '@mui/icons-material/Search';
@@ -199,29 +199,48 @@ function UploadTab({ categorias, onUploaded }) {
 }
 
 // ── Panel "Buscar y Ver" ──────────────────────────────────────────────────────
+const PAGE_SIZE = 12;
+
 function SearchTab({ categorias, refresh }) {
   const { isAdmin } = useAuth();
-  const [list,    setList]    = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search,  setSearch]  = useState('');
-  const [catFilter, setCatFilter] = useState('');
+  const [list,       setList]       = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [search,     setSearch]     = useState('');
+  const [catFilter,  setCatFilter]  = useState('');
+  const [page,       setPage]       = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total,      setTotal]      = useState(0);
   const [viewer,  setViewer]  = useState(null);
   const [delConf, setDelConf] = useState(null);
   const [delLoading, setDelLoading] = useState(false);
 
-  const fetchList = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data } = await procedimientosApi.getAll({ search, category: catFilter });
-      setList(data);
-    } catch {
-      setList([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [search, catFilter]);
+  // Cambia filtros → vuelve a pág 1
+  const handleSearchChange  = (val) => { setSearch(val);    setPage(1); };
+  const handleCatChange     = (val) => { setCatFilter(val); setPage(1); };
 
-  useEffect(() => { fetchList(); }, [fetchList, refresh]);
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    procedimientosApi
+      .getAll({ search, category: catFilter, page, pageSize: PAGE_SIZE })
+      .then(({ data }) => {
+        if (!active) return;
+        // Soporta tanto la respuesta paginada { items, total, totalPages }
+        // como la respuesta antigua (array directo) para retrocompatibilidad
+        if (Array.isArray(data)) {
+          setList(data);
+          setTotalPages(1);
+          setTotal(data.length);
+        } else {
+          setList(data.items ?? []);
+          setTotalPages(data.totalPages ?? 1);
+          setTotal(data.total ?? 0);
+        }
+      })
+      .catch(() => { if (active) { setList([]); setTotalPages(1); setTotal(0); } })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [search, catFilter, page, refresh]);
 
   const catColor = (name) => categorias.find(c => c.name === name)?.color || 'default';
 
@@ -253,7 +272,7 @@ function SearchTab({ categorias, refresh }) {
         <TextField
           placeholder="Buscar por título o descripción…"
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => handleSearchChange(e.target.value)}
           sx={{ flex: 1 }}
           InputProps={{
             startAdornment: <InputAdornment position="start"><SearchIcon color="action" /></InputAdornment>,
@@ -261,7 +280,7 @@ function SearchTab({ categorias, refresh }) {
         />
         <TextField
           select label="Categoría"
-          value={catFilter} onChange={e => setCatFilter(e.target.value)}
+          value={catFilter} onChange={e => handleCatChange(e.target.value)}
           sx={{ minWidth: 200 }}
           InputProps={{
             startAdornment: <InputAdornment position="start"><FilterListIcon color="action" /></InputAdornment>,
@@ -283,6 +302,13 @@ function SearchTab({ categorias, refresh }) {
           <FolderOpenIcon sx={{ fontSize: 64, color: 'action.disabled', mb: 1 }} />
           <Typography color="text.secondary">No se encontraron procedimientos.</Typography>
         </Box>
+      )}
+
+      {!loading && total > 0 && (
+        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+          {total} procedimiento{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
+          {totalPages > 1 && ` — página ${page} de ${totalPages}`}
+        </Typography>
       )}
 
       <Grid container spacing={2}>
@@ -335,6 +361,19 @@ function SearchTab({ categorias, refresh }) {
           </Grid>
         ))}
       </Grid>
+
+      {/* Paginación */}
+      {totalPages > 1 && (
+        <Box display="flex" justifyContent="center" mt={3}>
+          <Pagination
+            count={totalPages}
+            page={page}
+            onChange={(_, v) => setPage(v)}
+            color="primary"
+            shape="rounded"
+          />
+        </Box>
+      )}
 
       {/* Visor */}
       <Dialog open={!!viewer} onClose={() => setViewer(null)} maxWidth="lg" fullWidth PaperProps={{ sx: { height: '90vh' } }}>

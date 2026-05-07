@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Typography, Grid, Card, CardContent, Divider,
   CircularProgress, Alert, Stack, Chip, Tooltip,
-  LinearProgress, Paper, IconButton,
+  LinearProgress, Paper, IconButton, Button,
 } from '@mui/material';
 import RefreshIcon          from '@mui/icons-material/Refresh';
+import DownloadIcon         from '@mui/icons-material/Download';
 import PeopleIcon           from '@mui/icons-material/People';
 import EmailIcon            from '@mui/icons-material/Email';
 import InventoryIcon        from '@mui/icons-material/Inventory2';
@@ -113,10 +114,18 @@ function Section({ title, children }) {
 
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function IndicadoresPage() {
-  const [data,    setData]    = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState('');
-  const [ts,      setTs]      = useState(null);
+  const [data,        setData]        = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState('');
+  const [ts,          setTs]          = useState(null);
+  const [exporting,   setExporting]   = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try { await indicadoresApi.exportar(); }
+    catch { /* silencioso — el fetch ya muestra error en consola */ }
+    finally { setExporting(false); }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -155,11 +164,22 @@ export default function IndicadoresPage() {
             {ts && <> — Actualizado: <b>{ts}</b></>}
           </Typography>
         </Box>
-        <Tooltip title="Actualizar datos">
-          <IconButton onClick={fetchData} disabled={loading}>
-            <RefreshIcon />
-          </IconButton>
-        </Tooltip>
+        <Stack direction="row" spacing={1}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={exporting ? <CircularProgress size={16} /> : <DownloadIcon />}
+            onClick={handleExport}
+            disabled={exporting || loading || !data}
+          >
+            {exporting ? 'Exportando…' : 'Exportar Excel'}
+          </Button>
+          <Tooltip title="Actualizar datos">
+            <IconButton onClick={fetchData} disabled={loading}>
+              <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+        </Stack>
       </Stack>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}

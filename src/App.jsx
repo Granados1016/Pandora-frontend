@@ -1,50 +1,57 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { ThemeProvider, CssBaseline } from '@mui/material';
+import { ThemeProvider, CssBaseline, LinearProgress } from '@mui/material';
 import pandoraTheme from './theme';
 import { AuthProvider, useAuth, MODULES, ROLES } from './hooks/useAuth.jsx';
 import Layout from './components/Layout';
 
-// ── Páginas generales ─────────────────────────────────────────────────────────
-import Dashboard    from './pages/Dashboard';
-import Profile      from './pages/Profile';
-import Reports      from './pages/Reports';
+// Páginas críticas (siempre necesarias en el primer render)
 import Login        from './pages/Login';
 import Unauthorized from './pages/Unauthorized';
-import Admin        from './pages/Admin';
 
-// ── Mail+ ─────────────────────────────────────────────────────────────────────
-import NewCampaign    from './pages/NewCampaign';
-import Campaigns      from './pages/Campaigns';
-import CampaignDetail from './pages/CampaignDetail';
-import Templates      from './pages/Templates';
+// ── Lazy chunks — se cargan solo cuando se navega a esa ruta ──────────────────
+const Dashboard    = lazy(() => import('./pages/Dashboard'));
+const Profile      = lazy(() => import('./pages/Profile'));
+const Reports      = lazy(() => import('./pages/Reports'));
+const Admin        = lazy(() => import('./pages/Admin'));
 
-// ── Inventario ────────────────────────────────────────────────────────────────
-import InventoryDashboard from './pages/inventory/InventoryDashboard';
-import InventoryItems     from './pages/inventory/InventoryItems';
-import InventoryTypes     from './pages/inventory/InventoryTypes';
-import Departments        from './pages/catalogs/Departments';
-import Employees          from './pages/catalogs/Employees';
+// Mail+
+const NewCampaign    = lazy(() => import('./pages/NewCampaign'));
+const Campaigns      = lazy(() => import('./pages/Campaigns'));
+const CampaignDetail = lazy(() => import('./pages/CampaignDetail'));
+const Templates      = lazy(() => import('./pages/Templates'));
 
-// ── Licencias ─────────────────────────────────────────────────────────────────
-import Licencias from './pages/Licencias';
+// Inventario
+const InventoryDashboard = lazy(() => import('./pages/inventory/InventoryDashboard'));
+const InventoryItems     = lazy(() => import('./pages/inventory/InventoryItems'));
+const InventoryTypes     = lazy(() => import('./pages/inventory/InventoryTypes'));
+const Departments        = lazy(() => import('./pages/catalogs/Departments'));
+const Employees          = lazy(() => import('./pages/catalogs/Employees'));
 
-// ── Tickets ───────────────────────────────────────────────────────────────────
-import TicketTemplateBuilder from './pages/tickets/TicketTemplateBuilder';
-import TicketsListPage       from './pages/tickets/TicketsListPage';
-import TicketFormPage        from './pages/tickets/TicketFormPage';
-import TicketDetailPage      from './pages/tickets/TicketDetailPage';
+// Licencias
+const Licencias = lazy(() => import('./pages/Licencias'));
 
-// ── Procedimientos e Indicadores ──────────────────────────────────────────────
-import ProcedimientosPage from './pages/procedimientos/ProcedimientosPage';
-import IndicadoresPage    from './pages/indicadores/IndicadoresPage';
+// Tickets
+const TicketTemplateBuilder = lazy(() => import('./pages/tickets/TicketTemplateBuilder'));
+const TicketsListPage       = lazy(() => import('./pages/tickets/TicketsListPage'));
+const TicketFormPage        = lazy(() => import('./pages/tickets/TicketFormPage'));
+const TicketDetailPage      = lazy(() => import('./pages/tickets/TicketDetailPage'));
 
-// ── Calendario ────────────────────────────────────────────────────────────────
-import CalendarPage        from './pages/calendar/CalendarPage';
-import RoomsManager        from './pages/calendar/RoomsManager';
-import RoomRequestForm     from './pages/calendar/RoomRequestForm';
-import RoomRequestsManager from './pages/calendar/RoomRequestsManager';
-import CalendarReports     from './pages/calendar/CalendarReports';
+// Procedimientos e Indicadores
+const ProcedimientosPage = lazy(() => import('./pages/procedimientos/ProcedimientosPage'));
+const IndicadoresPage    = lazy(() => import('./pages/indicadores/IndicadoresPage'));
+
+// Calendario
+const CalendarPage        = lazy(() => import('./pages/calendar/CalendarPage'));
+const RoomsManager        = lazy(() => import('./pages/calendar/RoomsManager'));
+const RoomRequestForm     = lazy(() => import('./pages/calendar/RoomRequestForm'));
+const RoomRequestsManager = lazy(() => import('./pages/calendar/RoomRequestsManager'));
+const CalendarReports     = lazy(() => import('./pages/calendar/CalendarReports'));
+
+// ── Fallback global para Suspense ─────────────────────────────────────────────
+function PageLoader() {
+  return <LinearProgress sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }} />;
+}
 
 // ── ProtectedRoute ────────────────────────────────────────────────────────────
 // Props:
@@ -87,6 +94,7 @@ function ProtectedRoute({
 // ── Rutas de la aplicación ────────────────────────────────────────────────────
 function AppRoutes() {
   return (
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       {/* Pública */}
       <Route path="/login"        element={<Login />} />
@@ -234,6 +242,7 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
     </Routes>
+    </Suspense>
   );
 }
 
