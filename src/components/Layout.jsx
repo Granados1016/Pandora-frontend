@@ -33,6 +33,8 @@ import AddTaskIcon              from '@mui/icons-material/AddTask';
 import TuneIcon                 from '@mui/icons-material/Tune';
 import ExpandLessIcon           from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon           from '@mui/icons-material/ExpandMore';
+import DescriptionIcon          from '@mui/icons-material/Description';
+import ShowChartIcon            from '@mui/icons-material/ShowChart';
 
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 
@@ -169,6 +171,20 @@ export default function Layout({ children }) {
         { label: 'Nueva Solicitud',   icon: <AddCircleOutlineIcon />, path: '/calendar/solicitud',   show: hasModule(MODULES.CALENDARIO_ADMIN) || hasModule(MODULES.CAL_REQUEST) || isAdmin },
         { label: 'Solicitudes',       icon: <PendingActionsIcon />,   path: '/calendar/solicitudes', show: hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
         { label: 'Reportes',          icon: <BarChartOutlinedIcon />, path: '/calendar/reports',     show: hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
+      ],
+    },
+    {
+      label: 'Procedimientos',
+      show: hasModule(MODULES.PROCEDIMIENTOS) || isAdmin,
+      items: [
+        { label: 'Procedimientos', icon: <DescriptionIcon />, path: '/procedimientos', show: hasModule(MODULES.PROCEDIMIENTOS) || isAdmin },
+      ],
+    },
+    {
+      label: 'Indicadores',
+      show: hasModule(MODULES.INDICADORES) || isAdmin,
+      items: [
+        { label: 'Indicadores', icon: <ShowChartIcon />, path: '/indicadores', show: hasModule(MODULES.INDICADORES) || isAdmin },
       ],
     },
     {

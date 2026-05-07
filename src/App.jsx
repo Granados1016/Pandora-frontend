@@ -35,6 +35,10 @@ import TicketsListPage       from './pages/tickets/TicketsListPage';
 import TicketFormPage        from './pages/tickets/TicketFormPage';
 import TicketDetailPage      from './pages/tickets/TicketDetailPage';
 
+// ── Procedimientos e Indicadores ──────────────────────────────────────────────
+import ProcedimientosPage from './pages/procedimientos/ProcedimientosPage';
+import IndicadoresPage    from './pages/indicadores/IndicadoresPage';
+
 // ── Calendario ────────────────────────────────────────────────────────────────
 import CalendarPage        from './pages/calendar/CalendarPage';
 import RoomsManager        from './pages/calendar/RoomsManager';
@@ -201,6 +205,20 @@ function AppRoutes() {
               <Route path="/calendar/reports" element={
                 <ProtectedRoute requiredModule={MODULES.CALENDARIO_ADMIN}>
                   <CalendarReports />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Procedimientos ──────────────────────────────────────── */}
+              <Route path="/procedimientos" element={
+                <ProtectedRoute requiredModule={MODULES.PROCEDIMIENTOS}>
+                  <ProcedimientosPage />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Indicadores ─────────────────────────────────────────── */}
+              <Route path="/indicadores" element={
+                <ProtectedRoute requiredModule={MODULES.INDICADORES}>
+                  <IndicadoresPage />
                 </ProtectedRoute>
               } />
 

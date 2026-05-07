@@ -290,6 +290,31 @@ export const ticketApi = {
   delete:           (id)         => api.delete(`/tickets/${id}`),
 };
 
+export const procedimientosApi = {
+  getAll: (params = {}) => api.get('/procedimientos', { params }),
+  upload: (file, meta) => {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('title',       meta.title       || '');
+    form.append('description', meta.description || '');
+    form.append('category',    meta.category    || '');
+    return api.post('/procedimientos', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  remove: (id) => api.delete(`/procedimientos/${id}`),
+  viewUrl: (id) => {
+    const token = localStorage.getItem('pandora_token');
+    return `${BASE_URL}/procedimientos/${id}/view?access_token=${token}`;
+  },
+  downloadUrl: (id) => {
+    const token = localStorage.getItem('pandora_token');
+    return `${BASE_URL}/procedimientos/${id}/download?access_token=${token}`;
+  },
+};
+
+export const indicadoresApi = {
+  getAll: () => api.get('/indicadores'),
+};
+
 export const adminApi = {
   downloadBackup: async () => {
     const token = localStorage.getItem('pandora_token');

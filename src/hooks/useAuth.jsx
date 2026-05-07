@@ -26,6 +26,10 @@ export const MODULES = {
 
   // ── Sub-módulos de Calendario ────────────────────────────────────────────
   CAL_REQUEST:      16384, // Puede solicitar salas (sub-módulo de CALENDARIO)
+
+  // ── Módulos nuevos ────────────────────────────────────────────────────────
+  PROCEDIMIENTOS:   32768, // Módulo de gestión de procedimientos/documentos
+  INDICADORES:      65536, // Módulo de indicadores y KPIs
 };
 
 export const MODULE_LABELS = {
