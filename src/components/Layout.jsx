@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
   AppBar, Toolbar, Typography, IconButton, Divider, Avatar, Tooltip, Collapse,
+  Badge, InputBase, Paper, Chip, Stack, ClickAwayListener, Popper,
 } from '@mui/material';
 
 // ── Íconos de navegación ──────────────────────────────────────────────────────
@@ -35,8 +36,16 @@ import ExpandLessIcon           from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon           from '@mui/icons-material/ExpandMore';
 import DescriptionIcon          from '@mui/icons-material/Description';
 import ShowChartIcon            from '@mui/icons-material/ShowChart';
+import CampaignIcon             from '@mui/icons-material/Campaign';
+import NotificationsNoneIcon    from '@mui/icons-material/NotificationsNone';
+import NotificationsIcon        from '@mui/icons-material/Notifications';
+import SearchIcon               from '@mui/icons-material/Search';
+import HistoryIcon              from '@mui/icons-material/History';
+import OpenInNewIcon            from '@mui/icons-material/OpenInNew';
 
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
+import { useNotifications } from '../hooks/useNotifications';
+import { searchApi } from '../api/pandoraApi';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const EXPANDED_W  = 260;
@@ -174,6 +183,13 @@ export default function Layout({ children }) {
       ],
     },
     {
+      label: 'Comunicados',
+      show: hasModule(MODULES.COMUNICADOS) || isAdmin,
+      items: [
+        { label: 'Comunicados', icon: <CampaignIcon />, path: '/comunicados', show: hasModule(MODULES.COMUNICADOS) || isAdmin },
+      ],
+    },
+    {
       label: 'Procedimientos',
       show: hasModule(MODULES.PROCEDIMIENTOS) || isAdmin,
       items: [
@@ -205,10 +221,59 @@ export default function Layout({ children }) {
       label: 'Sistema',
       show: isAdmin,
       items: [
-        { label: 'Administración', icon: <AdminPanelSettingsIcon />, path: '/admin', show: isAdmin },
+        { label: 'Administración', icon: <AdminPanelSettingsIcon />, path: '/admin',       show: isAdmin },
+        { label: 'Log de Auditoría', icon: <HistoryIcon />,          path: '/admin/audit', show: isAdmin },
       ],
     },
   ];
+
+  // ── Notificaciones ──────────────────────────────────────────────────────────
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const [notifAnchor, setNotifAnchor] = useState(null);
+  const notifOpen = Boolean(notifAnchor);
+
+  // ── Búsqueda global ──────────────────────────────────────────────────────────
+  const [searchOpen,    setSearchOpen]    = useState(false);
+  const [searchQuery,   setSearchQuery]   = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchRef = useRef(null);
+
+  // Atajo Ctrl+K / Cmd+K
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(s => !s);
+        setSearchQuery('');
+        setSearchResults([]);
+      }
+      if (e.key === 'Escape') setSearchOpen(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  useEffect(() => {
+    if (!searchQuery || searchQuery.length < 2) { setSearchResults([]); return; }
+    const timer = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const { data } = await searchApi.global(searchQuery);
+        setSearchResults(data.results ?? []);
+      } catch { setSearchResults([]); }
+      finally { setSearchLoading(false); }
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const TYPE_LABELS = {
+    procedimiento: { label: 'Procedimiento', color: 'primary' },
+    comunicado:    { label: 'Comunicado',    color: 'warning' },
+    inventario:    { label: 'Inventario',    color: 'success' },
+    licencia:      { label: 'Licencia',      color: 'secondary' },
+    usuario:       { label: 'Usuario',       color: 'default' },
+  };
 
   // ── Ítem de navegación ──────────────────────────────────────────────────────
   const NavItem = ({ label, icon, path }) => {
@@ -444,7 +509,15 @@ export default function Layout({ children }) {
           <IconButton color="inherit" onClick={() => setMobileOpen(!mobileOpen)}>
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" fontWeight={800} ml={1}>PANDORA</Typography>
+          <Typography variant="h6" fontWeight={800} ml={1} flex={1}>PANDORA</Typography>
+          <IconButton color="inherit" onClick={() => setSearchOpen(s => !s)}>
+            <SearchIcon />
+          </IconButton>
+          <IconButton color="inherit" onClick={e => setNotifAnchor(notifAnchor ? null : e.currentTarget)}>
+            <Badge badgeContent={unreadCount} color="error" max={99}>
+              {unreadCount > 0 ? <NotificationsIcon /> : <NotificationsNoneIcon />}
+            </Badge>
+          </IconButton>
         </Toolbar>
       </AppBar>
 
@@ -517,8 +590,186 @@ export default function Layout({ children }) {
           minHeight: '100vh',
         }}
       >
+        {/* ── Barra superior desktop ──────────────────────────────────────── */}
+        <Box
+          sx={{
+            display: { xs: 'none', md: 'flex' },
+            alignItems: 'center',
+            px: 3, py: 1,
+            borderBottom: 1, borderColor: 'divider',
+            bgcolor: 'background.paper',
+            position: 'sticky', top: 0, zIndex: 100,
+            gap: 1,
+          }}
+        >
+          {/* Search bar */}
+          <Box
+            onClick={() => setSearchOpen(true)}
+            sx={{
+              display: 'flex', alignItems: 'center', gap: 1,
+              px: 2, py: 0.75, borderRadius: 2,
+              border: 1, borderColor: 'divider',
+              cursor: 'pointer', minWidth: 220,
+              '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
+            }}
+          >
+            <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+            <Typography variant="body2" color="text.disabled" flex={1}>Buscar…</Typography>
+            <Typography variant="caption" color="text.disabled" sx={{
+              border: 1, borderColor: 'divider', borderRadius: 0.5, px: 0.5, lineHeight: 1.6
+            }}>Ctrl+K</Typography>
+          </Box>
+
+          <Box flex={1} />
+
+          {/* Bell */}
+          <Tooltip title="Notificaciones">
+            <IconButton onClick={e => setNotifAnchor(notifAnchor ? null : e.currentTarget)}>
+              <Badge badgeContent={unreadCount} color="error" max={99}>
+                {unreadCount > 0 ? <NotificationsIcon color="primary" /> : <NotificationsNoneIcon />}
+              </Badge>
+            </IconButton>
+          </Tooltip>
+        </Box>
+
         {children}
       </Box>
+
+      {/* ── Panel de notificaciones (Popper) ──────────────────────────────── */}
+      <Popper open={notifOpen} anchorEl={notifAnchor} placement="bottom-end" style={{ zIndex: 1400 }}>
+        <ClickAwayListener onClickAway={() => setNotifAnchor(null)}>
+          <Paper elevation={8} sx={{ width: 360, maxHeight: 480, display: 'flex', flexDirection: 'column', borderRadius: 2, overflow: 'hidden' }}>
+            <Box sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center' }}>
+              <Typography fontWeight={700} flex={1}>Notificaciones</Typography>
+              {unreadCount > 0 && (
+                <Typography
+                  variant="caption" color="primary" sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                  onClick={markAllRead}
+                >
+                  Marcar todas como leídas
+                </Typography>
+              )}
+            </Box>
+            <Box sx={{ overflowY: 'auto', flex: 1 }}>
+              {notifications.length === 0 && (
+                <Box sx={{ p: 4, textAlign: 'center' }}>
+                  <NotificationsNoneIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1 }} />
+                  <Typography variant="body2" color="text.secondary">Sin notificaciones</Typography>
+                </Box>
+              )}
+              {notifications.map(n => (
+                <Box
+                  key={n.id}
+                  onClick={() => markRead(n.id)}
+                  sx={{
+                    px: 2, py: 1.5,
+                    borderBottom: 1, borderColor: 'divider',
+                    bgcolor: n.isRead ? 'transparent' : 'action.hover',
+                    cursor: n.isRead ? 'default' : 'pointer',
+                    '&:hover': { bgcolor: 'action.hover' },
+                  }}
+                >
+                  <Stack direction="row" spacing={1} alignItems="flex-start">
+                    <Chip
+                      label={n.type}
+                      size="small"
+                      color={n.type === 'error' ? 'error' : n.type === 'warning' ? 'warning' : n.type === 'success' ? 'success' : 'info'}
+                      sx={{ mt: 0.25, flexShrink: 0 }}
+                    />
+                    <Box flex={1} minWidth={0}>
+                      <Typography variant="body2" fontWeight={n.isRead ? 400 : 700} noWrap>
+                        {n.title}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{
+                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                      }}>
+                        {n.message}
+                      </Typography>
+                      <Typography variant="caption" color="text.disabled" display="block" mt={0.25}>
+                        {new Date(n.createdAt).toLocaleString('es-MX')}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </Box>
+              ))}
+            </Box>
+          </Paper>
+        </ClickAwayListener>
+      </Popper>
+
+      {/* ── Buscador global (modal Ctrl+K) ────────────────────────────────── */}
+      {searchOpen && (
+        <Box
+          sx={{
+            position: 'fixed', inset: 0, zIndex: 1500,
+            bgcolor: 'rgba(0,0,0,0.45)',
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+            pt: { xs: 8, md: '12vh' }, px: 2,
+          }}
+          onClick={() => setSearchOpen(false)}
+        >
+          <Paper
+            elevation={16}
+            onClick={e => e.stopPropagation()}
+            sx={{ width: '100%', maxWidth: 600, borderRadius: 3, overflow: 'hidden' }}
+          >
+            {/* Input */}
+            <Box sx={{ display: 'flex', alignItems: 'center', px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+              <SearchIcon sx={{ color: 'text.secondary', mr: 1.5 }} />
+              <InputBase
+                autoFocus
+                placeholder="Buscar en Pandora…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                sx={{ flex: 1, fontSize: 16 }}
+                ref={searchRef}
+              />
+              {searchLoading && <Box sx={{ width: 16, height: 16, border: 2, borderColor: 'primary.main', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', '@keyframes spin': { to: { transform: 'rotate(360deg)' } } }} />}
+              <Typography variant="caption" color="text.disabled" sx={{ ml: 1, border: 1, borderColor: 'divider', borderRadius: 0.5, px: 0.5, lineHeight: 1.7 }}>Esc</Typography>
+            </Box>
+
+            {/* Resultados */}
+            {searchResults.length > 0 && (
+              <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                {searchResults.map((r, i) => {
+                  const typeInfo = TYPE_LABELS[r.type] || { label: r.type, color: 'default' };
+                  return (
+                    <Box
+                      key={i}
+                      onClick={() => { navigate(r.path); setSearchOpen(false); }}
+                      sx={{
+                        px: 2, py: 1.5, cursor: 'pointer',
+                        borderBottom: 1, borderColor: 'divider',
+                        display: 'flex', alignItems: 'center', gap: 1.5,
+                        '&:hover': { bgcolor: 'action.hover' },
+                      }}
+                    >
+                      <Chip label={typeInfo.label} size="small" color={typeInfo.color} sx={{ flexShrink: 0 }} />
+                      <Box flex={1} minWidth={0}>
+                        <Typography variant="body2" fontWeight={600} noWrap>{r.label}</Typography>
+                        {r.subtitle && <Typography variant="caption" color="text.secondary" noWrap display="block">{r.subtitle}</Typography>}
+                      </Box>
+                      <OpenInNewIcon sx={{ fontSize: 14, color: 'text.disabled', flexShrink: 0 }} />
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
+
+            {searchQuery.length >= 2 && !searchLoading && searchResults.length === 0 && (
+              <Box sx={{ p: 4, textAlign: 'center' }}>
+                <Typography color="text.secondary" variant="body2">Sin resultados para "<b>{searchQuery}</b>"</Typography>
+              </Box>
+            )}
+
+            {!searchQuery && (
+              <Box sx={{ p: 2 }}>
+                <Typography variant="caption" color="text.secondary">Escribe al menos 2 caracteres para buscar en procedimientos, comunicados, inventario, licencias y usuarios.</Typography>
+              </Box>
+            )}
+          </Paper>
+        </Box>
+      )}
     </Box>
   );
 }

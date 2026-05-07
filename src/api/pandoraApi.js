@@ -335,6 +335,27 @@ export const indicadoresApi = {
   },
 };
 
+export const comunicadosApi = {
+  getAll:  (params = {}) => api.get('/comunicados', { params }),
+  getById: (id)          => api.get(`/comunicados/${id}`),
+  create:  (data)        => api.post('/comunicados', data),
+  update:  (id, data)    => api.put(`/comunicados/${id}`, data),
+  remove:  (id)          => api.delete(`/comunicados/${id}`),
+};
+
+export const notificacionesApi = {
+  getAll:      ()     => api.get('/notifications'),
+  unreadCount: ()     => api.get('/notifications/unread-count'),
+  markRead:    (id)   => api.patch(`/notifications/${id}/read`),
+  markAllRead: ()     => api.patch('/notifications/read-all'),
+  create:      (data) => api.post('/notifications', data),
+  remove:      (id)   => api.delete(`/notifications/${id}`),
+};
+
+export const searchApi = {
+  global: (q) => api.get('/search', { params: { q } }),
+};
+
 export const adminApi = {
   downloadBackup: async () => {
     const token = localStorage.getItem('pandora_token');

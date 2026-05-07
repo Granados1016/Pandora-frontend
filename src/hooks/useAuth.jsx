@@ -28,8 +28,9 @@ export const MODULES = {
   CAL_REQUEST:      16384, // Puede solicitar salas (sub-módulo de CALENDARIO)
 
   // ── Módulos nuevos ────────────────────────────────────────────────────────
-  PROCEDIMIENTOS:   32768, // Módulo de gestión de procedimientos/documentos
-  INDICADORES:      65536, // Módulo de indicadores y KPIs
+  PROCEDIMIENTOS:   32768,  // Módulo de gestión de procedimientos/documentos
+  INDICADORES:      65536,  // Módulo de indicadores y KPIs
+  COMUNICADOS:      131072, // Módulo de comunicados institucionales
 };
 
 export const MODULE_LABELS = {

@@ -264,7 +264,14 @@ function SearchTab({ categorias, refresh }) {
     finally { setDelLoading(false); }
   };
 
-  const isViewable = (ct) => ct?.includes('pdf') || ct?.startsWith('image/');
+  // PDF e imágenes se muestran inline; Office docs via Office Online
+  const isOfficeDoc = (ct) =>
+    ct?.includes('officedocument') ||   // .docx / .xlsx / .pptx
+    ct?.includes('msword') ||
+    ct?.includes('ms-excel') ||
+    ct?.includes('ms-powerpoint') ||
+    ct?.includes('opendocument');
+  const isViewable = (ct) => ct?.includes('pdf') || ct?.startsWith('image/') || isOfficeDoc(ct);
 
   return (
     <Box mt={3}>
@@ -386,6 +393,13 @@ function SearchTab({ categorias, refresh }) {
             <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.100', overflow: 'auto', p: 2 }}>
               <img src={viewer.url} alt={viewer.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
             </Box>
+          ) : isOfficeDoc(viewer?.contentType) ? (
+            // Office Online Viewer para Word/Excel/PowerPoint
+            <iframe
+              src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(viewer.url)}`}
+              title={viewer?.title}
+              style={{ width: '100%', height: '100%', border: 'none' }}
+            />
           ) : (
             <iframe src={viewer?.url} title={viewer?.title} style={{ width: '100%', height: '100%', border: 'none' }} />
           )}

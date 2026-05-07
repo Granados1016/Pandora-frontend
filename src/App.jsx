@@ -41,6 +41,10 @@ const TicketDetailPage      = lazy(() => import('./pages/tickets/TicketDetailPag
 const ProcedimientosPage = lazy(() => import('./pages/procedimientos/ProcedimientosPage'));
 const IndicadoresPage    = lazy(() => import('./pages/indicadores/IndicadoresPage'));
 
+// Comunicados y Auditoría
+const ComunicadosPage = lazy(() => import('./pages/comunicados/ComunicadosPage'));
+const AuditPage       = lazy(() => import('./pages/admin/AuditPage'));
+
 // Calendario
 const CalendarPage        = lazy(() => import('./pages/calendar/CalendarPage'));
 const RoomsManager        = lazy(() => import('./pages/calendar/RoomsManager'));
@@ -227,6 +231,20 @@ function AppRoutes() {
               <Route path="/indicadores" element={
                 <ProtectedRoute requiredModule={MODULES.INDICADORES}>
                   <IndicadoresPage />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Comunicados ─────────────────────────────────────────── */}
+              <Route path="/comunicados" element={
+                <ProtectedRoute requiredModule={MODULES.COMUNICADOS}>
+                  <ComunicadosPage />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Auditoría — solo Admin ───────────────────────────────── */}
+              <Route path="/admin/audit" element={
+                <ProtectedRoute adminOnly>
+                  <AuditPage />
                 </ProtectedRoute>
               } />
 
