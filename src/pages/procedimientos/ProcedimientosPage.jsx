@@ -24,6 +24,9 @@ import CategoryIcon          from '@mui/icons-material/Category';
 import LabelIcon             from '@mui/icons-material/Label';
 import HistoryIcon           from '@mui/icons-material/History';
 import PublishIcon           from '@mui/icons-material/Publish';
+import GridViewIcon          from '@mui/icons-material/GridView';
+import FolderIcon            from '@mui/icons-material/Folder';
+import ArrowBackIcon         from '@mui/icons-material/ArrowBack';
 
 import { procedimientosApi, categoriasApi } from '../../api/pandoraApi';
 import { useAuth } from '../../hooks/useAuth';
@@ -212,8 +215,9 @@ function SearchTab({ categorias, refresh }) {
   const [page,       setPage]       = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total,      setTotal]      = useState(0);
-  const [tick,    setTick]    = useState(0);
+  const [tick,     setTick]    = useState(0);
   const fetchList = () => setTick(t => t + 1);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'folders'
   const [viewer,  setViewer]  = useState(null);
   const [delConf, setDelConf] = useState(null);
   const [delLoading, setDelLoading] = useState(false);
@@ -310,53 +314,166 @@ function SearchTab({ categorias, refresh }) {
     ct?.includes('opendocument');
   const isViewable = (ct) => ct?.includes('pdf') || ct?.startsWith('image/') || isOfficeDoc(ct);
 
+  // ── Datos para vista de carpetas ─────────────────────────────────────────
+  // Agrupamos todos los docs cargados más la lista de categorías registradas
+  const folderMap = React.useMemo(() => {
+    const map = {};
+    // Carpetas registradas en catálogo
+    categorias.forEach(c => {
+      map[c.name] = { name: c.name, color: c.color || 'default', count: 0 };
+    });
+    // Documentos sin categoría
+    list.forEach(item => {
+      const key = item.category || '(Sin categoría)';
+      if (!map[key]) map[key] = { name: key, color: 'default', count: 0 };
+      map[key].count++;
+    });
+    return Object.values(map).sort((a, b) => b.count - a.count);
+  }, [categorias, list]);
+
   return (
     <Box mt={3}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3}>
-        <TextField
-          placeholder="Buscar por título o descripción…"
-          value={search}
-          onChange={e => handleSearchChange(e.target.value)}
-          sx={{ flex: 1 }}
-          InputProps={{
-            startAdornment: <InputAdornment position="start"><SearchIcon color="action" /></InputAdornment>,
-          }}
-        />
-        <TextField
-          select label="Categoría"
-          value={catFilter} onChange={e => handleCatChange(e.target.value)}
-          sx={{ minWidth: 200 }}
-          InputProps={{
-            startAdornment: <InputAdornment position="start"><FilterListIcon color="action" /></InputAdornment>,
-          }}
-        >
-          <MenuItem value="">Todas</MenuItem>
-          {categorias.map(c => (
-            <MenuItem key={c.id} value={c.name}>
-              <Chip label={c.name} size="small" color={c.color || 'default'} />
-            </MenuItem>
-          ))}
-        </TextField>
+      {/* ── Barra de controles ─────────────────────────────────────────── */}
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3} alignItems={{ sm: 'center' }}>
+        {/* Si estamos en carpeta, mostrar botón volver; si no, mostrar buscador */}
+        {viewMode === 'folders' && catFilter ? (
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={() => handleCatChange('')}
+            size="small"
+            sx={{ alignSelf: 'flex-start' }}
+          >
+            Todas las carpetas
+          </Button>
+        ) : (
+          <TextField
+            placeholder="Buscar por título o descripción…"
+            value={search}
+            onChange={e => handleSearchChange(e.target.value)}
+            sx={{ flex: 1 }}
+            size="small"
+            InputProps={{
+              startAdornment: <InputAdornment position="start"><SearchIcon color="action" /></InputAdornment>,
+            }}
+          />
+        )}
+
+        {/* Filtro categoría — solo visible en modo grid */}
+        {viewMode === 'grid' && (
+          <TextField
+            select label="Categoría" size="small"
+            value={catFilter} onChange={e => handleCatChange(e.target.value)}
+            sx={{ minWidth: 180 }}
+            InputProps={{
+              startAdornment: <InputAdornment position="start"><FilterListIcon color="action" sx={{ fontSize: 18 }} /></InputAdornment>,
+            }}
+          >
+            <MenuItem value="">Todas</MenuItem>
+            {categorias.map(c => (
+              <MenuItem key={c.id} value={c.name}>
+                <Chip label={c.name} size="small" color={c.color || 'default'} />
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
+
+        {/* Toggle vista */}
+        <Stack direction="row" spacing={0.5}>
+          <Tooltip title="Vista en cuadrícula">
+            <IconButton
+              size="small"
+              color={viewMode === 'grid' ? 'primary' : 'default'}
+              onClick={() => setViewMode('grid')}
+              sx={{ border: 1, borderColor: viewMode === 'grid' ? 'primary.main' : 'divider' }}
+            >
+              <GridViewIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Vista por carpetas">
+            <IconButton
+              size="small"
+              color={viewMode === 'folders' ? 'primary' : 'default'}
+              onClick={() => { setViewMode('folders'); handleSearchChange(''); }}
+              sx={{ border: 1, borderColor: viewMode === 'folders' ? 'primary.main' : 'divider' }}
+            >
+              <FolderIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Stack>
       </Stack>
 
       {loading && <LinearProgress sx={{ borderRadius: 1 }} />}
 
-      {!loading && list.length === 0 && (
-        <Box textAlign="center" py={8}>
-          <FolderOpenIcon sx={{ fontSize: 64, color: 'action.disabled', mb: 1 }} />
-          <Typography color="text.secondary">No se encontraron procedimientos.</Typography>
-        </Box>
+      {/* ══ VISTA CARPETAS — sin categoría seleccionada: mostrar carpetas ══ */}
+      {viewMode === 'folders' && !catFilter && (
+        <>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {folderMap.length} carpeta{folderMap.length !== 1 ? 's' : ''}
+          </Typography>
+          <Grid container spacing={2}>
+            {folderMap.map(folder => (
+              <Grid item xs={6} sm={4} md={3} key={folder.name}>
+                <Card
+                  variant="outlined"
+                  onClick={() => handleCatChange(folder.name)}
+                  sx={{
+                    cursor: 'pointer', textAlign: 'center', p: 2,
+                    transition: 'all .15s',
+                    '&:hover': { borderColor: 'primary.main', boxShadow: 3, transform: 'translateY(-2px)' },
+                  }}
+                >
+                  <FolderIcon sx={{ fontSize: 52, color: `${folder.color}.main`, mb: 1 }} />
+                  <Typography variant="body2" fontWeight={700} noWrap title={folder.name}>
+                    {folder.name}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {folder.count} documento{folder.count !== 1 ? 's' : ''}
+                  </Typography>
+                </Card>
+              </Grid>
+            ))}
+            {folderMap.length === 0 && !loading && (
+              <Grid item xs={12}>
+                <Box textAlign="center" py={6}>
+                  <FolderOpenIcon sx={{ fontSize: 64, color: 'action.disabled', mb: 1 }} />
+                  <Typography color="text.secondary">Aún no hay categorías creadas.</Typography>
+                </Box>
+              </Grid>
+            )}
+          </Grid>
+        </>
       )}
 
-      {!loading && total > 0 && (
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-          {total} procedimiento{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
-          {totalPages > 1 && ` — página ${page} de ${totalPages}`}
-        </Typography>
+      {/* ══ VISTA CARPETAS — con categoría seleccionada: mostrar docs de esa carpeta ══ */}
+      {viewMode === 'folders' && catFilter && (
+        <Stack direction="row" spacing={1} alignItems="center" mb={2}>
+          <FolderIcon color="primary" />
+          <Typography variant="h6" fontWeight={700}>{catFilter}</Typography>
+          <Typography variant="caption" color="text.secondary">
+            — {total} documento{total !== 1 ? 's' : ''}
+          </Typography>
+        </Stack>
       )}
 
-      <Grid container spacing={2}>
-        {list.map(item => (
+      {/* ══ GRID DE DOCUMENTOS (grid mode, o folders mode con carpeta abierta) ══ */}
+      {(viewMode === 'grid' || (viewMode === 'folders' && catFilter)) && (
+        <>
+          {!loading && list.length === 0 && (
+            <Box textAlign="center" py={8}>
+              <FolderOpenIcon sx={{ fontSize: 64, color: 'action.disabled', mb: 1 }} />
+              <Typography color="text.secondary">No se encontraron procedimientos.</Typography>
+            </Box>
+          )}
+
+          {!loading && total > 0 && viewMode === 'grid' && (
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+              {total} procedimiento{total !== 1 ? 's' : ''} encontrado{total !== 1 ? 's' : ''}
+              {totalPages > 1 && ` — página ${page} de ${totalPages}`}
+            </Typography>
+          )}
+
+          <Grid container spacing={2}>
+            {list.map(item => (
           <Grid item xs={12} sm={6} md={4} key={item.id}>
             <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <CardContent sx={{ flex: 1 }}>
@@ -408,20 +525,22 @@ function SearchTab({ categorias, refresh }) {
               </CardActions>
             </Card>
           </Grid>
-        ))}
-      </Grid>
+            ))}
+          </Grid>
 
-      {/* Paginación */}
-      {totalPages > 1 && (
-        <Box display="flex" justifyContent="center" mt={3}>
-          <Pagination
-            count={totalPages}
-            page={page}
-            onChange={(_, v) => setPage(v)}
-            color="primary"
-            shape="rounded"
-          />
-        </Box>
+          {/* Paginación */}
+          {totalPages > 1 && (
+            <Box display="flex" justifyContent="center" mt={3}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(_, v) => setPage(v)}
+                color="primary"
+                shape="rounded"
+              />
+            </Box>
+          )}
+        </>
       )}
 
       {/* Visor */}

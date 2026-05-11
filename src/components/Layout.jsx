@@ -242,9 +242,28 @@ export default function Layout({ children }) {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchFilter,  setSearchFilter]  = useState('all'); // filtro por tipo
+  const [dateFilter,    setDateFilter]    = useState('all'); // 'all' | '7d' | '30d' | '90d'
   const searchRef = useRef(null);
 
-  const closeSearch = () => { setSearchOpen(false); setSearchQuery(''); setSearchResults([]); setSearchFilter('all'); };
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchFilter('all');
+    setDateFilter('all');
+  };
+
+  // Filtra resultados por período
+  const applyDateFilter = (results, period) => {
+    if (period === 'all') return results;
+    const now = new Date();
+    const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
+    const cutoff = new Date(now - days * 86400_000);
+    return results.filter(r => {
+      if (!r.date) return true; // sin fecha → siempre mostrar
+      return new Date(r.date) >= cutoff;
+    });
+  };
 
   // Atajo Ctrl+K / Cmd+K
   useEffect(() => {
@@ -255,6 +274,7 @@ export default function Layout({ children }) {
         setSearchQuery('');
         setSearchResults([]);
         setSearchFilter('all');
+        setDateFilter('all');
       }
       if (e.key === 'Escape') setSearchOpen(false);
     };
@@ -740,47 +760,87 @@ export default function Layout({ children }) {
           <Typography variant="caption" color="text.disabled" sx={{ ml: 1, border: 1, borderColor: 'divider', borderRadius: 0.5, px: 0.5, lineHeight: 1.7 }}>Esc</Typography>
         </Box>
 
-        {/* Filtros por módulo — solo cuando hay resultados */}
+        {/* Filtros por módulo + período — solo cuando hay resultados */}
         {searchResults.length > 0 && (() => {
           const types = [...new Set(searchResults.map(r => r.type))];
+          const DATE_OPTS = [
+            { value: 'all', label: 'Cualquier fecha' },
+            { value: '7d',  label: 'Últimos 7 días' },
+            { value: '30d', label: 'Último mes' },
+            { value: '90d', label: 'Últimos 3 meses' },
+          ];
           return (
-            <Box sx={{ px: 2, py: 1, borderBottom: 1, borderColor: 'divider', display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-              <Chip
-                label="Todos"
-                size="small"
-                variant={searchFilter === 'all' ? 'filled' : 'outlined'}
-                color={searchFilter === 'all' ? 'primary' : 'default'}
-                onClick={() => setSearchFilter('all')}
-                sx={{ cursor: 'pointer' }}
-              />
-              {types.map(t => {
-                const ti = TYPE_LABELS[t] || { label: t, color: 'default' };
-                return (
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              {/* Fila módulos */}
+              <Box sx={{ px: 2, pt: 1, pb: 0.5, display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5, fontWeight: 600 }}>Módulo:</Typography>
+                <Chip
+                  label="Todos"
+                  size="small"
+                  variant={searchFilter === 'all' ? 'filled' : 'outlined'}
+                  color={searchFilter === 'all' ? 'primary' : 'default'}
+                  onClick={() => setSearchFilter('all')}
+                  sx={{ cursor: 'pointer' }}
+                />
+                {types.map(t => {
+                  const ti = TYPE_LABELS[t] || { label: t, color: 'default' };
+                  return (
+                    <Chip
+                      key={t}
+                      label={`${ti.label} (${searchResults.filter(r => r.type === t).length})`}
+                      size="small"
+                      variant={searchFilter === t ? 'filled' : 'outlined'}
+                      color={searchFilter === t ? ti.color : 'default'}
+                      onClick={() => setSearchFilter(prev => prev === t ? 'all' : t)}
+                      sx={{ cursor: 'pointer' }}
+                    />
+                  );
+                })}
+              </Box>
+              {/* Fila período */}
+              <Box sx={{ px: 2, pb: 1, display: 'flex', gap: 0.75, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5, fontWeight: 600 }}>Período:</Typography>
+                {DATE_OPTS.map(opt => (
                   <Chip
-                    key={t}
-                    label={`${ti.label} (${searchResults.filter(r => r.type === t).length})`}
+                    key={opt.value}
+                    label={opt.label}
                     size="small"
-                    variant={searchFilter === t ? 'filled' : 'outlined'}
-                    color={searchFilter === t ? ti.color : 'default'}
-                    onClick={() => setSearchFilter(prev => prev === t ? 'all' : t)}
+                    variant={dateFilter === opt.value ? 'filled' : 'outlined'}
+                    color={dateFilter === opt.value ? 'secondary' : 'default'}
+                    onClick={() => setDateFilter(opt.value)}
                     sx={{ cursor: 'pointer' }}
                   />
-                );
-              })}
+                ))}
+              </Box>
             </Box>
           );
         })()}
 
         {/* Resultados */}
         {searchResults.length > 0 && (() => {
-          const filtered = searchFilter === 'all'
+          const byModule = searchFilter === 'all'
             ? searchResults
             : searchResults.filter(r => r.type === searchFilter);
+          const filtered = applyDateFilter(byModule, dateFilter);
+
+          const fmtDate = (d) => {
+            if (!d) return null;
+            const dt = new Date(d);
+            const now = new Date();
+            const diffDays = Math.floor((now - dt) / 86400_000);
+            if (diffDays === 0) return 'Hoy';
+            if (diffDays === 1) return 'Ayer';
+            if (diffDays < 7)  return `Hace ${diffDays} días`;
+            return dt.toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: diffDays > 300 ? 'numeric' : undefined });
+          };
+
           return (
-            <Box sx={{ maxHeight: 380, overflowY: 'auto' }}>
+            <Box sx={{ maxHeight: 360, overflowY: 'auto' }}>
               {filtered.length === 0 && (
                 <Box sx={{ p: 3, textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary">Sin resultados en este módulo</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Sin resultados con los filtros actuales
+                  </Typography>
                 </Box>
               )}
               {filtered.map((r, i) => {
@@ -790,7 +850,7 @@ export default function Layout({ children }) {
                     key={i}
                     onClick={() => { navigate(r.path); closeSearch(); }}
                     sx={{
-                      px: 2, py: 1.5, cursor: 'pointer',
+                      px: 2, py: 1.25, cursor: 'pointer',
                       borderBottom: 1, borderColor: 'divider',
                       display: 'flex', alignItems: 'center', gap: 1.5,
                       '&:hover': { bgcolor: 'action.hover' },
@@ -799,7 +859,18 @@ export default function Layout({ children }) {
                     <Chip label={typeInfo.label} size="small" color={typeInfo.color} sx={{ flexShrink: 0 }} />
                     <Box flex={1} minWidth={0}>
                       <Typography variant="body2" fontWeight={600} noWrap>{r.label}</Typography>
-                      {r.subtitle && <Typography variant="caption" color="text.secondary" noWrap display="block">{r.subtitle}</Typography>}
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        {r.subtitle && (
+                          <Typography variant="caption" color="text.secondary" noWrap>
+                            {r.subtitle}
+                          </Typography>
+                        )}
+                        {r.date && (
+                          <Typography variant="caption" color="text.disabled" sx={{ flexShrink: 0 }}>
+                            · {fmtDate(r.date)}
+                          </Typography>
+                        )}
+                      </Stack>
                     </Box>
                     <OpenInNewIcon sx={{ fontSize: 14, color: 'text.disabled', flexShrink: 0 }} />
                   </Box>
@@ -818,7 +889,8 @@ export default function Layout({ children }) {
         {!searchQuery && (
           <Box sx={{ p: 2 }}>
             <Typography variant="caption" color="text.secondary">
-              Busca en procedimientos, comunicados, inventario, licencias y usuarios. Usa los filtros para acotar por módulo.
+              Busca en procedimientos, comunicados, inventario, licencias, tickets y usuarios.
+              Filtra por <strong>módulo</strong> y <strong>período</strong> para acotar resultados.
             </Typography>
           </Box>
         )}
