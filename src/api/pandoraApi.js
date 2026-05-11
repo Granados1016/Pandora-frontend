@@ -316,6 +316,19 @@ export const procedimientosApi = {
     const token = localStorage.getItem('pandora_token');
     return `${BASE_URL}/procedimientos/${id}/download?access_token=${token}`;
   },
+  // ── Versiones ──
+  getVersions: (id) => api.get(`/procedimientos/${id}/versions`),
+  uploadVersion: (id, file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post(`/procedimientos/${id}/versions`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  versionDownloadUrl: (id, vId) => {
+    const token = localStorage.getItem('pandora_token');
+    return `${BASE_URL}/procedimientos/${id}/versions/${vId}/download?access_token=${token}`;
+  },
 };
 
 export const indicadoresApi = {

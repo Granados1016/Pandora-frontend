@@ -15,9 +15,11 @@ import AccessTimeIcon         from '@mui/icons-material/AccessTime';
 import AssignmentIndIcon      from '@mui/icons-material/AssignmentInd';
 import ImageIcon              from '@mui/icons-material/Image';
 import DownloadIcon           from '@mui/icons-material/Download';
+import PictureAsPdfIcon       from '@mui/icons-material/PictureAsPdf';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
-import { ticketApi }          from '../../api/pandoraApi';
+import { printPdf }           from '../../utils/printPdf';
+import { ticketApi, userApi } from '../../api/pandoraApi';
 import { apiError }           from '../../api/apiError';
 import { useAuth }            from '../../hooks/useAuth.jsx';
 import { format }             from 'date-fns';
@@ -145,6 +147,12 @@ export default function TicketDetailPage() {
   const [deleteOpen,   setDeleteOpen]   = useState(false);
   const [deleting,     setDeleting]     = useState(false);
 
+  // Lista de usuarios para asignación
+  const [users, setUsers] = useState([]);
+  useEffect(() => {
+    if (isAdmin) userApi.getAll().then(r => setUsers(r.data ?? [])).catch(() => {});
+  }, [isAdmin]);
+
   // ── Load ──────────────────────────────────────────────────────────────────
 
   const load = useCallback(async () => {
@@ -243,6 +251,59 @@ export default function TicketDetailPage() {
     }
   };
 
+  // ── Export PDF ────────────────────────────────────────────────────────────
+
+  const exportPdf = () => {
+    const { ticket, fieldValues, comments } = data;
+    const statusColor = { 'Abierto': 'chip-default', 'En Proceso': 'chip-warning',
+      'Resuelto': 'chip-success', 'Cerrado': 'chip-success', 'En Espera': 'chip-warning' };
+    const priorityColor = { 'Baja': 'chip-default', 'Media': 'chip-default',
+      'Alta': 'chip-warning', 'Crítica': 'chip-error' };
+
+    const fields = fieldValues?.length ? `
+      <div class="section-title">Campos del formulario</div>
+      <div class="detail-grid">
+        ${fieldValues.map(f => `
+          <div class="detail-item">
+            <label>${f.label}</label>
+            <p>${f.value || '—'}</p>
+          </div>`).join('')}
+      </div>` : '';
+
+    const commentsHtml = comments?.length ? `
+      <div class="section-title">Comentarios (${comments.length})</div>
+      <table>
+        <thead><tr><th>Usuario</th><th>Comentario</th><th>Fecha</th></tr></thead>
+        <tbody>
+          ${comments.map(c => `<tr>
+            <td>${c.author ?? '—'}</td>
+            <td>${c.content ?? ''}</td>
+            <td>${c.createdAt ? new Date(c.createdAt).toLocaleString('es-MX') : '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>` : '';
+
+    const html = `
+      <div class="section-title">Información general</div>
+      <div class="detail-grid">
+        <div class="detail-item"><label>Número</label><p>${ticket.ticketNumber}</p></div>
+        <div class="detail-item"><label>Estatus</label>
+          <p><span class="chip ${statusColor[ticket.status] ?? 'chip-default'}">${ticket.status}</span></p></div>
+        <div class="detail-item"><label>Prioridad</label>
+          <p><span class="chip ${priorityColor[ticket.priority] ?? 'chip-default'}">${ticket.priority}</span></p></div>
+        <div class="detail-item"><label>Área</label><p>${ticket.area ?? '—'}</p></div>
+        <div class="detail-item"><label>Solicitante</label><p>${ticket.requesterName ?? '—'}</p></div>
+        <div class="detail-item"><label>Asignado a</label><p>${ticket.assignedTo ?? 'Sin asignar'}</p></div>
+        <div class="detail-item"><label>Creado</label><p>${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString('es-MX') : '—'}</p></div>
+        <div class="detail-item"><label>Actualizado</label><p>${ticket.updatedAt ? new Date(ticket.updatedAt).toLocaleString('es-MX') : '—'}</p></div>
+      </div>
+      ${fields}
+      ${commentsHtml}
+    `;
+
+    printPdf(`Ticket ${ticket.ticketNumber}`, html, { subtitle: ticket.title });
+  };
+
   // ── Download attachment ────────────────────────────────────────────────────
 
   const downloadAttachment = (att) => {
@@ -308,13 +369,20 @@ export default function TicketDetailPage() {
               {ticket.updatedAt && ` · Actualizado ${fmtShort(ticket.updatedAt)}`}
             </Typography>
           </Box>
-          {isAdmin && (
-            <Tooltip title="Eliminar ticket">
-              <IconButton color="error" onClick={() => setDeleteOpen(true)}>
-                <DeleteIcon />
+          <Stack direction="row" spacing={1}>
+            <Tooltip title="Exportar PDF">
+              <IconButton onClick={exportPdf} size="small">
+                <PictureAsPdfIcon />
               </IconButton>
             </Tooltip>
-          )}
+            {isAdmin && (
+              <Tooltip title="Eliminar ticket">
+                <IconButton color="error" onClick={() => setDeleteOpen(true)}>
+                  <DeleteIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Stack>
         </Stack>
       </Paper>
 
@@ -509,11 +577,23 @@ export default function TicketDetailPage() {
                   </TextField>
 
                   <TextField
+                    select
                     fullWidth size="small" label="Asignado a"
                     value={statusForm.assignedTo}
                     onChange={e => setStatusForm(f => ({ ...f, assignedTo: e.target.value }))}
-                    placeholder="Nombre del responsable"
-                  />
+                  >
+                    <MenuItem value=""><em>Sin asignar</em></MenuItem>
+                    {users.map(u => (
+                      <MenuItem key={u.id} value={u.fullName}>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Avatar sx={{ width: 20, height: 20, fontSize: 10, bgcolor: 'primary.main' }}>
+                            {u.fullName?.[0]}
+                          </Avatar>
+                          <span>{u.fullName}</span>
+                        </Stack>
+                      </MenuItem>
+                    ))}
+                  </TextField>
 
                   <TextField
                     fullWidth size="small" label="Departamento"

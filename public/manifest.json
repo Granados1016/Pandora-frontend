@@ -1,0 +1,20 @@
+{
+  "name": "Pandora — Sistema de Gestión iMET",
+  "short_name": "Pandora",
+  "description": "Sistema integral de gestión institucional iMET",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#1a237e",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "es-MX"
+}

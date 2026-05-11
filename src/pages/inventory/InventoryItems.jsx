@@ -16,10 +16,12 @@ import SearchIcon from '@mui/icons-material/Search';
 import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
 import DownloadIcon from '@mui/icons-material/Download';
 import UploadIcon from '@mui/icons-material/Upload';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import { inventoryApi, catalogApi } from '../../api/pandoraApi';
 import ExcelImportDialog from '../../components/inventory/ExcelImportDialog';
 import { apiError } from '../../api/apiError';
 import { useAuth, MODULES } from '../../hooks/useAuth.jsx';
+import { printPdf, buildTableHtml } from '../../utils/printPdf';
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 const STATUS_OPTIONS = [
@@ -275,13 +277,36 @@ export default function InventoryItems() {
           </Typography>
         </Box>
         <Stack direction="row" spacing={1}>
+          <Tooltip title="Exportar tabla actual a PDF">
+            <Button
+              variant="outlined" color="error" startIcon={<PictureAsPdfIcon />}
+              onClick={() => {
+                const statusChip = (s) => {
+                  const c = s === 'Activo' ? 'chip-success' : s === 'Mantenimiento' ? 'chip-warning' : s === 'Dado de baja' ? 'chip-error' : 'chip-default';
+                  return `<span class="chip ${c}">${s ?? '—'}</span>`;
+                };
+                const html = buildTableHtml(
+                  ['No. Inv.','Nombre','Categoría','Marca / Modelo','Departamento','Asignado a','Estatus'],
+                  ['inventoryNumber','name','typeName','_brandModel','department','assignedTo','status'],
+                  filtered.map(i => ({ ...i, _brandModel: [i.brand, i.model].filter(Boolean).join(' / ') || '—' })),
+                  (k, v) => k === 'status' ? statusChip(v) : String(v ?? '—'),
+                );
+                printPdf('Reporte de Inventario', html, {
+                  subtitle: `${filtered.length} equipo${filtered.length !== 1 ? 's' : ''} — filtro aplicado`,
+                });
+              }}
+              sx={{ borderRadius: 2 }}
+            >
+              PDF
+            </Button>
+          </Tooltip>
           <Tooltip title="Exportar a Excel">
             <Button
               variant="outlined" startIcon={<DownloadIcon />}
               href={inventoryApi.exportUrl()} download
               sx={{ borderRadius: 2 }}
             >
-              Exportar
+              Excel
             </Button>
           </Tooltip>
           {canWrite && (

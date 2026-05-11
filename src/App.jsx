@@ -1,7 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider, CssBaseline, LinearProgress } from '@mui/material';
-import pandoraTheme from './theme';
+import { ThemeModeProvider, useThemeMode } from './hooks/useThemeMode';
 import { AuthProvider, useAuth, MODULES, ROLES } from './hooks/useAuth.jsx';
 import Layout from './components/Layout';
 
@@ -264,13 +264,22 @@ function AppRoutes() {
   );
 }
 
-export default function App() {
+function ThemedApp() {
+  const { theme } = useThemeMode();
   return (
-    <ThemeProvider theme={pandoraTheme}>
+    <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
         <AppRoutes />
       </AuthProvider>
     </ThemeProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeModeProvider>
+      <ThemedApp />
+    </ThemeModeProvider>
   );
 }

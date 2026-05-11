@@ -42,10 +42,13 @@ import NotificationsIcon        from '@mui/icons-material/Notifications';
 import SearchIcon               from '@mui/icons-material/Search';
 import HistoryIcon              from '@mui/icons-material/History';
 import OpenInNewIcon            from '@mui/icons-material/OpenInNew';
+import DarkModeIcon             from '@mui/icons-material/DarkMode';
+import LightModeIcon            from '@mui/icons-material/LightMode';
 
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 import { useNotifications } from '../hooks/useNotifications';
 import { searchApi } from '../api/pandoraApi';
+import { useThemeMode } from '../hooks/useThemeMode';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const EXPANDED_W  = 260;
@@ -59,6 +62,7 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { username, fullName, isAdmin, hasModule, hasSubModule, hasModuleWrite, logout } = useAuth();
+  const { mode, toggleMode } = useThemeMode();
 
   // Estado del sidebar (desktop)
   const [open, setOpen] = useState(
@@ -237,7 +241,10 @@ export default function Layout({ children }) {
   const [searchQuery,   setSearchQuery]   = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchFilter,  setSearchFilter]  = useState('all'); // filtro por tipo
   const searchRef = useRef(null);
+
+  const closeSearch = () => { setSearchOpen(false); setSearchQuery(''); setSearchResults([]); setSearchFilter('all'); };
 
   // Atajo Ctrl+K / Cmd+K
   useEffect(() => {
@@ -247,6 +254,7 @@ export default function Layout({ children }) {
         setSearchOpen(s => !s);
         setSearchQuery('');
         setSearchResults([]);
+        setSearchFilter('all');
       }
       if (e.key === 'Escape') setSearchOpen(false);
     };
@@ -622,6 +630,13 @@ export default function Layout({ children }) {
 
           <Box flex={1} />
 
+          {/* Toggle modo oscuro */}
+          <Tooltip title={mode === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}>
+            <IconButton onClick={toggleMode} size="small">
+              {mode === 'dark' ? <LightModeIcon sx={{ color: 'warning.main' }} /> : <DarkModeIcon />}
+            </IconButton>
+          </Tooltip>
+
           {/* Bell */}
           <Tooltip title="Notificaciones">
             <IconButton onClick={e => setNotifAnchor(notifAnchor ? null : e.currentTarget)}>
@@ -700,12 +715,12 @@ export default function Layout({ children }) {
       {/* ── Buscador global (modal Ctrl+K) ────────────────────────────────── */}
       <Dialog
         open={searchOpen}
-        onClose={() => { setSearchOpen(false); setSearchQuery(''); setSearchResults([]); }}
+        onClose={closeSearch}
         fullWidth
         maxWidth="sm"
         PaperProps={{
           elevation: 16,
-          sx: { borderRadius: 3, overflow: 'hidden', mt: { xs: 8, md: '12vh' }, verticalAlign: 'top' },
+          sx: { borderRadius: 3, overflow: 'hidden', mt: { xs: 8, md: '10vh' }, verticalAlign: 'top' },
         }}
         sx={{ '& .MuiDialog-container': { alignItems: 'flex-start' } }}
         TransitionProps={{ onEntered: () => searchRef.current?.focus() }}
@@ -725,33 +740,74 @@ export default function Layout({ children }) {
           <Typography variant="caption" color="text.disabled" sx={{ ml: 1, border: 1, borderColor: 'divider', borderRadius: 0.5, px: 0.5, lineHeight: 1.7 }}>Esc</Typography>
         </Box>
 
+        {/* Filtros por módulo — solo cuando hay resultados */}
+        {searchResults.length > 0 && (() => {
+          const types = [...new Set(searchResults.map(r => r.type))];
+          return (
+            <Box sx={{ px: 2, py: 1, borderBottom: 1, borderColor: 'divider', display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+              <Chip
+                label="Todos"
+                size="small"
+                variant={searchFilter === 'all' ? 'filled' : 'outlined'}
+                color={searchFilter === 'all' ? 'primary' : 'default'}
+                onClick={() => setSearchFilter('all')}
+                sx={{ cursor: 'pointer' }}
+              />
+              {types.map(t => {
+                const ti = TYPE_LABELS[t] || { label: t, color: 'default' };
+                return (
+                  <Chip
+                    key={t}
+                    label={`${ti.label} (${searchResults.filter(r => r.type === t).length})`}
+                    size="small"
+                    variant={searchFilter === t ? 'filled' : 'outlined'}
+                    color={searchFilter === t ? ti.color : 'default'}
+                    onClick={() => setSearchFilter(prev => prev === t ? 'all' : t)}
+                    sx={{ cursor: 'pointer' }}
+                  />
+                );
+              })}
+            </Box>
+          );
+        })()}
+
         {/* Resultados */}
-        {searchResults.length > 0 && (
-          <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
-            {searchResults.map((r, i) => {
-              const typeInfo = TYPE_LABELS[r.type] || { label: r.type, color: 'default' };
-              return (
-                <Box
-                  key={i}
-                  onClick={() => { navigate(r.path); setSearchOpen(false); }}
-                  sx={{
-                    px: 2, py: 1.5, cursor: 'pointer',
-                    borderBottom: 1, borderColor: 'divider',
-                    display: 'flex', alignItems: 'center', gap: 1.5,
-                    '&:hover': { bgcolor: 'action.hover' },
-                  }}
-                >
-                  <Chip label={typeInfo.label} size="small" color={typeInfo.color} sx={{ flexShrink: 0 }} />
-                  <Box flex={1} minWidth={0}>
-                    <Typography variant="body2" fontWeight={600} noWrap>{r.label}</Typography>
-                    {r.subtitle && <Typography variant="caption" color="text.secondary" noWrap display="block">{r.subtitle}</Typography>}
-                  </Box>
-                  <OpenInNewIcon sx={{ fontSize: 14, color: 'text.disabled', flexShrink: 0 }} />
+        {searchResults.length > 0 && (() => {
+          const filtered = searchFilter === 'all'
+            ? searchResults
+            : searchResults.filter(r => r.type === searchFilter);
+          return (
+            <Box sx={{ maxHeight: 380, overflowY: 'auto' }}>
+              {filtered.length === 0 && (
+                <Box sx={{ p: 3, textAlign: 'center' }}>
+                  <Typography variant="body2" color="text.secondary">Sin resultados en este módulo</Typography>
                 </Box>
-              );
-            })}
-          </Box>
-        )}
+              )}
+              {filtered.map((r, i) => {
+                const typeInfo = TYPE_LABELS[r.type] || { label: r.type, color: 'default' };
+                return (
+                  <Box
+                    key={i}
+                    onClick={() => { navigate(r.path); closeSearch(); }}
+                    sx={{
+                      px: 2, py: 1.5, cursor: 'pointer',
+                      borderBottom: 1, borderColor: 'divider',
+                      display: 'flex', alignItems: 'center', gap: 1.5,
+                      '&:hover': { bgcolor: 'action.hover' },
+                    }}
+                  >
+                    <Chip label={typeInfo.label} size="small" color={typeInfo.color} sx={{ flexShrink: 0 }} />
+                    <Box flex={1} minWidth={0}>
+                      <Typography variant="body2" fontWeight={600} noWrap>{r.label}</Typography>
+                      {r.subtitle && <Typography variant="caption" color="text.secondary" noWrap display="block">{r.subtitle}</Typography>}
+                    </Box>
+                    <OpenInNewIcon sx={{ fontSize: 14, color: 'text.disabled', flexShrink: 0 }} />
+                  </Box>
+                );
+              })}
+            </Box>
+          );
+        })()}
 
         {searchQuery.length >= 2 && !searchLoading && searchResults.length === 0 && (
           <Box sx={{ p: 4, textAlign: 'center' }}>
@@ -761,7 +817,9 @@ export default function Layout({ children }) {
 
         {!searchQuery && (
           <Box sx={{ p: 2 }}>
-            <Typography variant="caption" color="text.secondary">Escribe al menos 2 caracteres para buscar en procedimientos, comunicados, inventario, licencias y usuarios.</Typography>
+            <Typography variant="caption" color="text.secondary">
+              Busca en procedimientos, comunicados, inventario, licencias y usuarios. Usa los filtros para acotar por módulo.
+            </Typography>
           </Box>
         )}
       </Dialog>

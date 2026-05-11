@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import MDEditor from '@uiw/react-md-editor';
 import {
   Box,
   Typography,
@@ -189,17 +190,28 @@ function ComunicadoDialog({ open, onClose, onSaved, initial }) {
             helperText={`${form.title.length}/200`}
           />
 
-          <TextField
-            id="com-content"
-            label="Contenido"
-            required
-            fullWidth
-            multiline
-            rows={6}
-            value={form.content}
-            onChange={set('content')}
-            placeholder="Escribe el contenido del comunicado…"
-          />
+          {/* Editor Markdown enriquecido */}
+          <Box>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
+              Contenido *
+            </Typography>
+            <Box data-color-mode="light">
+              <MDEditor
+                id="com-content"
+                value={form.content}
+                onChange={val => setForm(prev => ({ ...prev, content: val ?? '' }))}
+                height={220}
+                preview="edit"
+                hideToolbar={false}
+                textareaProps={{ placeholder: 'Escribe el comunicado… soporta **negrita**, _cursiva_, listas y más.' }}
+              />
+            </Box>
+            {!form.content.trim() && (
+              <Typography variant="caption" color="error" sx={{ mt: 0.5, display: 'block' }}>
+                El contenido es obligatorio
+              </Typography>
+            )}
+          </Box>
 
           <FormControl fullWidth>
             <InputLabel id="com-priority-label">Prioridad</InputLabel>
@@ -568,9 +580,9 @@ export default function ComunicadosPage() {
                   />
                 </Box>
                 <Divider />
-                <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                  {viewTarget.content}
-                </Typography>
+                <Box data-color-mode="light" sx={{ '& .wmde-markdown': { fontSize: '0.95rem', fontFamily: 'Inter, sans-serif' } }}>
+                  <MDEditor.Markdown source={viewTarget.content} />
+                </Box>
                 {viewTarget.expiresAt && (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1 }}>
                     <AccessTimeIcon sx={{ fontSize: 14, color: 'text.disabled' }} />

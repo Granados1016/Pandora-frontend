@@ -22,6 +22,8 @@ import CloseIcon             from '@mui/icons-material/Close';
 import FolderOpenIcon        from '@mui/icons-material/FolderOpen';
 import CategoryIcon          from '@mui/icons-material/Category';
 import LabelIcon             from '@mui/icons-material/Label';
+import HistoryIcon           from '@mui/icons-material/History';
+import PublishIcon           from '@mui/icons-material/Publish';
 
 import { procedimientosApi, categoriasApi } from '../../api/pandoraApi';
 import { useAuth } from '../../hooks/useAuth';
@@ -210,9 +212,17 @@ function SearchTab({ categorias, refresh }) {
   const [page,       setPage]       = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total,      setTotal]      = useState(0);
+  const [tick,    setTick]    = useState(0);
+  const fetchList = () => setTick(t => t + 1);
   const [viewer,  setViewer]  = useState(null);
   const [delConf, setDelConf] = useState(null);
   const [delLoading, setDelLoading] = useState(false);
+  const [versionTarget, setVersionTarget] = useState(null); // { id, title }
+  const [versions, setVersions]           = useState([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [newVersionFile, setNewVersionFile]   = useState(null);
+  const [uploadingVersion, setUploadingVersion] = useState(false);
+  const versionFileRef = useRef();
 
   // Cambia filtros → vuelve a pág 1
   const handleSearchChange  = (val) => { setSearch(val);    setPage(1); };
@@ -240,7 +250,7 @@ function SearchTab({ categorias, refresh }) {
       .catch(() => { if (active) { setList([]); setTotalPages(1); setTotal(0); } })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [search, catFilter, page, refresh]);
+  }, [search, catFilter, page, refresh, tick]);
 
   const catColor = (name) => categorias.find(c => c.name === name)?.color || 'default';
 
@@ -262,6 +272,33 @@ function SearchTab({ categorias, refresh }) {
     try { await procedimientosApi.remove(delConf); setDelConf(null); fetchList(); }
     catch { setDelConf(null); }
     finally { setDelLoading(false); }
+  };
+
+  // ── Version handlers ─────────────────────────────────────────────────────
+  const openVersions = async (item) => {
+    setVersionTarget({ id: item.id, title: item.title });
+    setNewVersionFile(null);
+    setVersionsLoading(true);
+    try {
+      const { data } = await procedimientosApi.getVersions(item.id);
+      setVersions(data);
+    } catch { setVersions([]); }
+    finally { setVersionsLoading(false); }
+  };
+
+  const handleUploadNewVersion = async () => {
+    if (!newVersionFile || !versionTarget) return;
+    setUploadingVersion(true);
+    try {
+      await procedimientosApi.uploadVersion(versionTarget.id, newVersionFile);
+      setNewVersionFile(null);
+      // Refresh versions list
+      const { data } = await procedimientosApi.getVersions(versionTarget.id);
+      setVersions(data);
+      fetchList();
+    } catch (e) {
+      console.error(e);
+    } finally { setUploadingVersion(false); }
   };
 
   // PDF e imágenes se muestran inline; Office docs via Office Online
@@ -356,6 +393,11 @@ function SearchTab({ categorias, refresh }) {
                     <DownloadIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
+                <Tooltip title="Historial de versiones">
+                  <IconButton size="small" color="secondary" onClick={() => openVersions(item)}>
+                    <HistoryIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
                 {isAdmin && (
                   <Tooltip title="Eliminar">
                     <IconButton size="small" color="error" onClick={() => setDelConf(item.id)}>
@@ -415,6 +457,78 @@ function SearchTab({ categorias, refresh }) {
           <Button color="error" variant="contained" onClick={handleDelete} disabled={delLoading}>
             {delLoading ? <CircularProgress size={18} /> : 'Eliminar'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Historial de versiones ── */}
+      <Dialog open={!!versionTarget} onClose={() => setVersionTarget(null)} maxWidth="sm" fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography fontWeight={700}>Historial de versiones</Typography>
+            <IconButton size="small" onClick={() => setVersionTarget(null)}><CloseIcon /></IconButton>
+          </Stack>
+          <Typography variant="caption" color="text.secondary">{versionTarget?.title}</Typography>
+        </DialogTitle>
+        <DialogContent dividers>
+          {versionsLoading && <LinearProgress sx={{ mb: 2 }} />}
+
+          {/* Upload new version */}
+          <Paper variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 2 }}>
+            <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+              Subir nueva versión
+            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Button
+                size="small" variant="outlined" startIcon={<PublishIcon />}
+                onClick={() => versionFileRef.current?.click()}
+              >
+                {newVersionFile ? newVersionFile.name : 'Seleccionar archivo'}
+              </Button>
+              {newVersionFile && (
+                <Button
+                  size="small" variant="contained" color="primary"
+                  onClick={handleUploadNewVersion}
+                  disabled={uploadingVersion}
+                  startIcon={uploadingVersion ? <CircularProgress size={14} /> : null}
+                >
+                  Publicar versión
+                </Button>
+              )}
+            </Stack>
+            <input ref={versionFileRef} type="file" hidden
+              onChange={e => setNewVersionFile(e.target.files?.[0] ?? null)} />
+          </Paper>
+
+          {/* Version list */}
+          {!versionsLoading && versions.length === 0 && (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+              No hay versiones anteriores. La versión actual es la primera.
+            </Typography>
+          )}
+          {versions.map((v) => (
+            <Stack key={v.id} direction="row" alignItems="center" justifyContent="space-between"
+              sx={{ py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+              <Box>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Chip label={`v${v.versionNumber}`} size="small" color="secondary" />
+                  <Typography variant="body2" fontWeight={600}>{v.fileName}</Typography>
+                </Stack>
+                <Typography variant="caption" color="text.secondary">
+                  {v.uploadedBy ?? 'desconocido'} · {new Date(v.uploadedAt).toLocaleString('es-MX')} · {fmtSize(v.fileSize)}
+                </Typography>
+              </Box>
+              <Tooltip title="Descargar esta versión">
+                <IconButton size="small"
+                  href={procedimientosApi.versionDownloadUrl(versionTarget?.id, v.id)} download>
+                  <DownloadIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setVersionTarget(null)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
     </Box>
