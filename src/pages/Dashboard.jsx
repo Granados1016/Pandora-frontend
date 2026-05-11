@@ -12,6 +12,7 @@ import DashboardIcon   from '@mui/icons-material/Dashboard';
 
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 import { useDashboardLayout } from '../hooks/useDashboardLayout.js';
+import { useDashboardRefresh } from '../hooks/useDashboardRefresh.js';
 import {
   WelcomeWidget,
   MailStatsWidget,
@@ -19,19 +20,24 @@ import {
   RecentCampaignsWidget,
   InventoryWidget,
   CalendarTodayWidget,
+  TicketsWidget,
+  LicenciasWidget,
   WIDGET_META,
 } from '../components/dashboard/Widgets.jsx';
 
 // ─── Mapa widget-id → componente ─────────────────────────────────────────────
 
 function WidgetRenderer({ id, extraProps }) {
+  const { refreshKey } = extraProps;
   switch (id) {
     case 'welcome':         return <WelcomeWidget {...extraProps} />;
-    case 'mailStats':       return <MailStatsWidget />;
+    case 'mailStats':       return <MailStatsWidget refreshKey={refreshKey} />;
     case 'quickActions':    return <QuickActionsWidget hasModule={extraProps.hasModule} />;
-    case 'recentCampaigns': return <RecentCampaignsWidget />;
-    case 'inventory':       return <InventoryWidget />;
-    case 'calendar':        return <CalendarTodayWidget />;
+    case 'recentCampaigns': return <RecentCampaignsWidget refreshKey={refreshKey} />;
+    case 'inventory':       return <InventoryWidget refreshKey={refreshKey} />;
+    case 'calendar':        return <CalendarTodayWidget refreshKey={refreshKey} />;
+    case 'tickets':         return <TicketsWidget refreshKey={refreshKey} />;
+    case 'licencias':       return <LicenciasWidget refreshKey={refreshKey} />;
     default:                return null;
   }
 }
@@ -161,9 +167,10 @@ export default function Dashboard() {
   const { username, fullName, isAdmin, hasModule } = useAuth();
   const { layout, toggleWidget, reorderWidget, resetLayout } = useDashboardLayout(username);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const refreshKey = useDashboardRefresh(60_000); // actualiza cada 60 s + en cada notificación SignalR
 
   // Props que se pasan a widgets que las necesiten
-  const extraProps = { fullName, username, isAdmin, hasModule,
+  const extraProps = { fullName, username, isAdmin, hasModule, refreshKey,
     position: typeof window !== 'undefined' ? localStorage.getItem('pandora_user_position') : null,
   };
 

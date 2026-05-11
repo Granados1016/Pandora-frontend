@@ -23,10 +23,15 @@ import ArticleIcon       from '@mui/icons-material/Article';
 import PeopleIcon        from '@mui/icons-material/People';
 import AddIcon           from '@mui/icons-material/Add';
 import StorageIcon       from '@mui/icons-material/Storage';
-import MeetingRoomIcon   from '@mui/icons-material/MeetingRoom';
-import ScheduleIcon      from '@mui/icons-material/Schedule';
+import MeetingRoomIcon          from '@mui/icons-material/MeetingRoom';
+import ScheduleIcon             from '@mui/icons-material/Schedule';
+import ConfirmationNumberIcon   from '@mui/icons-material/ConfirmationNumber';
+import AssignmentLateIcon       from '@mui/icons-material/AssignmentLate';
+import HourglassEmptyIcon       from '@mui/icons-material/HourglassEmpty';
+import KeyIcon                  from '@mui/icons-material/Key';
+import NotificationsActiveIcon  from '@mui/icons-material/NotificationsActive';
 
-import { campaignApi, inventoryApi, calendarApi } from '../../api/pandoraApi';
+import { campaignApi, inventoryApi, calendarApi, ticketApi, licenciasApi } from '../../api/pandoraApi';
 import { MODULES }    from '../../hooks/useAuth.jsx';
 import { statusColor, statusLabel } from '../../utils/statusHelpers';
 
@@ -239,17 +244,18 @@ export function QuickActionsWidget({ hasModule }) {
 
 // ─── 4. Campañas Recientes ────────────────────────────────────────────────────
 
-export function RecentCampaignsWidget() {
+export function RecentCampaignsWidget({ refreshKey = 0 }) {
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     campaignApi.getAll()
       .then(r => setItems(r.data.slice(0, 5)))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [refreshKey]);
 
   return (
     <WidgetCard title="Campañas Recientes" icon={<SendIcon fontSize="small" />}
@@ -292,16 +298,17 @@ export function RecentCampaignsWidget() {
 
 // ─── 5. Inventario ────────────────────────────────────────────────────────────
 
-export function InventoryWidget() {
+export function InventoryWidget({ refreshKey = 0 }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     inventoryApi.getDashboard()
       .then(r => setData(r.data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [refreshKey]);
 
   const stats = data ? [
     { label: 'Total equipos',  value: data.totalCount,          color: '#1565c0', icon: <InventoryIcon fontSize="small" /> },
@@ -330,12 +337,13 @@ export function InventoryWidget() {
 
 // ─── 6. Reservas de Hoy ───────────────────────────────────────────────────────
 
-export function CalendarTodayWidget() {
+export function CalendarTodayWidget({ refreshKey = 0 }) {
   const navigate = useNavigate();
   const [items, setItems]   = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     const today = new Date();
     const start = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0).toISOString();
     const end   = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59).toISOString();
@@ -348,7 +356,7 @@ export function CalendarTodayWidget() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [refreshKey]);
 
   const todayLabel = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'short' });
 
@@ -389,6 +397,107 @@ export function CalendarTodayWidget() {
   );
 }
 
+// ─── 7. Tickets en tiempo real ────────────────────────────────────────────────
+
+export function TicketsWidget({ refreshKey = 0 }) {
+  const navigate = useNavigate();
+  const [data, setData]     = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    ticketApi.getAll()
+      .then(r => {
+        const list = Array.isArray(r.data) ? r.data : (r.data?.items ?? []);
+        const abierto    = list.filter(t => t.status === 'Abierto').length;
+        const enProceso  = list.filter(t => t.status === 'En Proceso').length;
+        const enEspera   = list.filter(t => t.status === 'En Espera').length;
+        const criticos   = list.filter(t => t.priority === 'Crítica').length;
+        setData({ total: list.length, abierto, enProceso, enEspera, criticos });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [refreshKey]);
+
+  return (
+    <WidgetCard title="HelpDesk Tickets" icon={<ConfirmationNumberIcon fontSize="small" />}
+                action="/tickets" actionLabel="Ver tickets" loading={loading} minH={120}>
+      {data ? (
+        <Grid container spacing={1.5}>
+          <Grid item xs={6}>
+            <KpiMini label="Abiertos" value={data.abierto}
+              icon={<ConfirmationNumberIcon sx={{ fontSize: 16 }} />} color="#1565c0" />
+          </Grid>
+          <Grid item xs={6}>
+            <KpiMini label="En Proceso" value={data.enProceso}
+              icon={<HourglassEmptyIcon sx={{ fontSize: 16 }} />} color="#e65100" />
+          </Grid>
+          <Grid item xs={6}>
+            <KpiMini label="En Espera" value={data.enEspera}
+              icon={<AssignmentLateIcon sx={{ fontSize: 16 }} />} color="#6a1b9a" />
+          </Grid>
+          <Grid item xs={6}>
+            <KpiMini label="Críticos" value={data.criticos}
+              icon={<NotificationsActiveIcon sx={{ fontSize: 16 }} />} color="#b71c1c" />
+          </Grid>
+        </Grid>
+      ) : (
+        <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>Sin datos.</Typography>
+      )}
+    </WidgetCard>
+  );
+}
+
+// ─── 8. Licencias por vencer ──────────────────────────────────────────────────
+
+export function LicenciasWidget({ refreshKey = 0 }) {
+  const navigate = useNavigate();
+  const [data, setData]     = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    licenciasApi.alertas()
+      .then(r => {
+        const alertas = Array.isArray(r.data) ? r.data : [];
+        const vencen7  = alertas.filter(a => a.daysUntilExpiry <= 7).length;
+        const vencen30 = alertas.filter(a => a.daysUntilExpiry <= 30).length;
+        const vencidas = alertas.filter(a => a.daysUntilExpiry < 0).length;
+        setData({ total: alertas.length, vencen7, vencen30, vencidas });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [refreshKey]);
+
+  return (
+    <WidgetCard title="Control de Licencias" icon={<KeyIcon fontSize="small" />}
+                action="/licencias" actionLabel="Ver licencias" loading={loading} minH={100}>
+      {data ? (
+        <Grid container spacing={1.5}>
+          <Grid item xs={6}>
+            <KpiMini label="Alertas activas" value={data.total}
+              icon={<NotificationsActiveIcon sx={{ fontSize: 16 }} />} color="#e65100" />
+          </Grid>
+          <Grid item xs={6}>
+            <KpiMini label="Vencen en 7 días" value={data.vencen7}
+              icon={<KeyIcon sx={{ fontSize: 16 }} />} color="#b71c1c" />
+          </Grid>
+          <Grid item xs={6}>
+            <KpiMini label="Vencen en 30 días" value={data.vencen30}
+              icon={<KeyIcon sx={{ fontSize: 16 }} />} color="#f57c00" />
+          </Grid>
+          <Grid item xs={6}>
+            <KpiMini label="Ya vencidas" value={data.vencidas}
+              icon={<AssignmentLateIcon sx={{ fontSize: 16 }} />} color="#b71c1c" />
+          </Grid>
+        </Grid>
+      ) : (
+        <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>Sin alertas.</Typography>
+      )}
+    </WidgetCard>
+  );
+}
+
 // ─── Registro de widgets ──────────────────────────────────────────────────────
 
 export const WIDGET_META = {
@@ -398,4 +507,6 @@ export const WIDGET_META = {
   recentCampaigns: { label: 'Campañas Recientes',       module: MODULES.MAIL_PLUS,  gridProps: { xs: 12, md: 6 } },
   inventory:       { label: 'Inventario',               module: MODULES.INVENTARIO, gridProps: { xs: 12, md: 6 } },
   calendar:        { label: 'Reservas de Hoy',          module: MODULES.CALENDARIO, gridProps: { xs: 12, md: 6 } },
+  tickets:         { label: 'HelpDesk Tickets',         module: MODULES.HELPDESK,   gridProps: { xs: 12, md: 6 } },
+  licencias:       { label: 'Control de Licencias',     module: MODULES.LICENCIAS,  gridProps: { xs: 12, md: 6 } },
 };

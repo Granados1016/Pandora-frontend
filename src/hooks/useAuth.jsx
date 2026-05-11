@@ -34,13 +34,16 @@ export const MODULES = {
 };
 
 export const MODULE_LABELS = {
-  1:   'Mail+ (Correo Masivo)',
-  2:   'Inventario',
-  4:   'Control de Licencias',
-  8:   'HelpDesk Tickets',
-  16:  'Administración',
-  32:  'Pandora Calendar (solo vista)',
-  128: 'Pandora Calendar — Reservas y Gestión',
+  1:      'Mail+ (Correo Masivo)',
+  2:      'Inventario',
+  4:      'Control de Licencias',
+  8:      'HelpDesk / Tickets',
+  16:     'Administración',
+  32:     'Pandora Calendar (solo vista)',
+  128:    'Pandora Calendar — Reservas y Gestión',
+  32768:  'Procedimientos / Documentos',
+  65536:  'Indicadores y KPIs',
+  131072: 'Comunicados Institucionales',
 };
 
 // Sub-módulos agrupados por módulo padre — se usan en Admin.jsx
@@ -49,9 +52,9 @@ export const SUB_MODULES = [
   { bit: MODULES.INV_TYPES,     parent: MODULES.INVENTARIO, label: 'Categorías de equipo' },
   { bit: MODULES.INV_CATALOGS,  parent: MODULES.INVENTARIO, label: 'Departamentos y Personal' },
   { bit: MODULES.HD_GLOBAL,     parent: MODULES.HELPDESK,   label: 'Ver todos los tickets (sin marcar = solo los propios)' },
-  { bit: MODULES.HD_REQUEST,    parent: MODULES.HELPDESK,   label: 'Solicitar tickets' },
+  { bit: MODULES.HD_REQUEST,    parent: MODULES.HELPDESK,   label: 'Solicitar / crear nuevos tickets' },
   { bit: MODULES.LIC_STATS,     parent: MODULES.LICENCIAS,  label: 'Dashboard de gastos y estadísticas' },
-  { bit: MODULES.CAL_REQUEST,   parent: MODULES.CALENDARIO, label: 'Solicitar salas' },
+  { bit: MODULES.CAL_REQUEST,   parent: MODULES.CALENDARIO, label: 'Solicitar salas de reunión' },
 ];
 
 // ── Roles del sistema ────────────────────────────────────────────────────────
