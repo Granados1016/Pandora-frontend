@@ -115,7 +115,14 @@ function UploadTab({ categorias, onUploaded }) {
       onUploaded?.();
       setTimeout(() => setSuccess(false), 4000);
     } catch (e) {
-      setError(e?.response?.data?.message || e?.response?.data || 'Error al subir el archivo.');
+      // e.response.data puede ser un objeto {error, type, detail} o un string.
+      // Nunca pasar el objeto directamente a React (causaría error #31).
+      const d = e?.response?.data;
+      const msg = typeof d === 'string'
+        ? d
+        : d?.message || d?.error || d?.title || d?.detail
+          || 'Error al subir el archivo. Inténtalo de nuevo.';
+      setError(msg);
     } finally {
       setLoading(false);
     }
