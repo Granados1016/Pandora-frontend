@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box, Typography, Grid, Card, CardContent, Divider,
   CircularProgress, Alert, Stack, Chip, Tooltip,
@@ -112,6 +112,9 @@ function Section({ title, children }) {
   );
 }
 
+// ── Constante de intervalo de auto-refresh ────────────────────────────────────
+const REFRESH_INTERVAL = 60; // segundos
+
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function IndicadoresPage() {
   const [data,        setData]        = useState(null);
@@ -119,6 +122,9 @@ export default function IndicadoresPage() {
   const [error,       setError]       = useState('');
   const [ts,          setTs]          = useState(null);
   const [exporting,   setExporting]   = useState(false);
+  const [countdown,   setCountdown]   = useState(REFRESH_INTERVAL);
+  const timerRef  = useRef(null);
+  const countRef  = useRef(null);
 
   const handleExport = async () => {
     setExporting(true);
@@ -127,9 +133,10 @@ export default function IndicadoresPage() {
     finally { setExporting(false); }
   };
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError('');
+    setCountdown(REFRESH_INTERVAL);
     try {
       const { data: d } = await indicadoresApi.getAll();
       setData(d);
@@ -139,9 +146,22 @@ export default function IndicadoresPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchData(); }, []);
+  // Auto-refresh cada REFRESH_INTERVAL segundos
+  useEffect(() => {
+    fetchData();
+    timerRef.current = setInterval(() => fetchData(), REFRESH_INTERVAL * 1000);
+    return () => clearInterval(timerRef.current);
+  }, [fetchData]);
+
+  // Countdown regresivo visible
+  useEffect(() => {
+    countRef.current = setInterval(() => {
+      setCountdown(c => (c <= 1 ? REFRESH_INTERVAL : c - 1));
+    }, 1000);
+    return () => clearInterval(countRef.current);
+  }, []);
 
   if (loading && !data) {
     return (
@@ -156,12 +176,27 @@ export default function IndicadoresPage() {
       {/* Encabezado */}
       <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
         <Box>
-          <Typography variant="h4" fontWeight={700} mb={0.5}>
-            Indicadores
-          </Typography>
+          <Stack direction="row" alignItems="center" spacing={1.5} mb={0.5}>
+            <Typography variant="h4" fontWeight={700}>
+              Indicadores
+            </Typography>
+            <Chip
+              size="small"
+              label="● En vivo"
+              sx={{
+                bgcolor: '#e8f5e9', color: 'success.dark', fontWeight: 700,
+                fontSize: 11, letterSpacing: 0.3,
+                '& .MuiChip-label': { px: 1 },
+              }}
+            />
+          </Stack>
           <Typography variant="body2" color="text.secondary">
             Vista consolidada del sistema Pandora.
             {ts && <> — Actualizado: <b>{ts}</b></>}
+            {' '}
+            <Typography component="span" variant="caption" color="text.disabled">
+              (refresca en {countdown}s)
+            </Typography>
           </Typography>
         </Box>
         <Stack direction="row" spacing={1}>
@@ -174,10 +209,12 @@ export default function IndicadoresPage() {
           >
             {exporting ? 'Exportando…' : 'Exportar Excel'}
           </Button>
-          <Tooltip title="Actualizar datos">
-            <IconButton onClick={fetchData} disabled={loading}>
-              <RefreshIcon />
-            </IconButton>
+          <Tooltip title={`Actualizar ahora (auto cada ${REFRESH_INTERVAL}s)`}>
+            <span>
+              <IconButton onClick={fetchData} disabled={loading}>
+                <RefreshIcon sx={loading ? { animation: 'spin 1s linear infinite', '@keyframes spin': { from: { transform: 'rotate(0deg)' }, to: { transform: 'rotate(360deg)' } } } : {}} />
+              </IconButton>
+            </span>
           </Tooltip>
         </Stack>
       </Stack>
