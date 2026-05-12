@@ -164,7 +164,7 @@ export default function Layout({ children }) {
       show: hasModule(MODULES.HELPDESK) || isAdmin,
       items: [
         { label: hasSubModule(MODULES.HD_GLOBAL) || isAdmin ? 'Todos los Tickets' : 'Mis Tickets', icon: <ConfirmationNumberIcon />, path: '/tickets', show: hasModule(MODULES.HELPDESK) || isAdmin },
-        { label: 'Nuevo Ticket', icon: <AddTaskIcon />,            path: '/tickets/new',      show: hasModuleWrite(MODULES.HELPDESK) || isAdmin },
+        { label: 'Nuevo Ticket', icon: <AddTaskIcon />,            path: '/tickets/new',      show: hasModuleWrite(MODULES.HELPDESK) || hasSubModule(MODULES.HD_REQUEST) || isAdmin },
         { label: 'Configurar',   icon: <TuneIcon />,               path: '/tickets/template', show: isAdmin },
       ],
     },
@@ -209,9 +209,9 @@ export default function Layout({ children }) {
     },
     {
       label: 'Reportes',
-      show: true,
+      show: hasModule(MODULES.REPORTS) || isAdmin,
       items: [
-        { label: 'Reportes', icon: <AssessmentIcon />, path: '/reports', show: true },
+        { label: 'Reportes', icon: <AssessmentIcon />, path: '/reports', show: hasModule(MODULES.REPORTS) || isAdmin },
       ],
     },
     {

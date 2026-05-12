@@ -31,6 +31,7 @@ export const MODULES = {
   PROCEDIMIENTOS:   32768,  // Módulo de gestión de procedimientos/documentos
   INDICADORES:      65536,  // Módulo de indicadores y KPIs
   COMUNICADOS:      131072, // Módulo de comunicados institucionales
+  REPORTS:          262144, // Módulo de Reportes
 };
 
 export const MODULE_LABELS = {
@@ -44,17 +45,22 @@ export const MODULE_LABELS = {
   32768:  'Procedimientos / Documentos',
   65536:  'Indicadores y KPIs',
   131072: 'Comunicados Institucionales',
+  262144: 'Reportes',
 };
 
 // Sub-módulos agrupados por módulo padre — se usan en Admin.jsx
 export const SUB_MODULES = [
-  { bit: MODULES.INV_DASHBOARD, parent: MODULES.INVENTARIO, label: 'Dashboard (resumen general)' },
-  { bit: MODULES.INV_TYPES,     parent: MODULES.INVENTARIO, label: 'Categorías de equipo' },
-  { bit: MODULES.INV_CATALOGS,  parent: MODULES.INVENTARIO, label: 'Departamentos y Personal' },
-  { bit: MODULES.HD_GLOBAL,     parent: MODULES.HELPDESK,   label: 'Ver todos los tickets (sin marcar = solo los propios)' },
-  { bit: MODULES.HD_REQUEST,    parent: MODULES.HELPDESK,   label: 'Solicitar / crear nuevos tickets' },
-  { bit: MODULES.LIC_STATS,     parent: MODULES.LICENCIAS,  label: 'Dashboard de gastos y estadísticas' },
-  { bit: MODULES.CAL_REQUEST,   parent: MODULES.CALENDARIO, label: 'Solicitar salas de reunión' },
+  // ── Inventario ──────────────────────────────────────────────────────────
+  { bit: MODULES.INV_DASHBOARD, parent: MODULES.INVENTARIO, label: 'Dashboard de Inventario (resumen y gráficas)' },
+  { bit: MODULES.INV_TYPES,     parent: MODULES.INVENTARIO, label: 'Gestión de Categorías de equipo' },
+  { bit: MODULES.INV_CATALOGS,  parent: MODULES.INVENTARIO, label: 'Catálogos: Departamentos y Personal' },
+  // ── HelpDesk / Tickets ──────────────────────────────────────────────────
+  { bit: MODULES.HD_REQUEST,    parent: MODULES.HELPDESK,   label: 'Puede enviar / crear nuevos tickets' },
+  { bit: MODULES.HD_GLOBAL,     parent: MODULES.HELPDESK,   label: 'Ver TODOS los tickets (sin marcar = solo los propios)' },
+  // ── Licencias ────────────────────────────────────────────────────────────
+  { bit: MODULES.LIC_STATS,     parent: MODULES.LICENCIAS,  label: 'Dashboard de gastos y estadísticas de licencias' },
+  // ── Calendario ───────────────────────────────────────────────────────────
+  { bit: MODULES.CAL_REQUEST,   parent: MODULES.CALENDARIO, label: 'Puede solicitar reservas de salas' },
 ];
 
 // ── Roles del sistema ────────────────────────────────────────────────────────

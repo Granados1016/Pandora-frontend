@@ -113,7 +113,11 @@ function AppRoutes() {
               {/* ── Sin módulo requerido ─────────────────────────────────── */}
               <Route path="/"        element={<Dashboard />} />
               <Route path="/profile" element={<Profile />} />
-              <Route path="/reports" element={<Reports />} />
+              <Route path="/reports" element={
+                <ProtectedRoute requiredModule={MODULES.REPORTS}>
+                  <Reports />
+                </ProtectedRoute>
+              } />
 
               {/* ── Mail+ ───────────────────────────────────────────────── */}
               <Route path="/campaigns" element={
@@ -171,7 +175,7 @@ function AppRoutes() {
                 </ProtectedRoute>
               } />
               <Route path="/tickets/new" element={
-                <ProtectedRoute requiredModule={MODULES.HELPDESK}>
+                <ProtectedRoute requiredAnyModules={[MODULES.HELPDESK]}>
                   <TicketFormPage />
                 </ProtectedRoute>
               } />

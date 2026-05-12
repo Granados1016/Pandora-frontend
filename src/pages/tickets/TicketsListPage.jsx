@@ -123,7 +123,8 @@ function buildColumns(navigate) {
 export default function TicketsListPage() {
   const navigate             = useNavigate();
   const { isAdmin, hasModuleWrite, hasSubModule } = useAuth();
-  const canWrite     = hasModuleWrite(MODULES.HELPDESK);
+  // Puede crear tickets si tiene escritura en HELPDESK O si tiene el sub-bit HD_REQUEST explícito
+  const canWrite     = hasModuleWrite(MODULES.HELPDESK) || hasSubModule(MODULES.HD_REQUEST);
   const canSeeAll    = hasSubModule(MODULES.HD_GLOBAL) || isAdmin;
   const [tickets,   setTickets]   = useState([]);
   const [areas,     setAreas]     = useState([]);
