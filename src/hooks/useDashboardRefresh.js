@@ -17,9 +17,11 @@ export function useDashboardRefresh(intervalMs = 60_000) {
   const [tick, setTick] = useState(0);
   const refresh = () => setTick(t => t + 1);
 
-  // ── Auto-polling ──────────────────────────────────────────────────────────
+  // ── Auto-polling (solo si hay sesión activa) ──────────────────────────────
   useEffect(() => {
-    const id = setInterval(refresh, intervalMs);
+    const id = setInterval(() => {
+      if (localStorage.getItem('pandora_token')) refresh();
+    }, intervalMs);
     return () => clearInterval(id);
   }, [intervalMs]);
 
