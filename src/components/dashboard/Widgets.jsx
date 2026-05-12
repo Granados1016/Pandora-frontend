@@ -160,8 +160,8 @@ export function MailStatsWidget() {
       .then(r => {
         const campaigns = r.data;
         const total     = campaigns.length;
-        const completed = campaigns.filter(c => c.status === 3).length;  // COMPLETED
-        const failed    = campaigns.filter(c => c.status === 4).length;  // PARTIALLY_FAILED
+        const completed = campaigns.filter(c => c.status === 'Completado').length;
+        const failed    = campaigns.filter(c => c.status === 'Completado con errores').length;
         const sent      = campaigns.reduce((s, c) => s + (c.sentCount || 0), 0);
         setData({ total, completed, failed, sent });
       })
@@ -311,10 +311,10 @@ export function InventoryWidget({ refreshKey = 0 }) {
   }, [refreshKey]);
 
   const stats = data ? [
-    { label: 'Total equipos',  value: data.totalCount,          color: '#1565c0', icon: <InventoryIcon fontSize="small" /> },
-    { label: 'Activos',        value: data.activeCount,         color: '#2e7d32', icon: <CheckCircleIcon fontSize="small" /> },
-    { label: 'Mantenimiento',  value: data.maintenanceCount,    color: '#e65100', icon: <BuildIcon fontSize="small" /> },
-    { label: 'Dados de baja',  value: data.decommissionedCount, color: '#b71c1c', icon: <BlockIcon fontSize="small" /> },
+    { label: 'Total equipos',  value: data.total           ?? data.totalCount,          color: '#1565c0', icon: <InventoryIcon fontSize="small" /> },
+    { label: 'Activos',        value: data.activos         ?? data.activeCount,         color: '#2e7d32', icon: <CheckCircleIcon fontSize="small" /> },
+    { label: 'Mantenimiento',  value: data.enMantenimiento ?? data.maintenanceCount,    color: '#e65100', icon: <BuildIcon fontSize="small" /> },
+    { label: 'Dados de baja',  value: data.dadosDeBaja     ?? data.decommissionedCount, color: '#b71c1c', icon: <BlockIcon fontSize="small" /> },
   ] : [];
 
   return (
@@ -460,9 +460,9 @@ export function LicenciasWidget({ refreshKey = 0 }) {
     licenciasApi.alertas()
       .then(r => {
         const alertas = Array.isArray(r.data) ? r.data : [];
-        const vencen7  = alertas.filter(a => a.daysUntilExpiry <= 7).length;
-        const vencen30 = alertas.filter(a => a.daysUntilExpiry <= 30).length;
-        const vencidas = alertas.filter(a => a.daysUntilExpiry < 0).length;
+        const vencen7  = alertas.filter(a => (a.diasRestantes ?? a.daysUntilExpiry) <= 7).length;
+        const vencen30 = alertas.filter(a => (a.diasRestantes ?? a.daysUntilExpiry) <= 30).length;
+        const vencidas = alertas.filter(a => (a.diasRestantes ?? a.daysUntilExpiry) <  0).length;
         setData({ total: alertas.length, vencen7, vencen30, vencidas });
       })
       .catch(() => {})
