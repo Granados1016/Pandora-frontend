@@ -4,7 +4,7 @@ import {
   CircularProgress, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, IconButton, Tooltip, Dialog, DialogTitle,
   DialogContent, DialogActions, TextField, Select, MenuItem,
-  FormControl, InputLabel, InputAdornment, Tabs, Tab, Badge,
+  FormControl, InputLabel, InputAdornment, Tabs, Tab, Checkbox,
 } from '@mui/material';
 import AssignmentIcon          from '@mui/icons-material/Assignment';
 import WarningAmberIcon        from '@mui/icons-material/WarningAmber';
@@ -24,6 +24,8 @@ import ChevronLeftIcon         from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon        from '@mui/icons-material/ChevronRight';
 import FilterListIcon          from '@mui/icons-material/FilterList';
 import ClearIcon               from '@mui/icons-material/Clear';
+import PaymentIcon             from '@mui/icons-material/Payment';
+import HistoryIcon             from '@mui/icons-material/History';
 import { licenciasApi } from '../api/pandoraApi';
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 
@@ -45,6 +47,14 @@ function hasPaymentInMonth(l, year, month) {
   const base = new Date(l.proximoPago + 'T12:00:00');
   const diff = (year * 12 + month) - (base.getFullYear() * 12 + base.getMonth());
   return ((diff % fm) + fm) % fm === 0;
+}
+
+/** Calcula la nueva fecha de próximo pago dado el actual y la frecuencia */
+function calcNuevoProximoPago(proximoPagoStr, frecuencia) {
+  const meses = FREQ_MONTHS[frecuencia] || 1;
+  const d = new Date(proximoPagoStr + 'T12:00:00');
+  d.setMonth(d.getMonth() + meses);
+  return d.toISOString().slice(0, 10);
 }
 
 const ESTADO_CHIP = {
@@ -403,7 +413,7 @@ function CalendarioSection({ licencias }) {
 // ── componente principal ──────────────────────────────────────────────────────
 export default function Licencias() {
   const { isAdmin, hasModuleWrite, hasSubModule } = useAuth();
-  const canWrite   = hasModuleWrite(MODULES.LICENCIAS);
+  const canWrite    = hasModuleWrite(MODULES.LICENCIAS);
   const canSeeStats = hasSubModule(MODULES.LIC_STATS) || isAdmin;
   const [tab, setTab] = useState(0);
 
@@ -413,12 +423,12 @@ export default function Licencias() {
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState(null);
 
-  // ── Filtros (todos client-side para respuesta instantánea) ────────────────
+  // ── Filtros ───────────────────────────────────────────────────────────────
   const [busqueda,         setBusqueda]         = useState('');
   const [filtroArea,       setFiltroArea]       = useState('');
   const [filtroEstado,     setFiltroEstado]     = useState('');
   const [filtroFrecuencia, setFiltroFrecuencia] = useState('');
-  const [filtroDias,       setFiltroDias]       = useState('');   // 'vence7' | 'vence30' | 'vencidas'
+  const [filtroDias,       setFiltroDias]       = useState('');
 
   // ── CRUD dialog ───────────────────────────────────────────────────────────
   const [dialog,     setDialog]     = useState({ open: false, mode: 'create', data: EMPTY_FORM });
@@ -427,6 +437,16 @@ export default function Licencias() {
   const [confirmDel, setConfirmDel] = useState(null);
   const [exporting,  setExporting]  = useState(false);
 
+  // ── Selección + pagos ─────────────────────────────────────────────────────
+  const [selectedIds,      setSelectedIds]      = useState(new Set());
+  const [pagoDialog,       setPagoDialog]       = useState({ open: false, licencia: null, fechaPago: '', monto: '', notas: '' });
+  const [pagoMasivoDialog, setPagoMasivoDialog] = useState({ open: false, fechaPago: '' });
+  const [historialDialog,  setHistorialDialog]  = useState({ open: false, licencia: null });
+  const [historial,        setHistorial]        = useState([]);
+  const [loadingPago,      setLoadingPago]      = useState(false);
+  const [pagoErr,          setPagoErr]          = useState(null);
+  const [loadingHistorial, setLoadingHistorial] = useState(false);
+
   // ── Carga ─────────────────────────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -434,7 +454,7 @@ export default function Licencias() {
       const [dash, alert, lista] = await Promise.all([
         licenciasApi.dashboard(),
         licenciasApi.alertas(),
-        licenciasApi.getAll(),          // sin filtros → todo client-side
+        licenciasApi.getAll(),
       ]);
       setDashboard(dash.data);
       setAlertas(alert.data);
@@ -475,7 +495,87 @@ export default function Licencias() {
     setFiltroFrecuencia(''); setFiltroDias('');
   };
 
-  // ── Acciones ──────────────────────────────────────────────────────────────
+  // ── Selección ─────────────────────────────────────────────────────────────
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const s = new Set(prev);
+      if (s.has(id)) s.delete(id); else s.add(id);
+      return s;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === licenciasFiltradas.length)
+      setSelectedIds(new Set());
+    else
+      setSelectedIds(new Set(licenciasFiltradas.map(l => l.id)));
+  };
+
+  // ── Pago individual ───────────────────────────────────────────────────────
+  const handleOpenPago = (l) => {
+    const today = new Date().toISOString().slice(0, 10);
+    setPagoDialog({ open: true, licencia: l, fechaPago: today, monto: String(l.costoMXN), notas: '' });
+    setPagoErr(null);
+  };
+
+  const handleRegistrarPago = async () => {
+    setLoadingPago(true); setPagoErr(null);
+    try {
+      await licenciasApi.registrarPago(pagoDialog.licencia.id, {
+        fechaPago: pagoDialog.fechaPago,
+        monto:     Number(pagoDialog.monto),
+        notas:     pagoDialog.notas || null,
+      });
+      setPagoDialog(d => ({ ...d, open: false }));
+      setSelectedIds(new Set());
+      load();
+    } catch (e) {
+      const d = e?.response?.data;
+      setPagoErr(typeof d === 'string' ? d : d?.error || d?.message || 'Error al registrar pago');
+    } finally {
+      setLoadingPago(false);
+    }
+  };
+
+  // ── Pago masivo ───────────────────────────────────────────────────────────
+  const handleOpenPagoMasivo = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    setPagoMasivoDialog({ open: true, fechaPago: today });
+    setPagoErr(null);
+  };
+
+  const handlePagoMasivo = async () => {
+    setLoadingPago(true); setPagoErr(null);
+    try {
+      await licenciasApi.pagoMasivo({
+        ids:       Array.from(selectedIds),
+        fechaPago: pagoMasivoDialog.fechaPago,
+        notas:     null,
+      });
+      setSelectedIds(new Set());
+      setPagoMasivoDialog(d => ({ ...d, open: false }));
+      load();
+    } catch (e) {
+      const d = e?.response?.data;
+      setPagoErr(typeof d === 'string' ? d : d?.error || d?.message || 'Error al renovar licencias');
+    } finally {
+      setLoadingPago(false);
+    }
+  };
+
+  // ── Historial ─────────────────────────────────────────────────────────────
+  const handleOpenHistorial = async (l) => {
+    setHistorialDialog({ open: true, licencia: l });
+    setHistorial([]);
+    setLoadingHistorial(true);
+    try {
+      const res = await licenciasApi.historialPagos(l.id);
+      setHistorial(res.data);
+    } catch { setHistorial([]); }
+    finally { setLoadingHistorial(false); }
+  };
+
+  // ── CRUD ──────────────────────────────────────────────────────────────────
   const openCreate = () => setDialog({ open: true, mode: 'create', data: { ...EMPTY_FORM } });
 
   const openEdit = (l) => setDialog({
@@ -545,6 +645,8 @@ export default function Licencias() {
   );
 
   const { stats } = dashboard ?? { stats: {} };
+  const allSelected = licenciasFiltradas.length > 0 && selectedIds.size === licenciasFiltradas.length;
+  const someSelected = selectedIds.size > 0 && !allSelected;
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1400, mx: 'auto' }}>
@@ -609,14 +711,23 @@ export default function Licencias() {
                       </Typography>
                     </Box>
                   </Stack>
-                  <Chip
-                    size="small" color={urgente ? 'error' : 'warning'} sx={{ fontWeight: 700 }}
-                    label={
-                      a.diasRestantes < 0  ? `Venció hace ${Math.abs(a.diasRestantes)} día${Math.abs(a.diasRestantes) !== 1 ? 's' : ''}` :
-                      a.diasRestantes === 0 ? 'Vence HOY' :
-                      `${a.diasRestantes} día${a.diasRestantes !== 1 ? 's' : ''} restantes`
-                    }
-                  />
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Chip
+                      size="small" color={urgente ? 'error' : 'warning'} sx={{ fontWeight: 700 }}
+                      label={
+                        a.diasRestantes < 0  ? `Venció hace ${Math.abs(a.diasRestantes)} día${Math.abs(a.diasRestantes) !== 1 ? 's' : ''}` :
+                        a.diasRestantes === 0 ? 'Vence HOY' :
+                        `${a.diasRestantes} día${a.diasRestantes !== 1 ? 's' : ''} restantes`
+                      }
+                    />
+                    {canWrite && (
+                      <Tooltip title="Registrar pago">
+                        <IconButton size="small" color="success" onClick={() => handleOpenPago(a)}>
+                          <PaymentIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Stack>
                 </Stack>
               );
             })}
@@ -686,41 +797,36 @@ export default function Licencias() {
               )}
             </Stack>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} flexWrap="wrap" gap={1.5}>
-              {/* Búsqueda libre */}
               <TextField
                 size="small" placeholder="Buscar por plataforma, área, responsable…"
                 value={busqueda} onChange={e => setBusqueda(e.target.value)}
                 InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment> }}
                 sx={{ minWidth: 280, flex: 1 }}
               />
-              {/* Área */}
               <FormControl size="small" sx={{ minWidth: 140 }}>
                 <InputLabel id="filtro-area-label">Área</InputLabel>
-                <Select labelId="filtro-area-label" id="filtro-area" value={filtroArea} label="Área" onChange={e => setFiltroArea(e.target.value)}>
+                <Select labelId="filtro-area-label" value={filtroArea} label="Área" onChange={e => setFiltroArea(e.target.value)}>
                   <MenuItem value="">Todas</MenuItem>
                   {AREAS.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
                 </Select>
               </FormControl>
-              {/* Estado */}
               <FormControl size="small" sx={{ minWidth: 150 }}>
                 <InputLabel id="filtro-estado-label">Estado</InputLabel>
-                <Select labelId="filtro-estado-label" id="filtro-estado" value={filtroEstado} label="Estado" onChange={e => setFiltroEstado(e.target.value)}>
+                <Select labelId="filtro-estado-label" value={filtroEstado} label="Estado" onChange={e => setFiltroEstado(e.target.value)}>
                   <MenuItem value="">Todos</MenuItem>
                   {ESTADOS.map(e => <MenuItem key={e} value={e}>{e}</MenuItem>)}
                 </Select>
               </FormControl>
-              {/* Frecuencia */}
               <FormControl size="small" sx={{ minWidth: 150 }}>
                 <InputLabel id="filtro-freq-label">Frecuencia</InputLabel>
-                <Select labelId="filtro-freq-label" id="filtro-freq" value={filtroFrecuencia} label="Frecuencia" onChange={e => setFiltroFrecuencia(e.target.value)}>
+                <Select labelId="filtro-freq-label" value={filtroFrecuencia} label="Frecuencia" onChange={e => setFiltroFrecuencia(e.target.value)}>
                   <MenuItem value="">Todas</MenuItem>
                   {FRECUENCIAS.map(f => <MenuItem key={f} value={f}>{f}</MenuItem>)}
                 </Select>
               </FormControl>
-              {/* Próximo vencimiento */}
               <FormControl size="small" sx={{ minWidth: 180 }}>
                 <InputLabel id="filtro-dias-label">Próximo vencimiento</InputLabel>
-                <Select labelId="filtro-dias-label" id="filtro-dias" value={filtroDias} label="Próximo vencimiento" onChange={e => setFiltroDias(e.target.value)}>
+                <Select labelId="filtro-dias-label" value={filtroDias} label="Próximo vencimiento" onChange={e => setFiltroDias(e.target.value)}>
                   <MenuItem value="">Todos</MenuItem>
                   <MenuItem value="vence7">Vence en 7 días</MenuItem>
                   <MenuItem value="vence30">Vence en 30 días</MenuItem>
@@ -729,8 +835,8 @@ export default function Licencias() {
               </FormControl>
             </Stack>
 
-            {/* Indicador de resultados */}
-            <Stack direction="row" spacing={1} alignItems="center" mt={1.5}>
+            {/* Indicador de resultados + acción masiva */}
+            <Stack direction="row" spacing={1.5} alignItems="center" mt={1.5} flexWrap="wrap" gap={1}>
               <Typography variant="caption" color="text.secondary">
                 Mostrando <strong>{licenciasFiltradas.length}</strong> de <strong>{licencias.length}</strong> licencias
               </Typography>
@@ -738,6 +844,26 @@ export default function Licencias() {
                 <Typography variant="caption" color="text.secondary">
                   · Costo anual filtrado: <strong>{fmt$(licenciasFiltradas.reduce((s, l) => s + (l.costoAnualMXN ?? 0), 0))}</strong>
                 </Typography>
+              )}
+              {canWrite && selectedIds.size > 0 && (
+                <>
+                  <Box sx={{ flex: 1 }} />
+                  <Chip
+                    label={`${selectedIds.size} seleccionada${selectedIds.size !== 1 ? 's' : ''}`}
+                    size="small" color="primary" variant="filled"
+                  />
+                  <Button
+                    size="small" variant="contained" color="success"
+                    startIcon={<PaymentIcon fontSize="small" />}
+                    onClick={handleOpenPagoMasivo}
+                    sx={{ fontWeight: 700 }}
+                  >
+                    Renovar {selectedIds.size} licencia{selectedIds.size !== 1 ? 's' : ''}
+                  </Button>
+                  <Button size="small" onClick={() => setSelectedIds(new Set())}>
+                    Cancelar selección
+                  </Button>
+                </>
               )}
             </Stack>
           </Paper>
@@ -748,7 +874,19 @@ export default function Licencias() {
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: '#1a237e' }}>
-                    {['#','Plataforma','Área','Frecuencia','Próximo Pago','Días','Costo','Anual','Estado',''].map(h => (
+                    {/* Columna de checkbox (solo cuando canWrite) */}
+                    <TableCell padding="checkbox" sx={{ bgcolor: '#1a237e', width: 48 }}>
+                      {canWrite && (
+                        <Checkbox
+                          size="small"
+                          checked={allSelected}
+                          indeterminate={someSelected}
+                          onChange={toggleSelectAll}
+                          sx={{ color: 'rgba(255,255,255,0.7)', '&.Mui-checked': { color: 'white' }, '&.MuiCheckbox-indeterminate': { color: 'white' } }}
+                        />
+                      )}
+                    </TableCell>
+                    {['#','Plataforma','Área','Frecuencia','Próximo Pago','Días','Costo','Anual','Último Pago','Estado',''].map(h => (
                       <TableCell key={h} sx={{ color: 'white', fontWeight: 700, fontSize: 12, py: 1.2 }}>{h}</TableCell>
                     ))}
                   </TableRow>
@@ -756,7 +894,7 @@ export default function Licencias() {
                 <TableBody>
                   {licenciasFiltradas.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} align="center" sx={{ py: 5, color: 'text.secondary' }}>
+                      <TableCell colSpan={12} align="center" sx={{ py: 5, color: 'text.secondary' }}>
                         <Stack alignItems="center" spacing={1}>
                           <FilterListIcon sx={{ fontSize: 40, color: 'text.disabled' }} />
                           <Typography variant="body2">No hay licencias que coincidan con los filtros.</Typography>
@@ -767,9 +905,27 @@ export default function Licencias() {
                       </TableCell>
                     </TableRow>
                   ) : licenciasFiltradas.map((l, idx) => {
-                    const chip = ESTADO_CHIP[l.estado] ?? { color: 'default' };
+                    const chip      = ESTADO_CHIP[l.estado] ?? { color: 'default' };
+                    const isChecked = selectedIds.has(l.id);
                     return (
-                      <TableRow key={l.id} sx={{ bgcolor: idx % 2 === 0 ? 'white' : '#fafafa', '&:hover': { bgcolor: '#f0f4ff' } }}>
+                      <TableRow
+                        key={l.id}
+                        sx={{
+                          bgcolor: isChecked ? '#e3f2fd' : idx % 2 === 0 ? 'white' : '#fafafa',
+                          '&:hover': { bgcolor: isChecked ? '#bbdefb' : '#f0f4ff' },
+                        }}
+                      >
+                        {/* Checkbox */}
+                        <TableCell padding="checkbox">
+                          {canWrite && (
+                            <Checkbox
+                              size="small"
+                              checked={isChecked}
+                              onChange={() => toggleSelect(l.id)}
+                            />
+                          )}
+                        </TableCell>
+
                         <TableCell sx={{ fontSize: 12, fontWeight: 600 }}>{l.numero}</TableCell>
                         <TableCell>
                           <Box>
@@ -795,12 +951,38 @@ export default function Licencias() {
                         </TableCell>
                         <TableCell sx={{ fontSize: 12 }}>{fmt$(l.costoMXN)}</TableCell>
                         <TableCell sx={{ fontSize: 12 }}>{fmt$(l.costoAnualMXN)}</TableCell>
+
+                        {/* Último pago */}
+                        <TableCell sx={{ fontSize: 12 }}>
+                          {l.ultimoPago
+                            ? <Chip label={l.ultimoPago} size="small" color="success" variant="outlined"
+                                sx={{ fontSize: 11, fontWeight: 600 }} />
+                            : <Typography variant="caption" color="text.disabled" sx={{ fontStyle: 'italic' }}>—</Typography>
+                          }
+                        </TableCell>
+
                         <TableCell>
                           <Chip label={l.estado} color={chip.color} size="small" sx={{ fontWeight: 600, fontSize: 11 }} />
                         </TableCell>
+
+                        {/* Acciones */}
                         <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                          {/* Botón historial (siempre visible) */}
+                          <Tooltip title="Historial de pagos">
+                            <IconButton size="small" color="default" onClick={() => handleOpenHistorial(l)}>
+                              <HistoryIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                           {canWrite && (
                             <>
+                              {/* Botón registrar pago (solo licencias no canceladas) */}
+                              {l.estado !== 'Cancelada' && (
+                                <Tooltip title="Registrar pago">
+                                  <IconButton size="small" color="success" onClick={() => handleOpenPago(l)}>
+                                    <PaymentIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              )}
                               <Tooltip title="Editar">
                                 <IconButton size="small" onClick={() => openEdit(l)}>
                                   <EditIcon fontSize="small" />
@@ -830,7 +1012,9 @@ export default function Licencias() {
       {/* Tab 2: Calendario */}
       {tab === 2 && <CalendarioSection licencias={licencias} />}
 
-      {/* ── Dialog: Crear / Editar ───────────────────────────────────────────── */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* Dialog: Crear / Editar                                               */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
       <Dialog open={dialog.open} onClose={() => setDialog(d => ({ ...d, open: false }))} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 700 }}>
           {dialog.mode === 'create' ? 'Nueva Licencia' : 'Editar Licencia'}
@@ -845,16 +1029,16 @@ export default function Licencias() {
             </Grid>
             <Grid item xs={6}>
               <FormControl size="small" fullWidth>
-                <InputLabel id="form-area-label">Área</InputLabel>
-                <Select labelId="form-area-label" id="form-area" label="Área" {...field('area')}>
+                <InputLabel>Área</InputLabel>
+                <Select label="Área" {...field('area')}>
                   {AREAS.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
                 </Select>
               </FormControl>
             </Grid>
             <Grid item xs={6}>
               <FormControl size="small" fullWidth>
-                <InputLabel id="form-freq-label">Frecuencia</InputLabel>
-                <Select labelId="form-freq-label" id="form-freq" label="Frecuencia" {...field('frecuenciaPago')}>
+                <InputLabel>Frecuencia</InputLabel>
+                <Select label="Frecuencia" {...field('frecuenciaPago')}>
                   {FRECUENCIAS.map(f => <MenuItem key={f} value={f}>{f}</MenuItem>)}
                 </Select>
               </FormControl>
@@ -874,8 +1058,8 @@ export default function Licencias() {
             </Grid>
             <Grid item xs={6}>
               <FormControl size="small" fullWidth>
-                <InputLabel id="form-estado-label">Estado</InputLabel>
-                <Select labelId="form-estado-label" id="form-estado" label="Estado" {...field('estado')}>
+                <InputLabel>Estado</InputLabel>
+                <Select label="Estado" {...field('estado')}>
                   {ESTADOS.map(e => <MenuItem key={e} value={e}>{e}</MenuItem>)}
                 </Select>
               </FormControl>
@@ -897,7 +1081,9 @@ export default function Licencias() {
         </DialogActions>
       </Dialog>
 
-      {/* ── Dialog: Confirmar eliminar ───────────────────────────────────────── */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* Dialog: Confirmar eliminar                                           */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
       <Dialog open={!!confirmDel} onClose={() => setConfirmDel(null)} maxWidth="xs" fullWidth>
         <DialogTitle fontWeight={700}>Eliminar licencia</DialogTitle>
         <DialogContent>
@@ -908,6 +1094,200 @@ export default function Licencias() {
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setConfirmDel(null)}>Cancelar</Button>
           <Button variant="contained" color="error" onClick={handleDelete}>Eliminar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* Dialog: Registrar Pago (individual)                                  */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      <Dialog open={pagoDialog.open} onClose={() => setPagoDialog(d => ({ ...d, open: false }))} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <PaymentIcon color="success" />
+          Registrar Pago
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} pt={0.5}>
+            {/* Info de la licencia */}
+            {pagoDialog.licencia && (
+              <Paper elevation={0} sx={{ p: 1.5, bgcolor: '#f5f5f5', borderRadius: 2 }}>
+                <Typography variant="subtitle2" fontWeight={700}>{pagoDialog.licencia.plataforma}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {pagoDialog.licencia.area} · {pagoDialog.licencia.frecuenciaPago} · Actual próximo pago: {pagoDialog.licencia.proximoPago}
+                </Typography>
+              </Paper>
+            )}
+
+            <TextField
+              label="Fecha de pago"
+              size="small" fullWidth type="date"
+              InputLabelProps={{ shrink: true }}
+              value={pagoDialog.fechaPago}
+              onChange={e => setPagoDialog(d => ({ ...d, fechaPago: e.target.value }))}
+            />
+            <TextField
+              label="Monto pagado (MXN)"
+              size="small" fullWidth type="number"
+              InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }}
+              value={pagoDialog.monto}
+              onChange={e => setPagoDialog(d => ({ ...d, monto: e.target.value }))}
+            />
+
+            {/* Nuevo próximo pago (calculado) */}
+            {pagoDialog.licencia && (
+              <TextField
+                label="Nuevo Próximo Pago (calculado automáticamente)"
+                size="small" fullWidth
+                value={calcNuevoProximoPago(pagoDialog.licencia.proximoPago, pagoDialog.licencia.frecuenciaPago)}
+                InputProps={{ readOnly: true }}
+                sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#e8f5e9' } }}
+                helperText={`Se avanzará 1 período de ${pagoDialog.licencia?.frecuenciaPago?.toLowerCase()}`}
+              />
+            )}
+
+            <TextField
+              label="Notas (opcional)"
+              size="small" fullWidth multiline rows={2}
+              value={pagoDialog.notas}
+              onChange={e => setPagoDialog(d => ({ ...d, notas: e.target.value }))}
+            />
+
+            {pagoErr && <Alert severity="error">{pagoErr}</Alert>}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setPagoDialog(d => ({ ...d, open: false }))}>Cancelar</Button>
+          <Button
+            variant="contained" color="success"
+            onClick={handleRegistrarPago}
+            disabled={loadingPago || !pagoDialog.fechaPago || !pagoDialog.monto}
+            startIcon={loadingPago ? <CircularProgress size={16} /> : <PaymentIcon />}
+          >
+            Confirmar Pago
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* Dialog: Renovación masiva                                            */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      <Dialog open={pagoMasivoDialog.open} onClose={() => setPagoMasivoDialog(d => ({ ...d, open: false }))} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <PaymentIcon color="success" />
+          Renovar {selectedIds.size} licencia{selectedIds.size !== 1 ? 's' : ''}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={2} pt={0.5}>
+            <TextField
+              label="Fecha de pago"
+              size="small" fullWidth type="date"
+              InputLabelProps={{ shrink: true }}
+              value={pagoMasivoDialog.fechaPago}
+              onChange={e => setPagoMasivoDialog(d => ({ ...d, fechaPago: e.target.value }))}
+            />
+
+            <Typography variant="caption" color="text.secondary" fontWeight={600}>
+              Licencias seleccionadas:
+            </Typography>
+            <Box sx={{ maxHeight: 200, overflowY: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+              {licencias.filter(l => selectedIds.has(l.id)).map((l, i) => (
+                <Stack key={l.id} direction="row" justifyContent="space-between" alignItems="center"
+                  sx={{
+                    px: 2, py: 1,
+                    bgcolor: i % 2 === 0 ? 'white' : '#fafafa',
+                    borderBottom: '1px solid', borderColor: 'divider',
+                    '&:last-child': { borderBottom: 'none' },
+                  }}
+                >
+                  <Box>
+                    <Typography variant="body2" fontWeight={600} fontSize={13}>{l.plataforma}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {l.area} · {l.frecuenciaPago} · Vence: {calcNuevoProximoPago(l.proximoPago, l.frecuenciaPago)}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" fontWeight={700} color="success.main">
+                    {fmt$(l.costoMXN)}
+                  </Typography>
+                </Stack>
+              ))}
+            </Box>
+
+            <Typography variant="caption" color="text.secondary">
+              Cada licencia avanzará automáticamente su próximo pago según su frecuencia y quedará en estado <strong>Activa</strong>.
+            </Typography>
+
+            {pagoErr && <Alert severity="error">{pagoErr}</Alert>}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setPagoMasivoDialog(d => ({ ...d, open: false }))}>Cancelar</Button>
+          <Button
+            variant="contained" color="success"
+            onClick={handlePagoMasivo}
+            disabled={loadingPago || !pagoMasivoDialog.fechaPago}
+            startIcon={loadingPago ? <CircularProgress size={16} /> : <PaymentIcon />}
+          >
+            Confirmar Renovación
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      {/* Dialog: Historial de pagos                                           */}
+      {/* ════════════════════════════════════════════════════════════════════ */}
+      <Dialog open={historialDialog.open} onClose={() => setHistorialDialog(d => ({ ...d, open: false }))} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <HistoryIcon />
+          Historial de Pagos — {historialDialog.licencia?.plataforma}
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0 }}>
+          {loadingHistorial ? (
+            <Box display="flex" justifyContent="center" p={4}>
+              <CircularProgress />
+            </Box>
+          ) : historial.length === 0 ? (
+            <Box textAlign="center" py={5}>
+              <HistoryIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+              <Typography variant="body2" color="text.secondary">
+                Sin pagos registrados para esta licencia.
+              </Typography>
+            </Box>
+          ) : (
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow sx={{ bgcolor: '#1a237e' }}>
+                    {['Fecha de Pago','Monto','Nuevo Próximo Pago','Registrado por','Notas'].map(h => (
+                      <TableCell key={h} sx={{ color: 'white', fontWeight: 700, fontSize: 12 }}>{h}</TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {historial.map((p, i) => (
+                    <TableRow key={p.id} sx={{ bgcolor: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                      <TableCell sx={{ fontSize: 13, fontWeight: 600 }}>
+                        <Chip label={p.fechaPago} size="small" color="success" variant="outlined"
+                          sx={{ fontSize: 12, fontWeight: 700 }} />
+                      </TableCell>
+                      <TableCell sx={{ fontSize: 13, fontWeight: 700, color: 'success.main' }}>
+                        {fmt$(p.monto)}
+                      </TableCell>
+                      <TableCell sx={{ fontSize: 12 }}>{p.nuevoProximoPago ?? '—'}</TableCell>
+                      <TableCell sx={{ fontSize: 12, color: 'text.secondary' }}>{p.registradoPor ?? '—'}</TableCell>
+                      <TableCell sx={{ fontSize: 12, color: 'text.secondary', fontStyle: p.notas ? 'normal' : 'italic' }}>
+                        {p.notas ?? 'Sin notas'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mr: 'auto' }}>
+            {historial.length > 0 ? `${historial.length} pago${historial.length !== 1 ? 's' : ''} registrado${historial.length !== 1 ? 's' : ''}` : ''}
+          </Typography>
+          <Button onClick={() => setHistorialDialog(d => ({ ...d, open: false }))}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 
