@@ -305,7 +305,10 @@ export const procedimientosApi = {
     form.append('title',       meta.title       || '');
     form.append('description', meta.description || '');
     form.append('category',    meta.category    || '');
-    return api.post('/procedimientos', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+    // null elimina el header en axios v1.x → browser XHR pone el Content-Type
+    // con el boundary correcto: "multipart/form-data; boundary=----WebKitFormBoundaryXXXX"
+    // Sin boundary el servidor no puede parsear el multipart body.
+    return api.post('/procedimientos', form, { headers: { 'Content-Type': null } });
   },
   remove: (id) => api.delete(`/procedimientos/${id}`),
   viewUrl: (id) => {
@@ -321,7 +324,7 @@ export const procedimientosApi = {
   uploadVersion: (id, file) => {
     const form = new FormData();
     form.append('file', file);
-    return api.post(`/procedimientos/${id}/versions`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+    return api.post(`/procedimientos/${id}/versions`, form, { headers: { 'Content-Type': null } });
   },
   versionDownloadUrl: (id, vId) => {
     const token = localStorage.getItem('pandora_token');
