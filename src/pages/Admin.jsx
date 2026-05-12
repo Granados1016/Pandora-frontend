@@ -27,11 +27,12 @@ const ALL_MODULES = Object.entries(MODULE_LABELS).map(([value, label]) => ({
   label,
 }));
 
-// Módulos donde "solo vista" tiene sentido (excluir Admin y Calendario básico
-// que ya es solo-vista por diseño)
+// Módulos que ofrecen tres niveles de acceso: Sin acceso / Solo vista / Escritura completa
+// (excluir ADMIN que siempre tiene acceso total)
 const MODULES_WITH_WRITE = new Set([
   MODULES.MAIL_PLUS, MODULES.INVENTARIO, MODULES.LICENCIAS,
-  MODULES.HELPDESK, MODULES.CALENDARIO_ADMIN,
+  MODULES.HELPDESK,
+  MODULES.CALENDARIO, MODULES.CALENDARIO_ADMIN,
   MODULES.PROCEDIMIENTOS, MODULES.INDICADORES, MODULES.COMUNICADOS,
   MODULES.REPORTS,
 ]);

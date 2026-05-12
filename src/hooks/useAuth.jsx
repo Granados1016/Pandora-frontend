@@ -40,8 +40,8 @@ export const MODULE_LABELS = {
   4:      'Control de Licencias',
   8:      'HelpDesk / Tickets',
   16:     'Administración',
-  32:     'Pandora Calendar (solo vista)',
-  128:    'Pandora Calendar — Reservas y Gestión',
+  32:     'Pandora Calendar — Ver Calendario',
+  128:    'Pandora Calendar — Gestión de Salas y Reservas',
   32768:  'Procedimientos / Documentos',
   65536:  'Indicadores y KPIs',
   131072: 'Comunicados Institucionales',
@@ -60,7 +60,8 @@ export const SUB_MODULES = [
   // ── Licencias ────────────────────────────────────────────────────────────
   { bit: MODULES.LIC_STATS,     parent: MODULES.LICENCIAS,  label: 'Dashboard de gastos y estadísticas de licencias' },
   // ── Calendario ───────────────────────────────────────────────────────────
-  { bit: MODULES.CAL_REQUEST,   parent: MODULES.CALENDARIO, label: 'Puede solicitar reservas de salas' },
+  { bit: MODULES.CAL_REQUEST,   parent: MODULES.CALENDARIO,       label: 'Puede solicitar reservas de salas' },
+  { bit: MODULES.CAL_REQUEST,   parent: MODULES.CALENDARIO_ADMIN, label: 'Puede solicitar reservas de salas' },
 ];
 
 // ── Roles del sistema ────────────────────────────────────────────────────────
