@@ -305,10 +305,7 @@ export const procedimientosApi = {
     form.append('title',       meta.title       || '');
     form.append('description', meta.description || '');
     form.append('category',    meta.category    || '');
-    // No fijar Content-Type manualmente: el browser agrega el boundary correcto
-    // p.ej. "multipart/form-data; boundary=----WebKitFormBoundaryXXXX"
-    // Si se fuerza 'multipart/form-data' sin boundary el servidor no puede parsear.
-    return api.post('/procedimientos', form);
+    return api.post('/procedimientos', form, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
   remove: (id) => api.delete(`/procedimientos/${id}`),
   viewUrl: (id) => {
@@ -324,7 +321,7 @@ export const procedimientosApi = {
   uploadVersion: (id, file) => {
     const form = new FormData();
     form.append('file', file);
-    return api.post(`/procedimientos/${id}/versions`, form);
+    return api.post(`/procedimientos/${id}/versions`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
   versionDownloadUrl: (id, vId) => {
     const token = localStorage.getItem('pandora_token');
