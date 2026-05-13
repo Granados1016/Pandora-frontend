@@ -701,41 +701,72 @@ export default function Layout({ children }) {
                   <Typography variant="body2" color="text.secondary">Sin notificaciones</Typography>
                 </Box>
               )}
-              {notifications.map(n => (
-                <Box
-                  key={n.id}
-                  onClick={() => markRead(n.id)}
-                  sx={{
-                    px: 2, py: 1.5,
-                    borderBottom: 1, borderColor: 'divider',
-                    bgcolor: n.isRead ? 'transparent' : 'action.hover',
-                    cursor: n.isRead ? 'default' : 'pointer',
-                    '&:hover': { bgcolor: 'action.hover' },
-                  }}
-                >
-                  <Stack direction="row" spacing={1} alignItems="flex-start">
-                    <Chip
-                      label={n.type}
-                      size="small"
-                      color={n.type === 'error' ? 'error' : n.type === 'warning' ? 'warning' : n.type === 'success' ? 'success' : 'info'}
-                      sx={{ mt: 0.25, flexShrink: 0 }}
-                    />
-                    <Box flex={1} minWidth={0}>
-                      <Typography variant="body2" fontWeight={n.isRead ? 400 : 700} noWrap>
-                        {n.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{
-                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
-                      }}>
-                        {n.message}
-                      </Typography>
-                      <Typography variant="caption" color="text.disabled" display="block" mt={0.25}>
-                        {new Date(n.createdAt).toLocaleString('es-MX')}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </Box>
-              ))}
+              {notifications.map(n => {
+                // Mapa tipo → color del chip
+                const chipColor = {
+                  error:       'error',
+                  warning:     'warning',
+                  success:     'success',
+                  comunicado:  'secondary',
+                }[n.type] ?? 'info';
+
+                // Etiqueta legible del chip
+                const chipLabel = {
+                  error:       'Error',
+                  warning:     'Aviso',
+                  success:     'OK',
+                  comunicado:  '📢 Comunicado',
+                  info:        'Info',
+                }[n.type] ?? n.type;
+
+                // Ruta de navegación al hacer clic (si aplica)
+                const navPath = n.path ?? (n.type === 'comunicado' ? '/comunicados' : null);
+                const isClickable = !n.isRead || navPath;
+
+                return (
+                  <Box
+                    key={n.id}
+                    onClick={() => {
+                      markRead(n.id);
+                      if (navPath) {
+                        navigate(navPath);
+                        setNotifAnchor(null);
+                      }
+                    }}
+                    sx={{
+                      px: 2, py: 1.5,
+                      borderBottom: 1, borderColor: 'divider',
+                      bgcolor: n.isRead ? 'transparent' : 'action.hover',
+                      cursor: isClickable ? 'pointer' : 'default',
+                      '&:hover': { bgcolor: 'action.hover' },
+                    }}
+                  >
+                    <Stack direction="row" spacing={1} alignItems="flex-start">
+                      <Chip
+                        label={chipLabel}
+                        size="small"
+                        color={chipColor}
+                        sx={{ mt: 0.25, flexShrink: 0 }}
+                      />
+                      <Box flex={1} minWidth={0}>
+                        <Typography variant="body2" fontWeight={n.isRead ? 400 : 700} noWrap>
+                          {n.title}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{
+                          display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                        }}>
+                          {n.message}
+                        </Typography>
+                        {n.createdAt && (
+                          <Typography variant="caption" color="text.disabled" display="block" mt={0.25}>
+                            {new Date(n.createdAt).toLocaleString('es-MX')}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Stack>
+                  </Box>
+                );
+              })}
             </Box>
           </Paper>
         </ClickAwayListener>
