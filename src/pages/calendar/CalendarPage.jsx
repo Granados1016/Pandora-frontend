@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -7,9 +8,10 @@ import interactionPlugin from '@fullcalendar/interaction';
 import esLocale from '@fullcalendar/core/locales/es-us';
 import {
   Box, Button, ButtonGroup, Typography, Stack, Paper,
-  Select, MenuItem, FormControl, InputLabel, Chip, CircularProgress,
+  Select, MenuItem, FormControl, InputLabel, Chip, CircularProgress, Tooltip,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { calendarApi, catalogApi } from '../../api/pandoraApi';
 import ReservationModal from './ReservationModal';
@@ -35,8 +37,11 @@ const toFcEvent = (r) => ({
 });
 
 export default function CalendarPage() {
-  const { hasModule, hasModuleWrite, isAdmin } = useAuth();
+  const navigate = useNavigate();
+  const { hasModule, hasModuleWrite, hasSubModule, isAdmin } = useAuth();
   const canManage = hasModuleWrite(MODULES.CALENDARIO_ADMIN);
+  // canRequest: tiene el sub-bit CAL_REQUEST pero NO es gestor completo
+  const canRequest = (hasSubModule(MODULES.CAL_REQUEST) || isAdmin) && !canManage;
 
   const calRef = useRef(null);
   const [view, setView]           = useState('timeGridWeek');
@@ -91,11 +96,16 @@ export default function CalendarPage() {
     setModalOpen(true);
   };
 
-  // Drag para seleccionar rango → abrir modal nuevo (solo para gestores)
+  // Drag/click para seleccionar rango:
+  //   • Gestor (canManage)  → abre modal de reserva directo
+  //   • Solicitante (canRequest) → navega al formulario con fechas pre-llenadas
   const handleSelect = ({ startStr, endStr }) => {
-    if (!canManage) return;
-    setModalInitial({ start: startStr, end: endStr });
-    setModalOpen(true);
+    if (canManage) {
+      setModalInitial({ start: startStr, end: endStr });
+      setModalOpen(true);
+    } else if (canRequest) {
+      navigate('/calendar/solicitud', { state: { start: startStr, end: endStr } });
+    }
   };
 
   const handleNewReservation = () => {
@@ -154,6 +164,20 @@ export default function CalendarPage() {
                 Nueva reserva
               </Button>
             )}
+
+            {/* Solicitar sala — para usuarios con CAL_REQUEST */}
+            {canRequest && (
+              <Tooltip title="Selecciona un día en el calendario para pre-llenar la fecha, o haz clic aquí">
+                <Button
+                  variant="outlined"
+                  startIcon={<MeetingRoomIcon />}
+                  onClick={() => navigate('/calendar/solicitud')}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Solicitar sala
+                </Button>
+              </Tooltip>
+            )}
           </Stack>
         </Stack>
 
@@ -190,8 +214,8 @@ export default function CalendarPage() {
             right:  '',
           }}
           events={events}
-          selectable={canManage}
-          selectMirror={canManage}
+          selectable={canManage || canRequest}
+          selectMirror={canManage || canRequest}
           dayMaxEvents
           weekends
           allDaySlot={false}

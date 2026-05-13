@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   Box, Paper, Typography, Stack, Grid, TextField, MenuItem,
   Button, Alert, CircularProgress, Divider, Checkbox, FormControlLabel,
@@ -141,7 +142,20 @@ function Section({ number, title, children }) {
 // ── Formulario principal ──────────────────────────────────────────────────────
 
 export default function RoomRequestForm() {
-  const [form, setForm]       = useState(EMPTY);
+  const { state: navState } = useLocation();
+
+  // Si viene navegando desde el calendario con una fecha/hora pre-seleccionada,
+  // pre-llenar los campos de fecha y hora. navState.start y navState.end son
+  // strings ISO como "2026-05-12T10:00:00".
+  const getInitialForm = () => {
+    if (!navState?.start) return EMPTY;
+    const requestedDate = navState.start.substring(0, 10);
+    const startTime     = navState.start.substring(11, 16);   // "HH:MM"
+    const endTime       = navState.end   ? navState.end.substring(11, 16) : '';
+    return { ...EMPTY, requestedDate, startTime, endTime };
+  };
+
+  const [form, setForm]       = useState(getInitialForm);
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState('');
   const [success, setSuccess] = useState(false);
