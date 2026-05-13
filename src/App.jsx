@@ -199,7 +199,7 @@ function AppRoutes() {
 
               {/* ── Calendario ──────────────────────────────────────────── */}
               <Route path="/calendar" element={
-                <ProtectedRoute requiredModule={MODULES.CALENDARIO}>
+                <ProtectedRoute requiredAnyModules={[MODULES.CALENDARIO, MODULES.CALENDARIO_ADMIN, MODULES.CAL_REQUEST]}>
                   <CalendarPage />
                 </ProtectedRoute>
               } />
