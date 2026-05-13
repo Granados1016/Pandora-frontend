@@ -199,12 +199,15 @@ function AppRoutes() {
 
               {/* ── Calendario ──────────────────────────────────────────── */}
               <Route path="/calendar" element={
-                <ProtectedRoute requiredAnyModules={[MODULES.CALENDARIO, MODULES.CALENDARIO_ADMIN, MODULES.CAL_REQUEST]}>
+                <ProtectedRoute requiredAnyModules={[
+                  MODULES.CALENDARIO, MODULES.CALENDARIO_ADMIN, MODULES.CAL_REQUEST,
+                  MODULES.CAL_ROOMS, MODULES.CAL_SOLICITUDES, MODULES.CAL_REPORTS_CAL,
+                ]}>
                   <CalendarPage />
                 </ProtectedRoute>
               } />
               <Route path="/calendar/rooms" element={
-                <ProtectedRoute requiredModule={MODULES.CALENDARIO_ADMIN}>
+                <ProtectedRoute requiredAnyModules={[MODULES.CAL_ROOMS, MODULES.CALENDARIO_ADMIN]}>
                   <RoomsManager />
                 </ProtectedRoute>
               } />
@@ -214,12 +217,12 @@ function AppRoutes() {
                 </ProtectedRoute>
               } />
               <Route path="/calendar/solicitudes" element={
-                <ProtectedRoute requiredModule={MODULES.CALENDARIO_ADMIN}>
+                <ProtectedRoute requiredAnyModules={[MODULES.CAL_SOLICITUDES, MODULES.CALENDARIO_ADMIN]}>
                   <RoomRequestsManager />
                 </ProtectedRoute>
               } />
               <Route path="/calendar/reports" element={
-                <ProtectedRoute requiredModule={MODULES.CALENDARIO_ADMIN}>
+                <ProtectedRoute requiredAnyModules={[MODULES.CAL_REPORTS_CAL, MODULES.CALENDARIO_ADMIN]}>
                   <CalendarReports />
                 </ProtectedRoute>
               } />

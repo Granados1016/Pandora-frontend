@@ -8,9 +8,9 @@ export const MODULES = {
   LICENCIAS:        4,
   HELPDESK:         8,
   ADMIN:            16,
-  CALENDARIO:       32,
-  // bit 64 libre
-  CALENDARIO_ADMIN: 128,
+  CALENDARIO:       32,   // Vista del calendario (solo lectura)
+  CAL_ROOMS:        64,   // Gestión de Salas
+  CALENDARIO_ADMIN: 128,  // Agendar y gestionar reservas directamente
 
   // ── Sub-módulos de Inventario ────────────────────────────────────────────
   INV_DASHBOARD:    256,   // Ver dashboard/resumen de inventario
@@ -24,28 +24,36 @@ export const MODULES = {
   // ── Sub-módulos de Licencias ─────────────────────────────────────────────
   LIC_STATS:        4096,  // Ver dashboard de gastos y estadísticas
 
-  // ── Sub-módulos de Calendario ────────────────────────────────────────────
-  CAL_REQUEST:      16384, // Puede solicitar salas (sub-módulo de CALENDARIO)
+  // ── Módulos de Calendario (granular) ────────────────────────────────────
+  CAL_REQUEST:      16384,  // Solicitar sala (botón + click en día del calendario)
 
   // ── Módulos nuevos ────────────────────────────────────────────────────────
   PROCEDIMIENTOS:   32768,  // Módulo de gestión de procedimientos/documentos
   INDICADORES:      65536,  // Módulo de indicadores y KPIs
   COMUNICADOS:      131072, // Módulo de comunicados institucionales
   REPORTS:          262144, // Módulo de Reportes
+
+  // ── Calendario — permisos granulares adicionales ─────────────────────────
+  CAL_SOLICITUDES:  524288,  // Gestionar solicitudes de salas
+  CAL_REPORTS_CAL:  1048576, // Reportes del calendario
 };
 
 export const MODULE_LABELS = {
-  1:      'Mail+ (Correo Masivo)',
-  2:      'Inventario',
-  4:      'Control de Licencias',
-  8:      'HelpDesk / Tickets',
-  16:     'Administración',
-  32:     'Pandora Calendar — Ver Calendario',
-  128:    'Pandora Calendar — Gestión de Salas y Reservas',
-  32768:  'Procedimientos / Documentos',
-  65536:  'Indicadores y KPIs',
-  131072: 'Comunicados Institucionales',
-  262144: 'Reportes',
+  1:       'Mail+ (Correo Masivo)',
+  2:       'Inventario',
+  4:       'Control de Licencias',
+  8:       'HelpDesk / Tickets',
+  16:      'Administración',
+  32:      'Pandora Calendar — Vista del Calendario',
+  64:      'Pandora Calendar — Gestión de Salas',
+  128:     'Pandora Calendar — Agendar y Gestionar Reservas',
+  16384:   'Pandora Calendar — Solicitar Sala',
+  32768:   'Procedimientos / Documentos',
+  65536:   'Indicadores y KPIs',
+  131072:  'Comunicados Institucionales',
+  262144:  'Reportes',
+  524288:  'Pandora Calendar — Gestionar Solicitudes de Salas',
+  1048576: 'Pandora Calendar — Reportes del Calendario',
 };
 
 // Sub-módulos agrupados por módulo padre — se usan en Admin.jsx
@@ -59,9 +67,7 @@ export const SUB_MODULES = [
   { bit: MODULES.HD_GLOBAL,     parent: MODULES.HELPDESK,   label: 'Ver TODOS los tickets (sin marcar = solo los propios)' },
   // ── Licencias ────────────────────────────────────────────────────────────
   { bit: MODULES.LIC_STATS,     parent: MODULES.LICENCIAS,  label: 'Dashboard de gastos y estadísticas de licencias' },
-  // ── Calendario ───────────────────────────────────────────────────────────
-  { bit: MODULES.CAL_REQUEST,   parent: MODULES.CALENDARIO,       label: 'Puede solicitar reservas de salas' },
-  { bit: MODULES.CAL_REQUEST,   parent: MODULES.CALENDARIO_ADMIN, label: 'Puede solicitar reservas de salas' },
+  // ── Calendario: CAL_REQUEST ya es módulo independiente, sin sub-módulos ─
 ];
 
 // ── Roles del sistema ────────────────────────────────────────────────────────

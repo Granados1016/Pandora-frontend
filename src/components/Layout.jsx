@@ -177,13 +177,22 @@ export default function Layout({ children }) {
     },
     {
       label: 'Calendario',
-      show: hasModule(MODULES.CALENDARIO) || hasModule(MODULES.CALENDARIO_ADMIN) || hasSubModule(MODULES.CAL_REQUEST) || isAdmin,
+      show: hasModule(MODULES.CALENDARIO) || hasModule(MODULES.CALENDARIO_ADMIN)
+         || hasModule(MODULES.CAL_REQUEST) || hasModule(MODULES.CAL_ROOMS)
+         || hasModule(MODULES.CAL_SOLICITUDES) || hasModule(MODULES.CAL_REPORTS_CAL) || isAdmin,
       items: [
-        { label: 'Pandora Calendar',  icon: <CalendarMonthIcon />,   path: '/calendar',             show: hasModule(MODULES.CALENDARIO) || hasModule(MODULES.CALENDARIO_ADMIN) || hasSubModule(MODULES.CAL_REQUEST) || isAdmin },
-        { label: 'Salas',             icon: <MeetingRoomIcon />,      path: '/calendar/rooms',       show: hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
-        { label: 'Solicitar Sala',    icon: <AddCircleOutlineIcon />, path: '/calendar/solicitud',   show: hasModule(MODULES.CALENDARIO_ADMIN) || hasSubModule(MODULES.CAL_REQUEST) || isAdmin },
-        { label: 'Solicitudes',       icon: <PendingActionsIcon />,   path: '/calendar/solicitudes', show: hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
-        { label: 'Reportes',          icon: <BarChartOutlinedIcon />, path: '/calendar/reports',     show: hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
+        { label: 'Pandora Calendar',  icon: <CalendarMonthIcon />,   path: '/calendar',
+          show: hasModule(MODULES.CALENDARIO) || hasModule(MODULES.CALENDARIO_ADMIN)
+             || hasModule(MODULES.CAL_REQUEST) || hasModule(MODULES.CAL_ROOMS)
+             || hasModule(MODULES.CAL_SOLICITUDES) || hasModule(MODULES.CAL_REPORTS_CAL) || isAdmin },
+        { label: 'Salas',             icon: <MeetingRoomIcon />,      path: '/calendar/rooms',
+          show: hasModule(MODULES.CAL_ROOMS) || hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
+        { label: 'Solicitar Sala',    icon: <AddCircleOutlineIcon />, path: '/calendar/solicitud',
+          show: hasModule(MODULES.CAL_REQUEST) || hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
+        { label: 'Solicitudes',       icon: <PendingActionsIcon />,   path: '/calendar/solicitudes',
+          show: hasModule(MODULES.CAL_SOLICITUDES) || hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
+        { label: 'Reportes',          icon: <BarChartOutlinedIcon />, path: '/calendar/reports',
+          show: hasModule(MODULES.CAL_REPORTS_CAL) || hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
       ],
     },
     {
