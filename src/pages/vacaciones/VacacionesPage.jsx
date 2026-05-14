@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box, Grid, Paper, Typography, Button, TextField, MenuItem,
-  Chip, CircularProgress, Alert, Divider, Tooltip, IconButton,
-  Dialog, DialogTitle, DialogContent, DialogActions,
-  LinearProgress, Stack, useTheme,
+  Chip, CircularProgress, Alert, Divider, Tooltip,
+  LinearProgress, Stack, useTheme, Table, TableBody,
+  TableCell, TableContainer, TableHead, TableRow, IconButton,
 } from '@mui/material';
 import ChevronLeftIcon  from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -12,10 +12,12 @@ import { DatePicker }   from '@mui/x-date-pickers/DatePicker';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
+import isBetween from 'dayjs/plugin/isBetween';
 import 'dayjs/locale/es';
 import api from '../../api/pandoraApi';
 import { useAuth } from '../../hooks/useAuth.jsx';
 
+dayjs.extend(isBetween);
 dayjs.locale('es');
 
 const MONTH_NAMES = [
@@ -31,47 +33,51 @@ const STATUS_COLOR = {
   holiday:   '#e53935',
 };
 
+const STATUS_LABEL = {
+  Aprobado:  { color: 'success', label: 'Aprobado' },
+  Pendiente: { color: 'warning', label: 'Pendiente' },
+  Rechazado: { color: 'error',   label: 'Rechazado' },
+  Cancelado: { color: 'default', label: 'Cancelado' },
+};
+
 const LEGEND = [
-  { label: 'Aprobado',  color: STATUS_COLOR.aprobado },
-  { label: 'Solicitado', color: STATUS_COLOR.pendiente },
-  { label: 'Festivo',   color: STATUS_COLOR.holiday },
-  { label: 'Rechazado', color: STATUS_COLOR.rechazado },
+  { label: 'Aprobado',   color: STATUS_COLOR.aprobado  },
+  { label: 'Solicitado', color: STATUS_COLOR.pendiente  },
+  { label: 'Festivo',    color: STATUS_COLOR.holiday    },
+  { label: 'Rechazado',  color: STATUS_COLOR.rechazado  },
 ];
 
-// ── Mini calendario mensual ───────────────────────────────────────────────────
-function MonthGrid({ year, month, markedMap }) {
-  const theme = useTheme();
-  const firstDay = new Date(year, month, 1).getDay(); // 0=dom
-  // Ajustar para que la semana empiece en Lunes
-  const startOffset = (firstDay + 6) % 7;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+// ── Mini calendario mensual interactivo ──────────────────────────────────────
+function MonthGrid({ year, month, markedMap, selStart, selEnd, hovered, onDayClick, onDayHover }) {
+  const theme    = useTheme();
+  const firstDay = new Date(year, month, 1).getDay();
+  const offset   = (firstDay + 6) % 7; // semana empieza lunes
+  const total    = new Date(year, month + 1, 0).getDate();
+  const today    = new Date();
 
   const cells = [];
-  for (let i = 0; i < startOffset; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  for (let i = 0; i < offset; i++) cells.push(null);
+  for (let d = 1; d <= total; d++)   cells.push(d);
 
-  const today = new Date();
+  // Rango efectivo para resaltar (preview con hover)
+  const rangeEnd = selStart && !selEnd && hovered
+    ? (dayjs(hovered).isAfter(selStart) ? hovered : null)
+    : selEnd ? selEnd.format('YYYY-MM-DD') : null;
 
   return (
-    <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, height: '100%' }}>
+    <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, height: '100%', userSelect: 'none' }}>
       <Typography variant="subtitle2" align="center" fontWeight={700} sx={{ mb: 1 }}>
         {MONTH_NAMES[month]}
       </Typography>
 
-      {/* Cabecera días */}
+      {/* Cabecera L M X J V S D */}
       <Grid container columns={7}>
         {['L','M','X','J','V','S','D'].map((d, i) => (
           <Grid item xs={1} key={i}>
-            <Typography
-              variant="caption"
-              align="center"
-              display="block"
-              sx={{
-                fontWeight: 600,
-                color: i >= 5 ? 'error.main' : 'text.secondary',
-                fontSize: '0.65rem',
-              }}
-            >
+            <Typography variant="caption" align="center" display="block" sx={{
+              fontWeight: 600, fontSize: '0.62rem',
+              color: i >= 5 ? 'error.main' : 'text.secondary',
+            }}>
               {d}
             </Typography>
           </Grid>
@@ -83,27 +89,65 @@ function MonthGrid({ year, month, markedMap }) {
         {cells.map((day, idx) => {
           if (!day) return <Grid item xs={1} key={`e-${idx}`} />;
 
-          const dateStr = `${year}-${String(month + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-          const mark    = markedMap[dateStr];
-          const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+          const dateStr   = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+          const mark      = markedMap[dateStr];
+          const isToday   = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
           const isWeekend = (idx % 7) >= 5;
+          const isPast    = dayjs(dateStr).isBefore(dayjs().startOf('day'));
 
-          let bg = 'transparent';
+          // Selección
+          const isSelStart = selStart && selStart.format('YYYY-MM-DD') === dateStr;
+          const isSelEnd   = selEnd   && selEnd.format('YYYY-MM-DD')   === dateStr;
+          const isInRange  = selStart && rangeEnd &&
+            dayjs(dateStr).isBetween(selStart.format('YYYY-MM-DD'), rangeEnd, 'day', '[]');
+
+          // Color de fondo
+          let bg        = 'transparent';
           let textColor = isWeekend ? 'error.light' : 'text.primary';
-          if (mark) { bg = STATUS_COLOR[mark.type] || '#90caf9'; textColor = '#fff'; }
-          if (isToday && !mark) { bg = theme.palette.primary.main; textColor = '#fff'; }
+          let border    = 'none';
+
+          if (mark) {
+            bg = STATUS_COLOR[mark.type] || theme.palette.primary.light;
+            textColor = '#fff';
+          } else if (isSelStart || isSelEnd) {
+            bg = theme.palette.primary.main;
+            textColor = '#fff';
+          } else if (isInRange) {
+            bg = theme.palette.primary.light + '55';
+            border = `1px solid ${theme.palette.primary.light}`;
+          } else if (isToday) {
+            bg = theme.palette.primary.main;
+            textColor = '#fff';
+          }
 
           return (
             <Grid item xs={1} key={dateStr}>
-              <Tooltip title={mark ? `${mark.requestType || mark.type} · ${mark.type}` : ''} disableHoverListener={!mark}>
-                <Box sx={{
-                  width: '100%', aspectRatio: '1',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  borderRadius: '50%',
-                  bgcolor: bg,
-                  cursor: mark ? 'pointer' : 'default',
-                }}>
-                  <Typography variant="caption" sx={{ color: textColor, fontSize: '0.68rem', fontWeight: mark || isToday ? 700 : 400 }}>
+              <Tooltip
+                title={mark ? (mark.requestType || mark.type) : ''}
+                disableHoverListener={!mark}
+              >
+                <Box
+                  onClick={!isPast ? () => onDayClick(dateStr) : undefined}
+                  onMouseEnter={() => onDayHover(dateStr)}
+                  onMouseLeave={() => onDayHover(null)}
+                  sx={{
+                    width: '100%', aspectRatio: '1',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    borderRadius: isSelStart || isSelEnd ? '50%' : '4px',
+                    bgcolor: bg,
+                    border,
+                    cursor: isPast ? 'default' : 'pointer',
+                    transition: 'background 0.1s',
+                    '&:hover': !isPast && !mark ? {
+                      bgcolor: theme.palette.action.hover,
+                    } : {},
+                  }}
+                >
+                  <Typography variant="caption" sx={{
+                    color: isPast && !mark ? 'text.disabled' : textColor,
+                    fontSize: '0.68rem',
+                    fontWeight: isSelStart || isSelEnd || isToday || mark ? 700 : 400,
+                  }}>
                     {day}
                   </Typography>
                 </Box>
@@ -116,30 +160,33 @@ function MonthGrid({ year, month, markedMap }) {
   );
 }
 
-// ── Página principal ─────────────────────────────────────────────────────────
+// ── Página principal ──────────────────────────────────────────────────────────
 export default function VacacionesPage() {
   const { fullName } = useAuth();
-  const [year, setYear]       = useState(new Date().getFullYear());
-  const [markedDays, setMarked] = useState([]);
-  const [diasInfo, setDiasInfo] = useState(null);
-  const [loading, setLoading]  = useState(true);
-  const [error, setError]      = useState('');
-  const [success, setSuccess]  = useState('');
 
-  // Formulario solicitud
-  const [startDate, setStartDate] = useState(null);
-  const [endDate,   setEndDate]   = useState(null);
-  const [tipo,      setTipo]      = useState('Vacaciones');
-  const [notas,     setNotas]     = useState('');
-  const [sending,   setSending]   = useState(false);
+  const [year,      setYear]    = useState(new Date().getFullYear());
+  const [markedDays,setMarked]  = useState([]);
+  const [diasInfo,  setDiasInfo]= useState(null);
+  const [loading,   setLoading] = useState(true);
+  const [historial, setHistorial] = useState([]);
+  const [histLoading, setHistLoading] = useState(true);
 
-  // Diálogo mis solicitudes
-  const [historialOpen, setHistorialOpen] = useState(false);
-  const [historial,     setHistorial]     = useState([]);
+  // Selección en calendario
+  const [selStart,  setSelStart]  = useState(null);  // dayjs | null
+  const [selEnd,    setSelEnd]    = useState(null);   // dayjs | null
+  const [hovered,   setHovered]   = useState(null);  // 'YYYY-MM-DD' | null
+  const [isSelecting, setIsSelecting] = useState(false);
 
+  // Formulario
+  const [tipo,    setTipo]    = useState('Vacaciones');
+  const [notas,   setNotas]   = useState('');
+  const [sending, setSending] = useState(false);
+  const [error,   setError]   = useState('');
+  const [success, setSuccess] = useState('');
+
+  // ── Carga datos ─────────────────────────────────────────────────────────────
   const loadCalendar = useCallback(async () => {
     setLoading(true);
-    setError('');
     try {
       const [calRes, diasRes] = await Promise.all([
         api.get(`/vacaciones/mi-calendario/${year}`),
@@ -147,38 +194,66 @@ export default function VacacionesPage() {
       ]);
       setMarked(calRes.data);
       setDiasInfo(diasRes.data);
-    } catch {
-      setError('No se pudo cargar el calendario.');
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError('No se pudo cargar el calendario.'); }
+    finally   { setLoading(false); }
   }, [year]);
 
-  useEffect(() => { loadCalendar(); }, [loadCalendar]);
+  const loadHistorial = useCallback(async () => {
+    setHistLoading(true);
+    try {
+      const res = await api.get('/vacaciones/mis-solicitudes');
+      setHistorial(res.data);
+    } catch { /* silencioso */ }
+    finally   { setHistLoading(false); }
+  }, []);
 
-  // Construir mapa fecha → marca
-  const markedMap = markedDays.reduce((acc, m) => {
-    acc[m.date] = m;
-    return acc;
-  }, {});
+  useEffect(() => { loadCalendar(); },  [loadCalendar]);
+  useEffect(() => { loadHistorial(); }, [loadHistorial]);
 
+  // Mapa fecha → marca
+  const markedMap = useMemo(() =>
+    markedDays.reduce((acc, m) => { acc[m.date] = m; return acc; }, {}),
+    [markedDays]
+  );
+
+  // ── Interacción con calendario ──────────────────────────────────────────────
+  const handleDayClick = (dateStr) => {
+    const d = dayjs(dateStr);
+    if (!isSelecting || !selStart) {
+      setSelStart(d);
+      setSelEnd(null);
+      setIsSelecting(true);
+    } else {
+      if (d.isBefore(selStart, 'day')) {
+        setSelStart(d);
+        setSelEnd(null);
+      } else {
+        setSelEnd(d);
+        setIsSelecting(false);
+      }
+    }
+  };
+
+  // ── Enviar solicitud ────────────────────────────────────────────────────────
   const handleSolicitar = async () => {
-    if (!startDate || !endDate) { setError('Selecciona las fechas.'); return; }
-    if (endDate.isBefore(startDate)) { setError('La fecha fin debe ser posterior al inicio.'); return; }
+    if (!selStart) { setError('Selecciona las fechas en el calendario o en los campos.'); return; }
+    const end = selEnd || selStart;
     setSending(true);
     setError('');
     try {
       const res = await api.post('/vacaciones/solicitar', {
-        startDate: startDate.format('YYYY-MM-DD'),
-        endDate:   endDate.format('YYYY-MM-DD'),
+        startDate: selStart.format('YYYY-MM-DD'),
+        endDate:   end.format('YYYY-MM-DD'),
         type:      tipo,
         notes:     notas || null,
       });
-      setSuccess(`Solicitud enviada correctamente (${res.data.totalDays} día(s) hábil(es)).`);
-      setStartDate(null);
-      setEndDate(null);
+      setSuccess(`Solicitud enviada — ${res.data.totalDays} día(s) hábil(es).`);
+      setSelStart(null);
+      setSelEnd(null);
+      setIsSelecting(false);
       setNotas('');
       loadCalendar();
+      loadHistorial();
     } catch (err) {
       setError(err.response?.data || 'Error al enviar la solicitud.');
     } finally {
@@ -186,39 +261,37 @@ export default function VacacionesPage() {
     }
   };
 
-  const loadHistorial = async () => {
-    const res = await api.get('/vacaciones/mis-solicitudes');
-    setHistorial(res.data);
-    setHistorialOpen(true);
-  };
-
   const handleCancelar = async (id) => {
+    if (!window.confirm('¿Cancelar esta solicitud?')) return;
     try {
       await api.delete(`/vacaciones/${id}/cancelar`);
-      setHistorial(h => h.map(x => x.id === id ? { ...x, status: 'Cancelado' } : x));
       loadCalendar();
-    } catch {
-      alert('No se pudo cancelar la solicitud.');
-    }
+      loadHistorial();
+    } catch { alert('No se pudo cancelar.'); }
   };
 
-  const pct = diasInfo ? Math.round((diasInfo.usedDays / diasInfo.totalDays) * 100) : 0;
+  const pct = diasInfo
+    ? Math.min(100, Math.round((diasInfo.usedDays / diasInfo.totalDays) * 100))
+    : 0;
+
+  const endEffective = selEnd || (isSelecting && hovered && dayjs(hovered).isAfter(selStart)
+    ? dayjs(hovered) : selStart);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
       <Box sx={{ p: { xs: 2, md: 3 } }}>
+
         {/* Encabezado */}
         <Stack direction="row" alignItems="center" spacing={1} mb={2}>
           <BeachAccessIcon color="primary" />
-          <Typography variant="h5" fontWeight={700}>
-            Mis Vacaciones
-          </Typography>
+          <Typography variant="h5" fontWeight={700}>Mis Vacaciones</Typography>
         </Stack>
 
         <Grid container spacing={2}>
-          {/* ── Panel izquierdo ──────────────────────────────────────────── */}
+          {/* ── Panel izquierdo ──────────────────────────────────────── */}
           <Grid item xs={12} md={3} lg={2.5}>
-            <Paper sx={{ p: 2, borderRadius: 2, position: 'sticky', top: 80 }}>
+            <Paper sx={{ p: 2, borderRadius: 2, position: { md: 'sticky' }, top: 80 }}>
+
               {/* Días disponibles */}
               <Typography variant="overline" color="text.secondary">Días Disponibles</Typography>
               {diasInfo ? (
@@ -227,10 +300,9 @@ export default function VacacionesPage() {
                     {diasInfo.availableDays}/{diasInfo.totalDays}
                   </Typography>
                   <LinearProgress
-                    variant="determinate"
-                    value={pct}
+                    variant="determinate" value={pct}
                     color={pct > 80 ? 'error' : pct > 50 ? 'warning' : 'success'}
-                    sx={{ borderRadius: 2, mb: 1.5 }}
+                    sx={{ borderRadius: 2, mb: 1 }}
                   />
                   <Typography variant="caption" color="text.secondary">
                     {diasInfo.usedDays} usado(s) · {diasInfo.year}
@@ -240,36 +312,46 @@ export default function VacacionesPage() {
 
               <Divider sx={{ my: 2 }} />
 
-              {/* Formulario */}
-              <Typography variant="overline" color="text.secondary">Nueva Solicitud</Typography>
-              <Stack spacing={1.5} mt={1}>
-                <TextField
-                  select size="small" label="Tipo" value={tipo}
-                  onChange={e => setTipo(e.target.value)}
-                >
-                  {['Vacaciones','Permiso','Ausencia','Día equipo'].map(t => (
-                    <MenuItem key={t} value={t}>{t}</MenuItem>
-                  ))}
-                </TextField>
+              {/* Instrucción */}
+              <Typography variant="caption" color="text.secondary" display="block" mb={1}>
+                Haz clic en el calendario para seleccionar las fechas, o úsalos directamente aquí:
+              </Typography>
 
+              {/* Formulario */}
+              <Stack spacing={1.5}>
                 <DatePicker
                   label="Desde"
-                  value={startDate}
-                  onChange={v => { setStartDate(v); if (endDate && v && endDate.isBefore(v)) setEndDate(v); }}
+                  value={selStart}
+                  onChange={v => { setSelStart(v); if (selEnd && v && selEnd.isBefore(v)) setSelEnd(v); }}
                   slotProps={{ textField: { size: 'small', fullWidth: true } }}
                   disablePast
                 />
                 <DatePicker
                   label="Hasta"
-                  value={endDate}
-                  onChange={setEndDate}
-                  minDate={startDate || undefined}
+                  value={selEnd}
+                  onChange={v => setSelEnd(v)}
+                  minDate={selStart || undefined}
                   slotProps={{ textField: { size: 'small', fullWidth: true } }}
                   disablePast
                 />
 
+                {/* Preview días hábiles */}
+                {selStart && (
+                  <Typography variant="caption" color="primary.main" fontWeight={600}>
+                    {selEnd
+                      ? `${selEnd.diff(selStart, 'day') + 1} día(s) en el rango (hábiles calculados al enviar)`
+                      : 'Selecciona la fecha fin'}
+                  </Typography>
+                )}
+
+                <TextField select size="small" label="Tipo" value={tipo} onChange={e => setTipo(e.target.value)}>
+                  {['Vacaciones','Permiso','Ausencia','Día equipo'].map(t => (
+                    <MenuItem key={t} value={t}>{t}</MenuItem>
+                  ))}
+                </TextField>
+
                 <TextField
-                  multiline rows={3} size="small"
+                  multiline rows={2} size="small"
                   label="Nota (opcional)"
                   value={notas}
                   onChange={e => setNotas(e.target.value)}
@@ -281,14 +363,18 @@ export default function VacacionesPage() {
 
                 <Button
                   variant="contained" fullWidth
-                  onClick={handleSolicitar} disabled={sending}
+                  onClick={handleSolicitar}
+                  disabled={sending || !selStart}
                   startIcon={sending ? <CircularProgress size={16} color="inherit" /> : null}
                 >
                   {sending ? 'Enviando…' : 'Solicitar'}
                 </Button>
-                <Button variant="outlined" size="small" fullWidth onClick={loadHistorial}>
-                  Ver mis solicitudes
-                </Button>
+
+                {(selStart || selEnd) && (
+                  <Button size="small" color="inherit" onClick={() => { setSelStart(null); setSelEnd(null); setIsSelecting(false); }}>
+                    Limpiar selección
+                  </Button>
+                )}
               </Stack>
 
               <Divider sx={{ my: 2 }} />
@@ -298,20 +384,25 @@ export default function VacacionesPage() {
               <Stack spacing={0.5} mt={0.5}>
                 {LEGEND.map(l => (
                   <Stack direction="row" alignItems="center" spacing={1} key={l.label}>
-                    <Box sx={{ width: 14, height: 14, borderRadius: '50%', bgcolor: l.color, flexShrink: 0 }} />
+                    <Box sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: l.color, flexShrink: 0 }} />
                     <Typography variant="caption">{l.label}</Typography>
                   </Stack>
                 ))}
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: '2px', bgcolor: 'primary.main', flexShrink: 0 }} />
+                  <Typography variant="caption">Seleccionado</Typography>
+                </Stack>
               </Stack>
             </Paper>
           </Grid>
 
-          {/* ── Calendario año ───────────────────────────────────────────── */}
+          {/* ── Área derecha ──────────────────────────────────────────── */}
           <Grid item xs={12} md={9} lg={9.5}>
+
             {/* Navegación año */}
             <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
               <Typography variant="h6" fontWeight={700}>
-                {fullName ? `${fullName} · ${year}` : year}
+                {fullName ? `${fullName} · ${year}` : String(year)}
               </Typography>
               <Stack direction="row" alignItems="center" spacing={1}>
                 <IconButton size="small" onClick={() => setYear(y => y - 1)}><ChevronLeftIcon /></IconButton>
@@ -320,61 +411,90 @@ export default function VacacionesPage() {
               </Stack>
             </Stack>
 
+            {/* Calendario */}
             {loading ? (
-              <Box display="flex" justifyContent="center" py={8}>
-                <CircularProgress />
-              </Box>
+              <Box display="flex" justifyContent="center" py={8}><CircularProgress /></Box>
             ) : (
               <Grid container spacing={1.5}>
                 {Array.from({ length: 12 }, (_, i) => (
                   <Grid item xs={12} sm={6} md={4} lg={3} key={i}>
-                    <MonthGrid year={year} month={i} markedMap={markedMap} />
+                    <MonthGrid
+                      year={year} month={i}
+                      markedMap={markedMap}
+                      selStart={selStart}
+                      selEnd={selEnd}
+                      hovered={hovered}
+                      onDayClick={handleDayClick}
+                      onDayHover={setHovered}
+                    />
                   </Grid>
                 ))}
               </Grid>
             )}
+
+            {/* ── Historial ──────────────────────────────────────────── */}
+            <Box mt={4}>
+              <Typography variant="h6" fontWeight={700} mb={1.5}>
+                Historial de Vacaciones
+              </Typography>
+
+              {histLoading ? (
+                <Box display="flex" justifyContent="center" py={3}><CircularProgress size={28} /></Box>
+              ) : historial.length === 0 ? (
+                <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, textAlign: 'center' }}>
+                  <Typography color="text.secondary">No hay solicitudes registradas aún.</Typography>
+                </Paper>
+              ) : (
+                <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: 'action.hover' }}>
+                        <TableCell><strong>Tipo</strong></TableCell>
+                        <TableCell><strong>Desde</strong></TableCell>
+                        <TableCell><strong>Hasta</strong></TableCell>
+                        <TableCell align="center"><strong>Días</strong></TableCell>
+                        <TableCell><strong>Estado</strong></TableCell>
+                        <TableCell><strong>Nota</strong></TableCell>
+                        <TableCell><strong>Respuesta</strong></TableCell>
+                        <TableCell align="center"><strong>Acción</strong></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {historial.map(s => {
+                        const sc = STATUS_LABEL[s.status] || { color: 'default', label: s.status };
+                        return (
+                          <TableRow key={s.id} hover>
+                            <TableCell>{s.type}</TableCell>
+                            <TableCell>{s.startDate}</TableCell>
+                            <TableCell>{s.endDate}</TableCell>
+                            <TableCell align="center"><strong>{s.totalDays}</strong></TableCell>
+                            <TableCell>
+                              <Chip label={sc.label} color={sc.color} size="small" />
+                            </TableCell>
+                            <TableCell sx={{ maxWidth: 160 }}>
+                              <Typography variant="caption">{s.notes || '—'}</Typography>
+                            </TableCell>
+                            <TableCell sx={{ maxWidth: 160 }}>
+                              <Typography variant="caption" color="text.secondary">{s.reviewNotes || '—'}</Typography>
+                            </TableCell>
+                            <TableCell align="center">
+                              {s.status === 'Pendiente' && (
+                                <Button size="small" color="error" variant="outlined"
+                                  onClick={() => handleCancelar(s.id)}>
+                                  Cancelar
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </Box>
           </Grid>
         </Grid>
-
-        {/* ── Diálogo historial ────────────────────────────────────────────── */}
-        <Dialog open={historialOpen} onClose={() => setHistorialOpen(false)} maxWidth="md" fullWidth>
-          <DialogTitle>Mis Solicitudes</DialogTitle>
-          <DialogContent dividers>
-            {historial.length === 0 ? (
-              <Typography color="text.secondary" align="center" py={3}>No hay solicitudes registradas.</Typography>
-            ) : historial.map(s => (
-              <Paper key={s.id} variant="outlined" sx={{ p: 2, mb: 1.5, borderRadius: 2 }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={1}>
-                  <Box>
-                    <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
-                      <Typography fontWeight={600}>{s.type}</Typography>
-                      <Chip
-                        label={s.status} size="small"
-                        sx={{
-                          bgcolor: STATUS_COLOR[s.status.toLowerCase()] || '#90a4ae',
-                          color: '#fff', fontWeight: 700, fontSize: '0.7rem',
-                        }}
-                      />
-                    </Stack>
-                    <Typography variant="body2" color="text.secondary">
-                      {s.startDate} → {s.endDate} · {s.totalDays} día(s)
-                    </Typography>
-                    {s.notes && <Typography variant="caption" display="block" color="text.secondary">Nota: {s.notes}</Typography>}
-                    {s.reviewNotes && <Typography variant="caption" display="block" color="primary">Respuesta: {s.reviewNotes}</Typography>}
-                  </Box>
-                  {s.status === 'Pendiente' && (
-                    <Button size="small" color="error" variant="outlined" onClick={() => handleCancelar(s.id)}>
-                      Cancelar
-                    </Button>
-                  )}
-                </Stack>
-              </Paper>
-            ))}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setHistorialOpen(false)}>Cerrar</Button>
-          </DialogActions>
-        </Dialog>
       </Box>
     </LocalizationProvider>
   );

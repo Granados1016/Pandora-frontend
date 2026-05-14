@@ -328,15 +328,16 @@ function TabFestivos() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
-// Pestaña 3: Políticas de días
+// Pestaña 3: Políticas de días (personal + AppUsers)
 // ════════════════════════════════════════════════════════════════════════════════
 function TabPoliticas() {
   const [year,      setYear]      = useState(new Date().getFullYear());
   const [politicas, setPoliticas] = useState([]);
   const [loading,   setLoading]   = useState(true);
-  const [editId,    setEditId]    = useState(null); // username being edited
+  const [editId,    setEditId]    = useState(null);
   const [editVal,   setEditVal]   = useState(15);
   const [saving,    setSaving]    = useState(false);
+  const [search,    setSearch]    = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -353,26 +354,41 @@ function TabPoliticas() {
     setSaving(true);
     try {
       await api.put('/vacaciones/admin/politicas', { username, year, totalDays: editVal });
-      setPoliticas(p => p.map(x => x.username === username ? { ...x, totalDays: editVal } : x));
+      setPoliticas(p => p.map(x => x.username === username
+        ? { ...x, totalDays: editVal, available: editVal - x.usedDays }
+        : x));
       setEditId(null);
     } catch { alert('Error al guardar.'); }
     finally  { setSaving(false); }
   };
 
+  const filtered = politicas.filter(p =>
+    !search || p.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+    p.username?.toLowerCase().includes(search.toLowerCase()) ||
+    p.department?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <>
-      <Stack direction="row" spacing={2} alignItems="center" mb={2}>
-        <Typography variant="body1" fontWeight={600}>Año:</Typography>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }} mb={2} flexWrap="wrap">
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography variant="body1" fontWeight={600}>Año:</Typography>
+          <TextField
+            select size="small" value={year} onChange={e => setYear(+e.target.value)} sx={{ width: 100 }}
+          >
+            {[-1, 0, 1, 2].map(d => {
+              const y = new Date().getFullYear() + d;
+              return <MenuItem key={y} value={y}>{y}</MenuItem>;
+            })}
+          </TextField>
+        </Stack>
         <TextField
-          select size="small" value={year} onChange={e => setYear(+e.target.value)} sx={{ width: 100 }}
-        >
-          {[-1, 0, 1, 2].map(d => {
-            const y = new Date().getFullYear() + d;
-            return <MenuItem key={y} value={y}>{y}</MenuItem>;
-          })}
-        </TextField>
+          size="small" placeholder="Buscar empleado, usuario o departamento…"
+          value={search} onChange={e => setSearch(e.target.value)}
+          sx={{ minWidth: 260 }}
+        />
         <Typography variant="caption" color="text.secondary">
-          (Cambia los días disponibles por usuario para el año seleccionado)
+          {filtered.length} usuario(s) · haz clic en ✏️ para editar sus días
         </Typography>
       </Stack>
 
@@ -383,17 +399,33 @@ function TabPoliticas() {
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: 'action.hover' }}>
-                <TableCell><strong>Usuario</strong></TableCell>
-                <TableCell align="center"><strong>Días asignados</strong></TableCell>
+                <TableCell><strong>Empleado</strong></TableCell>
+                <TableCell><strong>Puesto / Departamento</strong></TableCell>
+                <TableCell align="center"><strong>Asignados</strong></TableCell>
+                <TableCell align="center"><strong>Usados</strong></TableCell>
+                <TableCell align="center"><strong>Disponibles</strong></TableCell>
                 <TableCell align="center"><strong>Editar</strong></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {politicas.map(p => (
+              {filtered.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                    No se encontraron usuarios.
+                  </TableCell>
+                </TableRow>
+              )}
+              {filtered.map(p => (
                 <TableRow key={p.username} hover>
                   <TableCell>
                     <Typography variant="body2" fontWeight={600}>{p.fullName}</Typography>
                     <Typography variant="caption" color="text.secondary">{p.username}</Typography>
+                    {p.email && <Typography variant="caption" color="text.disabled" display="block">{p.email}</Typography>}
+                  </TableCell>
+                  <TableCell>
+                    {p.position   && <Typography variant="body2">{p.position}</Typography>}
+                    {p.department && <Chip label={p.department} size="small" variant="outlined" sx={{ mt: 0.3 }} />}
+                    {!p.position && !p.department && <Typography variant="caption" color="text.disabled">—</Typography>}
                   </TableCell>
                   <TableCell align="center">
                     {editId === p.username ? (
@@ -401,11 +433,22 @@ function TabPoliticas() {
                         type="number" size="small" value={editVal}
                         onChange={e => setEditVal(+e.target.value)}
                         inputProps={{ min: 0, max: 365 }}
-                        sx={{ width: 80 }}
+                        sx={{ width: 75 }}
                       />
                     ) : (
-                      <Typography fontWeight={700} color="primary">{p.totalDays}</Typography>
+                      <Typography fontWeight={700} color="primary.main">{p.totalDays}</Typography>
                     )}
+                  </TableCell>
+                  <TableCell align="center">
+                    <Typography fontWeight={600} color="warning.main">{p.usedDays ?? 0}</Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <Typography
+                      fontWeight={700}
+                      color={(p.available ?? p.totalDays) <= 0 ? 'error.main' : 'success.main'}
+                    >
+                      {p.available ?? p.totalDays}
+                    </Typography>
                   </TableCell>
                   <TableCell align="center">
                     {editId === p.username ? (
