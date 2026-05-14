@@ -36,6 +36,10 @@ export const MODULES = {
   // ── Calendario — permisos granulares adicionales ─────────────────────────
   CAL_SOLICITUDES:  524288,  // Gestionar solicitudes de salas
   CAL_REPORTS_CAL:  1048576, // Reportes del calendario
+
+  // ── Vacaciones ────────────────────────────────────────────────────────────
+  VACACIONES:       2097152, // Ver calendario y solicitar vacaciones
+  VAC_ADMIN:        4194304, // Gestionar solicitudes, festivos y políticas
 };
 
 export const MODULE_LABELS = {
@@ -54,6 +58,8 @@ export const MODULE_LABELS = {
   262144:  'Reportes',
   524288:  'Pandora Calendar — Gestionar Solicitudes de Salas',
   1048576: 'Pandora Calendar — Reportes del Calendario',
+  2097152: 'Vacaciones — Solicitar y ver calendario',
+  4194304: 'Vacaciones — Gestión (aprobar, festivos, políticas)',
 };
 
 // Sub-módulos agrupados por módulo padre — se usan en Admin.jsx

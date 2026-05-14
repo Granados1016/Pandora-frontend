@@ -41,6 +41,9 @@ import NotificationsNoneIcon    from '@mui/icons-material/NotificationsNone';
 import NotificationsIcon        from '@mui/icons-material/Notifications';
 import SearchIcon               from '@mui/icons-material/Search';
 import HistoryIcon              from '@mui/icons-material/History';
+import BeachAccessIcon          from '@mui/icons-material/BeachAccess';
+import HowToRegIcon             from '@mui/icons-material/HowToReg';
+import EventBusyIcon            from '@mui/icons-material/EventBusy';
 import OpenInNewIcon            from '@mui/icons-material/OpenInNew';
 import DarkModeIcon             from '@mui/icons-material/DarkMode';
 import LightModeIcon            from '@mui/icons-material/LightMode';
@@ -214,6 +217,16 @@ export default function Layout({ children }) {
       show: hasModule(MODULES.INDICADORES) || isAdmin,
       items: [
         { label: 'Indicadores', icon: <ShowChartIcon />, path: '/indicadores', show: hasModule(MODULES.INDICADORES) || isAdmin },
+      ],
+    },
+    {
+      label: 'Vacaciones',
+      show: hasModule(MODULES.VACACIONES) || hasModule(MODULES.VAC_ADMIN) || isAdmin,
+      items: [
+        { label: 'Mi Calendario',  icon: <BeachAccessIcon />,  path: '/vacaciones',
+          show: hasModule(MODULES.VACACIONES) || isAdmin },
+        { label: 'Gestión Admin',  icon: <HowToRegIcon />,     path: '/vacaciones/admin',
+          show: hasModule(MODULES.VAC_ADMIN) || isAdmin },
       ],
     },
     {

@@ -45,6 +45,10 @@ const IndicadoresPage    = lazy(() => import('./pages/indicadores/IndicadoresPag
 const ComunicadosPage = lazy(() => import('./pages/comunicados/ComunicadosPage'));
 const AuditPage       = lazy(() => import('./pages/admin/AuditPage'));
 
+// Vacaciones
+const VacacionesPage      = lazy(() => import('./pages/vacaciones/VacacionesPage'));
+const VacacionesAdminPage = lazy(() => import('./pages/vacaciones/VacacionesAdminPage'));
+
 // Calendario
 const CalendarPage        = lazy(() => import('./pages/calendar/CalendarPage'));
 const RoomsManager        = lazy(() => import('./pages/calendar/RoomsManager'));
@@ -245,6 +249,18 @@ function AppRoutes() {
               <Route path="/comunicados" element={
                 <ProtectedRoute requiredModule={MODULES.COMUNICADOS}>
                   <ComunicadosPage />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Vacaciones ──────────────────────────────────────────── */}
+              <Route path="/vacaciones" element={
+                <ProtectedRoute requiredModule={MODULES.VACACIONES}>
+                  <VacacionesPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/vacaciones/admin" element={
+                <ProtectedRoute requiredModule={MODULES.VAC_ADMIN}>
+                  <VacacionesAdminPage />
                 </ProtectedRoute>
               } />
 
