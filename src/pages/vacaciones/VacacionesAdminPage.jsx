@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box, Tabs, Tab, Paper, Typography, Stack, Chip, Button,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
@@ -12,6 +12,9 @@ import DeleteOutlineIcon      from '@mui/icons-material/DeleteOutline';
 import AddIcon                from '@mui/icons-material/Add';
 import EditIcon               from '@mui/icons-material/Edit';
 import HowToRegIcon           from '@mui/icons-material/HowToReg';
+import VisibilityIcon         from '@mui/icons-material/Visibility';
+import CloseIcon              from '@mui/icons-material/Close';
+import AttachFileIcon         from '@mui/icons-material/AttachFile';
 import { DatePicker }         from '@mui/x-date-pickers/DatePicker';
 import { AdapterDayjs }       from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -43,6 +46,32 @@ function TabSolicitudes({ filterStatus, setFilterStatus }) {
   const [reviewDlg, setReviewDlg]     = useState(null); // { id, username, action }
   const [reviewNote, setReviewNote]   = useState('');
   const [saving, setSaving]           = useState(false);
+
+  // Visor de documentos
+  const [docOpen,    setDocOpen]    = useState(false);
+  const [docBlobUrl, setDocBlobUrl] = useState(null);
+  const [docMime,    setDocMime]    = useState('');
+  const [docReqId,   setDocReqId]   = useState(null);
+
+  const handleViewDoc = async (id) => {
+    try {
+      const res = await api.get(`/vacaciones/${id}/documento`, { responseType: 'blob' });
+      if (docBlobUrl) URL.revokeObjectURL(docBlobUrl);
+      setDocBlobUrl(URL.createObjectURL(res.data));
+      setDocMime(res.data.type);
+      setDocReqId(id);
+      setDocOpen(true);
+    } catch {
+      setError('No se pudo cargar el documento adjunto.');
+    }
+  };
+
+  const handleCloseDoc = () => {
+    if (docBlobUrl) URL.revokeObjectURL(docBlobUrl);
+    setDocBlobUrl(null);
+    setDocMime('');
+    setDocOpen(false);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -104,6 +133,7 @@ function TabSolicitudes({ filterStatus, setFilterStatus }) {
                 <TableCell align="center"><strong>Días</strong></TableCell>
                 <TableCell><strong>Estado</strong></TableCell>
                 <TableCell><strong>Nota</strong></TableCell>
+                <TableCell align="center"><strong>Documento</strong></TableCell>
                 <TableCell align="center"><strong>Acciones</strong></TableCell>
               </TableRow>
             </TableHead>
@@ -125,6 +155,20 @@ function TabSolicitudes({ filterStatus, setFilterStatus }) {
                   </TableCell>
                   <TableCell sx={{ maxWidth: 180 }}>
                     <Typography variant="caption" sx={{ wordBreak: 'break-word' }}>{s.notes || '—'}</Typography>
+                  </TableCell>
+                  {/* Columna Documento */}
+                  <TableCell align="center">
+                    {s.hasDocument ? (
+                      <Tooltip title="Ver documento adjunto">
+                        <IconButton size="small" color="primary" onClick={() => handleViewDoc(s.id)}>
+                          <VisibilityIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title="Sin documento adjunto">
+                        <AttachFileIcon fontSize="small" sx={{ color: 'text.disabled', verticalAlign: 'middle' }} />
+                      </Tooltip>
+                    )}
                   </TableCell>
                   <TableCell align="center">
                     {s.status === 'Pendiente' && (
@@ -182,6 +226,54 @@ function TabSolicitudes({ filterStatus, setFilterStatus }) {
           >
             {saving ? <CircularProgress size={18} color="inherit" /> : 'Confirmar'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Visor de documento adjunto */}
+      <Dialog open={docOpen} onClose={handleCloseDoc} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ pr: 6 }}>
+          Documento adjunto — solicitud #{docReqId}
+          <IconButton
+            onClick={handleCloseDoc}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+            size="small"
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0, minHeight: 400 }}>
+          {docMime === 'application/pdf' ? (
+            <Box sx={{ width: '100%', height: '65vh' }}>
+              <iframe
+                src={docBlobUrl}
+                title="Documento PDF"
+                width="100%"
+                height="100%"
+                style={{ border: 'none', display: 'block' }}
+              />
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2, minHeight: 300 }}>
+              <img
+                src={docBlobUrl}
+                alt="Documento adjunto"
+                style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain', borderRadius: 4 }}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            component="a"
+            href={docBlobUrl}
+            download={`solicitud-${docReqId}`}
+            variant="outlined"
+            size="small"
+            startIcon={<AttachFileIcon />}
+          >
+            Descargar
+          </Button>
+          <Button onClick={handleCloseDoc} variant="contained">Cerrar</Button>
         </DialogActions>
       </Dialog>
     </>

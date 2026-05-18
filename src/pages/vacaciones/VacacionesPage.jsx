@@ -1,13 +1,18 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Box, Grid, Paper, Typography, Button, TextField, MenuItem,
   Chip, CircularProgress, Alert, Divider, Tooltip,
   LinearProgress, Stack, useTheme, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, IconButton,
+  Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import ChevronLeftIcon  from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import BeachAccessIcon  from '@mui/icons-material/BeachAccess';
+import AttachFileIcon   from '@mui/icons-material/AttachFile';
+import VisibilityIcon   from '@mui/icons-material/Visibility';
+import CloseIcon        from '@mui/icons-material/Close';
+import UploadFileIcon   from '@mui/icons-material/UploadFile';
 import { DatePicker }   from '@mui/x-date-pickers/DatePicker';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -184,6 +189,14 @@ export default function VacacionesPage() {
   const [error,   setError]   = useState('');
   const [success, setSuccess] = useState('');
 
+  // Documento adjunto
+  const fileInputRef    = useRef(null);
+  const pendingUploadId = useRef(null);
+  const [uploadingId,   setUploadingId]   = useState(null);
+  const [docOpen,       setDocOpen]       = useState(false);
+  const [docBlobUrl,    setDocBlobUrl]    = useState(null);
+  const [docMime,       setDocMime]       = useState('');
+
   // ── Carga datos ─────────────────────────────────────────────────────────────
   const loadCalendar = useCallback(async () => {
     setLoading(true);
@@ -268,6 +281,63 @@ export default function VacacionesPage() {
       loadCalendar();
       loadHistorial();
     } catch { alert('No se pudo cancelar.'); }
+  };
+
+  // ── Documentos adjuntos ─────────────────────────────────────────────────────
+  const handleUploadClick = (id) => {
+    pendingUploadId.current = id;
+    fileInputRef.current.value = '';
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowedExts = ['.pdf', '.jpg', '.jpeg', '.png'];
+    const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+    if (!allowedExts.includes(ext)) {
+      setError('Solo se permiten archivos PDF, JPG o PNG.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('El archivo no puede superar 10 MB.');
+      return;
+    }
+    const id       = pendingUploadId.current;
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploadingId(id);
+    setError('');
+    try {
+      await api.post(`/vacaciones/${id}/documento`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setSuccess('Documento subido correctamente.');
+      loadHistorial();
+    } catch (err) {
+      setError(err.response?.data || 'Error al subir el documento.');
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const handleViewDoc = async (id) => {
+    try {
+      const res = await api.get(`/vacaciones/${id}/documento`, { responseType: 'blob' });
+      if (docBlobUrl) URL.revokeObjectURL(docBlobUrl);
+      setDocBlobUrl(URL.createObjectURL(res.data));
+      setDocMime(res.data.type);
+      setDocOpen(true);
+    } catch {
+      setError('No se pudo cargar el documento.');
+    }
+  };
+
+  const handleCloseDoc = () => {
+    if (docBlobUrl) URL.revokeObjectURL(docBlobUrl);
+    setDocBlobUrl(null);
+    setDocMime('');
+    setDocOpen(false);
   };
 
   const pct = diasInfo
@@ -456,6 +526,7 @@ export default function VacacionesPage() {
                         <TableCell><strong>Estado</strong></TableCell>
                         <TableCell><strong>Nota</strong></TableCell>
                         <TableCell><strong>Respuesta</strong></TableCell>
+                        <TableCell align="center"><strong>Documento</strong></TableCell>
                         <TableCell align="center"><strong>Acción</strong></TableCell>
                       </TableRow>
                     </TableHead>
@@ -477,6 +548,45 @@ export default function VacacionesPage() {
                             <TableCell sx={{ maxWidth: 160 }}>
                               <Typography variant="caption" color="text.secondary">{s.reviewNotes || '—'}</Typography>
                             </TableCell>
+                            {/* Columna Documento */}
+                            <TableCell align="center">
+                              {s.hasDocument ? (
+                                <Stack direction="row" spacing={0.5} justifyContent="center">
+                                  <Tooltip title="Ver documento">
+                                    <IconButton size="small" color="primary" onClick={() => handleViewDoc(s.id)}>
+                                      <VisibilityIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Reemplazar documento">
+                                    <IconButton
+                                      size="small" color="secondary"
+                                      onClick={() => handleUploadClick(s.id)}
+                                      disabled={uploadingId === s.id}
+                                    >
+                                      {uploadingId === s.id
+                                        ? <CircularProgress size={14} />
+                                        : <UploadFileIcon fontSize="small" />}
+                                    </IconButton>
+                                  </Tooltip>
+                                </Stack>
+                              ) : (
+                                <Tooltip title="Adjuntar documento firmado">
+                                  <span>
+                                    <Button
+                                      size="small" variant="outlined" color="inherit"
+                                      startIcon={uploadingId === s.id
+                                        ? <CircularProgress size={12} color="inherit" />
+                                        : <AttachFileIcon />}
+                                      onClick={() => handleUploadClick(s.id)}
+                                      disabled={uploadingId === s.id}
+                                      sx={{ fontSize: '0.7rem', whiteSpace: 'nowrap' }}
+                                    >
+                                      {uploadingId === s.id ? 'Subiendo…' : 'Adjuntar'}
+                                    </Button>
+                                  </span>
+                                </Tooltip>
+                              )}
+                            </TableCell>
                             <TableCell align="center">
                               {s.status === 'Pendiente' && (
                                 <Button size="small" color="error" variant="outlined"
@@ -496,6 +606,64 @@ export default function VacacionesPage() {
           </Grid>
         </Grid>
       </Box>
+
+      {/* Input oculto para subir archivo */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.jpg,.jpeg,.png"
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+      />
+
+      {/* Visor de documento */}
+      <Dialog open={docOpen} onClose={handleCloseDoc} maxWidth="md" fullWidth>
+        <DialogTitle sx={{ pr: 6 }}>
+          Documento adjunto
+          <IconButton
+            onClick={handleCloseDoc}
+            sx={{ position: 'absolute', right: 8, top: 8 }}
+            size="small"
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: 0, minHeight: 400 }}>
+          {docMime === 'application/pdf' ? (
+            <Box sx={{ width: '100%', height: '65vh' }}>
+              <iframe
+                src={docBlobUrl}
+                title="Documento PDF"
+                width="100%"
+                height="100%"
+                style={{ border: 'none', display: 'block' }}
+              />
+            </Box>
+          ) : (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 2, minHeight: 300 }}>
+              <img
+                src={docBlobUrl}
+                alt="Documento adjunto"
+                style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain', borderRadius: 4 }}
+              />
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            component="a"
+            href={docBlobUrl}
+            download="documento"
+            variant="outlined"
+            size="small"
+            startIcon={<AttachFileIcon />}
+          >
+            Descargar
+          </Button>
+          <Button onClick={handleCloseDoc} variant="contained">Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
     </LocalizationProvider>
   );
 }
