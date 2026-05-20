@@ -4,7 +4,7 @@ import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, MenuItem, CircularProgress, Alert, IconButton,
-  Tooltip, Grid, Divider, Switch, FormControlLabel,
+  Tooltip, Grid, Divider, Switch, FormControlLabel, Avatar,
 } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CancelOutlinedIcon     from '@mui/icons-material/CancelOutlined';
@@ -15,12 +15,14 @@ import HowToRegIcon           from '@mui/icons-material/HowToReg';
 import VisibilityIcon         from '@mui/icons-material/Visibility';
 import CloseIcon              from '@mui/icons-material/Close';
 import AttachFileIcon         from '@mui/icons-material/AttachFile';
+import FileDownloadIcon       from '@mui/icons-material/FileDownload';
+import GroupIcon              from '@mui/icons-material/Group';
 import { DatePicker }         from '@mui/x-date-pickers/DatePicker';
 import { AdapterDayjs }       from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
-import api from '../../api/pandoraApi';
+import api, { vacacionesApi } from '../../api/pandoraApi';
 
 dayjs.locale('es');
 
@@ -571,18 +573,133 @@ function TabPoliticas() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
+// Pestaña 4: Vista Equipo — quién está ausente este mes
+// ════════════════════════════════════════════════════════════════════════════════
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function TabEquipo() {
+  const now   = new Date();
+  const [year,  setYear]  = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1); // 1-12
+  const [equipo,   setEquipo]   = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true); setError('');
+    try {
+      const res = await vacacionesApi.getEquipo(year, month);
+      setEquipo(res.data);
+    } catch { setError('Error al cargar la vista de equipo.'); }
+    finally  { setLoading(false); }
+  }, [year, month]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const getInitials = (name = '') =>
+    name.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+  return (
+    <>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }} mb={2} flexWrap="wrap">
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography variant="body1" fontWeight={600}>Año:</Typography>
+          <TextField select size="small" value={year} onChange={e => setYear(+e.target.value)} sx={{ width: 100 }}>
+            {[-1, 0, 1].map(d => { const y = now.getFullYear() + d; return <MenuItem key={y} value={y}>{y}</MenuItem>; })}
+          </TextField>
+        </Stack>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography variant="body1" fontWeight={600}>Mes:</Typography>
+          <TextField select size="small" value={month} onChange={e => setMonth(+e.target.value)} sx={{ width: 140 }}>
+            {MESES.map((m, i) => <MenuItem key={i + 1} value={i + 1}>{m}</MenuItem>)}
+          </TextField>
+        </Stack>
+      </Stack>
+
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      {loading ? (
+        <Box display="flex" justifyContent="center" py={6}><CircularProgress /></Box>
+      ) : equipo.length === 0 ? (
+        <Box textAlign="center" py={6}>
+          <GroupIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+          <Typography color="text.secondary">
+            No hay vacaciones aprobadas en {MESES[month - 1]} {year}.
+          </Typography>
+        </Box>
+      ) : (
+        <>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            {equipo.length} colaborador{equipo.length !== 1 ? 'es' : ''} con vacaciones aprobadas en {MESES[month - 1]} {year}
+          </Typography>
+          <Grid container spacing={2}>
+            {equipo.map(e => (
+              <Grid item xs={12} sm={6} md={4} key={e.id}>
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Avatar sx={{ bgcolor: 'primary.main', width: 44, height: 44, fontSize: 16, fontWeight: 700 }}>
+                    {getInitials(e.fullName)}
+                  </Avatar>
+                  <Box flex={1} minWidth={0}>
+                    <Typography variant="body2" fontWeight={700} noWrap>{e.fullName}</Typography>
+                    <Typography variant="caption" color="text.secondary" noWrap display="block">@{e.username}</Typography>
+                    <Stack direction="row" spacing={0.5} mt={0.5} flexWrap="wrap">
+                      <Chip
+                        label={`${e.startDate} → ${e.endDate}`}
+                        size="small" color="primary" variant="outlined"
+                        sx={{ fontSize: 10, height: 20 }}
+                      />
+                      <Chip
+                        label={`${e.totalDays} día${e.totalDays !== 1 ? 's' : ''}`}
+                        size="small" color="success" variant="outlined"
+                        sx={{ fontSize: 10, height: 20 }}
+                      />
+                    </Stack>
+                  </Box>
+                </Paper>
+              </Grid>
+            ))}
+          </Grid>
+        </>
+      )}
+    </>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
 // Página principal Admin
 // ════════════════════════════════════════════════════════════════════════════════
 export default function VacacionesAdminPage() {
   const [tab, setTab]               = useState(0);
   const [filterStatus, setFilter]   = useState('Pendiente');
+  const [exporting, setExporting]   = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await vacacionesApi.exportExcel(new Date().getFullYear(), filterStatus || undefined);
+    } catch { alert('Error al exportar.'); }
+    finally { setExporting(false); }
+  };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
       <Box sx={{ p: { xs: 2, md: 3 } }}>
-        <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+        <Stack direction="row" alignItems="center" spacing={1} mb={2} flexWrap="wrap">
           <HowToRegIcon color="primary" />
-          <Typography variant="h5" fontWeight={700}>Gestión de Vacaciones</Typography>
+          <Typography variant="h5" fontWeight={700} flex={1}>Gestión de Vacaciones</Typography>
+          {tab === 0 && (
+            <Tooltip title="Exportar solicitudes a Excel">
+              <Button
+                variant="outlined" size="small"
+                startIcon={exporting ? <CircularProgress size={14} color="inherit" /> : <FileDownloadIcon />}
+                onClick={handleExport}
+                disabled={exporting}
+                color="success"
+              >
+                Excel
+              </Button>
+            </Tooltip>
+          )}
         </Stack>
 
         <Paper sx={{ borderRadius: 2 }}>
@@ -594,6 +711,7 @@ export default function VacacionesAdminPage() {
             <Tab label="Solicitudes" />
             <Tab label="Festivos" />
             <Tab label="Días por Usuario" />
+            <Tab label="Vista Equipo" icon={<GroupIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
           </Tabs>
 
           <Box sx={{ p: 2 }}>
@@ -605,6 +723,9 @@ export default function VacacionesAdminPage() {
             </TabPanel>
             <TabPanel value={tab} index={2}>
               <TabPoliticas />
+            </TabPanel>
+            <TabPanel value={tab} index={3}>
+              <TabEquipo />
             </TabPanel>
           </Box>
         </Paper>

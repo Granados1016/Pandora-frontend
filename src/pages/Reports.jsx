@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Grid, Card, CardContent, CircularProgress,
-  Alert, Tab, Tabs, Divider, Button, Tooltip,
+  Alert, Tab, Tabs, Divider, Button, Tooltip, TextField, MenuItem,
 } from '@mui/material';
 import EmailIcon from '@mui/icons-material/Email';
 import Inventory2Icon from '@mui/icons-material/Inventory2';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import BeachAccessIcon from '@mui/icons-material/BeachAccess';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import { printPdf, buildTableHtml } from '../utils/printPdf';
 import {
@@ -326,30 +327,142 @@ function CalendarTab({ data }) {
   );
 }
 
+// ─── Tab Vacaciones ───────────────────────────────────────────────────────────
+
+const STATUS_COLORS = { Aprobado: '#2e7d32', Pendiente: '#e65100', Rechazado: '#c62828', Cancelado: '#9e9e9e' };
+
+function VacacionesTab({ data, onYearChange }) {
+  if (!data) return null;
+  const d = data;
+
+  return (
+    <Box>
+      {/* KPIs */}
+      <Grid container spacing={2} mb={3}>
+        <Grid item xs={6} sm={3}>
+          <KpiCard label="Total solicitudes" value={d.total} color="#1565c0" />
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <KpiCard label="Aprobadas" value={d.aprobadas}
+            sub={`${d.total > 0 ? Math.round(d.aprobadas / d.total * 100) : 0}% del total`}
+            color="#2e7d32" />
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <KpiCard label="Pendientes" value={d.pendientes} color="#e65100" />
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <KpiCard label="Días tomados" value={d.totalDias}
+            sub="días hábiles aprobados"
+            color="#6a1b9a" />
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={2}>
+        {/* Solicitudes por mes */}
+        <Grid item xs={12} lg={8}>
+          <ChartCard title={`Solicitudes por mes — ${d.year}`} height={280}>
+            <BarChart data={d.byMonth} barGap={2}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <RechartsTooltip {...TOOLTIP_STYLE} />
+              <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+              <Bar dataKey="total"     name="Solicitudes" fill="#1565c0" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="aprobadas" name="Aprobadas"   fill="#2e7d32" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ChartCard>
+        </Grid>
+
+        {/* Por estado */}
+        <Grid item xs={12} lg={4}>
+          <ChartCard title="Por estado" height={280}>
+            <PieChart>
+              <Pie data={d.byStatus} dataKey="value" nameKey="name"
+                cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={3}>
+                {d.byStatus.map((s, i) => (
+                  <Cell key={i} fill={STATUS_COLORS[s.name] || P[i % P.length]} />
+                ))}
+              </Pie>
+              <RechartsTooltip {...TOOLTIP_STYLE} />
+              <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+            </PieChart>
+          </ChartCard>
+        </Grid>
+
+        {/* Días aprobados por mes */}
+        <Grid item xs={12} lg={6}>
+          <ChartCard title="Días de vacaciones aprobados por mes" height={240}>
+            <AreaChart data={d.byMonth}>
+              <defs>
+                <linearGradient id="gradVac" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor="#6a1b9a" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#6a1b9a" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <RechartsTooltip {...TOOLTIP_STYLE} />
+              <Area type="monotone" dataKey="dias" name="Días aprobados"
+                stroke="#6a1b9a" fill="url(#gradVac)" strokeWidth={2} dot={{ r: 4 }} />
+            </AreaChart>
+          </ChartCard>
+        </Grid>
+
+        {/* Top usuarios */}
+        {d.topUsuarios.length > 0 && (
+          <Grid item xs={12} lg={6}>
+            <ChartCard title="Top colaboradores por días tomados" height={Math.max(240, d.topUsuarios.length * 38)}>
+              <BarChart layout="vertical" data={d.topUsuarios} margin={{ left: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
+                <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                <YAxis type="category" dataKey="name" width={160} tick={{ fontSize: 11 }} />
+                <RechartsTooltip {...TOOLTIP_STYLE} />
+                <Bar dataKey="days" name="Días" fill="#2e7d32" radius={[0, 4, 4, 0]}>
+                  {d.topUsuarios.map((_, i) => <Cell key={i} fill={P[i % P.length]} />)}
+                </Bar>
+              </BarChart>
+            </ChartCard>
+          </Grid>
+        )}
+      </Grid>
+    </Box>
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 const ALL_TABS = [
   { label: 'Mail+',       icon: <EmailIcon />,         key: 'mail',      module: MODULES.MAIL_PLUS   },
   { label: 'Inventario',  icon: <Inventory2Icon />,     key: 'inventory', module: MODULES.INVENTARIO  },
   { label: 'Calendario',  icon: <CalendarMonthIcon />,  key: 'calendar',  module: MODULES.CALENDARIO  },
+  { label: 'Vacaciones',  icon: <BeachAccessIcon />,    key: 'vacaciones',module: MODULES.VAC_ADMIN   },
 ];
 
 export default function Reports() {
-  const { hasModule } = useAuth();
+  const { hasModule, isAdmin } = useAuth();
 
   // Solo los tabs a los que el usuario tiene acceso
-  const TABS = ALL_TABS.filter(t => hasModule(t.module));
+  const TABS = ALL_TABS.filter(t => hasModule(t.module) || isAdmin);
 
-  const [tab,      setTab]      = useState(0);
-  const [data,     setData]     = useState({ mail: null, inventory: null, calendar: null });
-  const [loading,  setLoading]  = useState({});
-  const [errors,   setErrors]   = useState({});
+  const [tab,         setTab]        = useState(0);
+  const [data,        setData]       = useState({ mail: null, inventory: null, calendar: null, vacaciones: null });
+  const [loading,     setLoading]    = useState({});
+  const [errors,      setErrors]     = useState({});
+  const [vacYear,     setVacYear]    = useState(new Date().getFullYear());
 
-  const loadTab = useCallback(async (key) => {
-    if (data[key]) return;                   // ya cargado
+  const loadTab = useCallback(async (key, forceYear) => {
+    if (key !== 'vacaciones' && data[key]) return; // ya cargado (vacaciones siempre recarga si cambia año)
     setLoading(l => ({ ...l, [key]: true }));
+    setErrors(e => ({ ...e, [key]: null }));
     try {
-      const fetchers = { mail: reportsApi.getMail, inventory: reportsApi.getInventory, calendar: reportsApi.getCalendar };
+      const y = forceYear ?? vacYear;
+      const fetchers = {
+        mail:       () => reportsApi.getMail(),
+        inventory:  () => reportsApi.getInventory(),
+        calendar:   () => reportsApi.getCalendar(),
+        vacaciones: () => reportsApi.getVacaciones(y),
+      };
       const { data: result } = await fetchers[key]();
       setData(d => ({ ...d, [key]: result }));
     } catch {
@@ -357,16 +470,24 @@ export default function Reports() {
     } finally {
       setLoading(l => ({ ...l, [key]: false }));
     }
-  }, [data]);
+  }, [data, vacYear]);
 
   // Cargar el tab activo al montar y al cambiar
   useEffect(() => {
-    loadTab(TABS[tab].key);
+    if (TABS[tab]) loadTab(TABS[tab].key);
   }, [tab]); // eslint-disable-line
 
-  const activeKey = TABS[tab]?.key;
-  const isLoading = loading[activeKey];
-  const error     = errors[activeKey];
+  // Recargar vacaciones cuando cambia el año
+  useEffect(() => {
+    if (TABS[tab]?.key === 'vacaciones') {
+      setData(d => ({ ...d, vacaciones: null }));
+      loadTab('vacaciones', vacYear);
+    }
+  }, [vacYear]); // eslint-disable-line
+
+  const activeKey  = TABS[tab]?.key;
+  const isLoading  = loading[activeKey];
+  const error      = errors[activeKey];
   const activeData = data[activeKey];
 
   // ── Exportar a PDF (#9) ────────────────────────────────────────────────────
@@ -455,22 +576,34 @@ export default function Reports() {
       {/* Tabs de módulo */}
       {TABS.length > 0 && (
         <>
-          <Tabs
-            value={tab}
-            onChange={(_, v) => setTab(v)}
-            sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
-            TabIndicatorProps={{ style: { height: 3, borderRadius: 2 } }}
-          >
-            {TABS.map(t => (
-              <Tab
-                key={t.key}
-                icon={t.icon}
-                iconPosition="start"
-                label={t.label}
-                sx={{ fontWeight: 600, minHeight: 48, textTransform: 'none', fontSize: 15 }}
-              />
-            ))}
-          </Tabs>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1, borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs
+              value={tab}
+              onChange={(_, v) => setTab(v)}
+              sx={{ flex: 1 }}
+              TabIndicatorProps={{ style: { height: 3, borderRadius: 2 } }}
+            >
+              {TABS.map(t => (
+                <Tab
+                  key={t.key}
+                  icon={t.icon}
+                  iconPosition="start"
+                  label={t.label}
+                  sx={{ fontWeight: 600, minHeight: 48, textTransform: 'none', fontSize: 15 }}
+                />
+              ))}
+            </Tabs>
+            {/* Selector de año — solo para Vacaciones */}
+            {activeKey === 'vacaciones' && (
+              <TextField
+                select size="small" value={vacYear}
+                onChange={e => setVacYear(+e.target.value)}
+                sx={{ width: 100, mb: 1 }}
+              >
+                {[-2, -1, 0, 1].map(d => { const y = new Date().getFullYear() + d; return <MenuItem key={y} value={y}>{y}</MenuItem>; })}
+              </TextField>
+            )}
+          </Box>
 
           {/* Contenido */}
           {isLoading && (
@@ -486,9 +619,10 @@ export default function Reports() {
 
           {!isLoading && !error && (
             <>
-              {TABS[tab]?.key === 'mail'      && <MailTab      data={data.mail}      />}
-              {TABS[tab]?.key === 'inventory' && <InventoryTab data={data.inventory} />}
-              {TABS[tab]?.key === 'calendar'  && <CalendarTab  data={data.calendar}  />}
+              {TABS[tab]?.key === 'mail'       && <MailTab       data={data.mail}       />}
+              {TABS[tab]?.key === 'inventory'  && <InventoryTab  data={data.inventory}  />}
+              {TABS[tab]?.key === 'calendar'   && <CalendarTab   data={data.calendar}   />}
+              {TABS[tab]?.key === 'vacaciones' && <VacacionesTab data={data.vacaciones} />}
             </>
           )}
         </>

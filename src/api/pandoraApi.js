@@ -108,9 +108,65 @@ export const templateApi = {
 };
 
 export const reportsApi = {
-  getMail:      () => api.get('/reports/mail'),
-  getInventory: () => api.get('/reports/inventory'),
-  getCalendar:  () => api.get('/reports/calendar'),
+  getMail:        () => api.get('/reports/mail'),
+  getInventory:   () => api.get('/reports/inventory'),
+  getCalendar:    () => api.get('/reports/calendar'),
+  // Vacaciones: usa el endpoint admin + agrega stats en el cliente
+  getVacaciones: async (year) => {
+    const y = year || new Date().getFullYear();
+    const [solRes, polRes] = await Promise.all([
+      api.get('/vacaciones/admin/solicitudes', { params: { year: y } }),
+      api.get('/vacaciones/admin/politicas',   { params: { year: y } }),
+    ]);
+    const sols = solRes.data;
+    const pols = polRes.data;
+
+    // Por estado
+    const byStatus = {};
+    sols.forEach(s => { byStatus[s.status] = (byStatus[s.status] || 0) + 1; });
+
+    // Por mes (usando startDate)
+    const byMonth = Array.from({ length: 12 }, (_, i) => ({
+      label: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][i],
+      total: 0, aprobadas: 0, dias: 0,
+    }));
+    sols.forEach(s => {
+      if (!s.startDate) return;
+      const m = parseInt(s.startDate.slice(5, 7)) - 1;
+      byMonth[m].total++;
+      if (s.status === 'Aprobado') { byMonth[m].aprobadas++; byMonth[m].dias += s.totalDays || 0; }
+    });
+
+    // Top usuarios por días aprobados
+    const byUser = {};
+    sols.filter(s => s.status === 'Aprobado').forEach(s => {
+      if (!byUser[s.fullName]) byUser[s.fullName] = 0;
+      byUser[s.fullName] += s.totalDays || 0;
+    });
+    const topUsuarios = Object.entries(byUser)
+      .map(([name, days]) => ({ name, days }))
+      .sort((a, b) => b.days - a.days)
+      .slice(0, 10);
+
+    const aprobadas  = sols.filter(s => s.status === 'Aprobado').length;
+    const pendientes = sols.filter(s => s.status === 'Pendiente').length;
+    const totalDias  = sols.filter(s => s.status === 'Aprobado').reduce((acc, s) => acc + (s.totalDays || 0), 0);
+
+    return {
+      data: {
+        year: y,
+        total: sols.length,
+        aprobadas,
+        pendientes,
+        rechazadas: sols.filter(s => s.status === 'Rechazado').length,
+        totalDias,
+        byStatus: Object.entries(byStatus).map(([name, value]) => ({ name, value })),
+        byMonth,
+        topUsuarios,
+        totalUsuariosConPolitica: pols.length,
+      },
+    };
+  },
 };
 
 export const campaignApi = {
@@ -144,6 +200,7 @@ export const userApi = {
   remove: (id) => api.delete(`/users/${id}`),
   me: () => api.get('/users/me'),
   updateSmtp: (data) => api.put('/users/me/smtp', data),
+  changePassword: (data) => api.put('/users/me/change-password', data),
   uploadPhoto: (file) => uploadForm('/users/me/photo', file),
   deletePhoto: () => api.delete('/users/me/photo'),
   uploadBanner: (file) => uploadForm('/users/me/banner', file),
@@ -292,6 +349,52 @@ export const ticketApi = {
   updateStatus:     (id, data)   => api.put(`/tickets/${id}/status`, data),
   addComment:       (id, data)   => api.post(`/tickets/${id}/comments`, data),
   delete:           (id)         => api.delete(`/tickets/${id}`),
+  // Estadísticas
+  getStats:         (year)       => api.get('/tickets/stats', { params: year ? { year } : undefined }),
+};
+
+export const vacacionesApi = {
+  // Empleado
+  getMiCalendario: (year) => api.get(`/vacaciones/mi-calendario/${year}`),
+  getMisDias:      ()     => api.get('/vacaciones/mis-dias'),
+  getMisSolicitudes:()    => api.get('/vacaciones/mis-solicitudes'),
+  solicitar:       (data) => api.post('/vacaciones/solicitar', data),
+  cancelar:        (id)   => api.delete(`/vacaciones/${id}/cancelar`),
+  // Admin
+  getAdminSolicitudes: (year) => api.get('/vacaciones/admin/solicitudes', { params: year ? { year } : undefined }),
+  revisar:         (id, data) => api.put(`/vacaciones/admin/${id}/revisar`, data),
+  getFestivos:     (year) => api.get(`/vacaciones/admin/festivos/${year}`),
+  crearFestivo:    (data) => api.post('/vacaciones/admin/festivos', data),
+  eliminarFestivo: (id)   => api.delete(`/vacaciones/admin/festivos/${id}`),
+  getPoliticas:    (year) => api.get('/vacaciones/admin/politicas', { params: year ? { year } : undefined }),
+  setPolitica:     (data) => api.put('/vacaciones/admin/politicas', data),
+  getEquipo:       (year, month) => api.get(`/vacaciones/admin/equipo/${year}/${month}`),
+  exportExcel:     async (year, status) => {
+    const token  = localStorage.getItem('pandora_token');
+    const params = new URLSearchParams({ ...(year ? { year } : {}), ...(status ? { status } : {}) });
+    const url    = `${BASE_URL}/vacaciones/admin/export-excel?${params}`;
+    const res    = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error(await res.text());
+    const blob     = await res.blob();
+    const filename = res.headers.get('Content-Disposition')?.match(/filename="?([^"]+)"?/)?.[1]
+                     || `Vacaciones_${year || new Date().getFullYear()}.xlsx`;
+    const href = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = href; a.download = filename; a.click();
+    URL.revokeObjectURL(href);
+  },
+};
+
+export const directorioApi = {
+  getAll:      (params = {}) => api.get('/directorio', { params }),
+  create:      (data)        => api.post('/directorio', data),
+  update:      (id, data)    => api.put(`/directorio/${id}`, data),
+  remove:      (id)          => api.delete(`/directorio/${id}`),
+  uploadPhoto: (id, file)    => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post(`/directorio/${id}/photo`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
 };
 
 export const categoriasApi = {

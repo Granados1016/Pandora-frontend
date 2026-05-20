@@ -15,6 +15,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import ShieldIcon from '@mui/icons-material/Shield';
 import BackupIcon from '@mui/icons-material/Backup';
 import DownloadIcon from '@mui/icons-material/Download';
+import KeyIcon from '@mui/icons-material/Key';
+import LockResetIcon from '@mui/icons-material/LockReset';
 import { userApi, adminApi } from '../api/pandoraApi';
 import { useAuth } from '../hooks/useAuth.jsx';
 
@@ -120,6 +122,31 @@ export default function Profile() {
       setSmtpMsg({ type: 'error', text: 'Error: ' + (err.response?.data || err.message) });
     } finally {
       setSmtpSaving(false);
+    }
+  };
+
+  // ── Cambiar contraseña ─────────────────────────────────────────────────────
+  const [pwForm,        setPwForm]        = useState({ current: '', newPw: '', confirm: '' });
+  const [showPwCurrent, setShowPwCurrent] = useState(false);
+  const [showPwNew,     setShowPwNew]     = useState(false);
+  const [pwSaving,      setPwSaving]      = useState(false);
+  const [pwMsg,         setPwMsg]         = useState(null);
+
+  const handleChangePassword = async () => {
+    if (!pwForm.current.trim()) { setPwMsg({ type: 'error', text: 'Ingresa tu contraseña actual.' }); return; }
+    if (pwForm.newPw.length < 8) { setPwMsg({ type: 'error', text: 'La nueva contraseña debe tener al menos 8 caracteres.' }); return; }
+    if (pwForm.newPw !== pwForm.confirm) { setPwMsg({ type: 'error', text: 'Las contraseñas nuevas no coinciden.' }); return; }
+    setPwSaving(true);
+    setPwMsg(null);
+    try {
+      await userApi.changePassword({ currentPassword: pwForm.current, newPassword: pwForm.newPw });
+      setPwMsg({ type: 'success', text: '✅ Contraseña actualizada correctamente.' });
+      setPwForm({ current: '', newPw: '', confirm: '' });
+    } catch (err) {
+      const msg = err.response?.data || err.message || 'Error al cambiar la contraseña.';
+      setPwMsg({ type: 'error', text: typeof msg === 'string' ? msg : 'Contraseña actual incorrecta.' });
+    } finally {
+      setPwSaving(false);
     }
   };
 
@@ -403,6 +430,76 @@ export default function Profile() {
                   disabled={smtpSaving || !smtpEmail.trim() || (!smtpPassword.trim() && !smtpConfigured)}
                 >
                   {smtpSaving ? <CircularProgress size={16} /> : 'Guardar'}
+                </Button>
+              </Stack>
+            </Stack>
+          </Paper>
+        </Grid>
+
+        {/* Cambiar contraseña */}
+        <Grid item xs={12} md={7}>
+          <Paper elevation={0} sx={{ p: 3, borderRadius: 3, border: '1px solid', borderColor: 'divider', height: '100%' }}>
+            <Stack direction="row" spacing={1.5} alignItems="center" mb={1}>
+              <KeyIcon color="primary" />
+              <Box>
+                <Typography variant="h6" fontWeight={700}>Cambiar Contraseña</Typography>
+                <Typography variant="body2" color="text.secondary">Actualiza tu contraseña de acceso al sistema.</Typography>
+              </Box>
+            </Stack>
+            <Divider sx={{ mb: 2.5 }} />
+            <Stack spacing={2}>
+              <TextField
+                label="Contraseña actual" size="small" fullWidth
+                type={showPwCurrent ? 'text' : 'password'}
+                value={pwForm.current}
+                onChange={e => setPwForm(f => ({ ...f, current: e.target.value }))}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => setShowPwCurrent(v => !v)} edge="end" size="small">
+                        {showPwCurrent ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <TextField
+                label="Nueva contraseña (mín. 8 caracteres)" size="small" fullWidth
+                type={showPwNew ? 'text' : 'password'}
+                value={pwForm.newPw}
+                onChange={e => setPwForm(f => ({ ...f, newPw: e.target.value }))}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => setShowPwNew(v => !v)} edge="end" size="small">
+                        {showPwNew ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <TextField
+                label="Confirmar nueva contraseña" size="small" fullWidth
+                type="password"
+                value={pwForm.confirm}
+                onChange={e => setPwForm(f => ({ ...f, confirm: e.target.value }))}
+                error={!!pwForm.confirm && pwForm.confirm !== pwForm.newPw}
+                helperText={pwForm.confirm && pwForm.confirm !== pwForm.newPw ? 'Las contraseñas no coinciden' : ''}
+                onKeyDown={e => { if (e.key === 'Enter') handleChangePassword(); }}
+              />
+              {pwMsg && (
+                <Alert severity={pwMsg.type} onClose={() => setPwMsg(null)} sx={{ borderRadius: 2 }}>
+                  {pwMsg.text}
+                </Alert>
+              )}
+              <Stack direction="row" justifyContent="flex-end">
+                <Button
+                  variant="contained" size="small"
+                  startIcon={pwSaving ? <CircularProgress size={14} color="inherit" /> : <LockResetIcon />}
+                  onClick={handleChangePassword}
+                  disabled={pwSaving || !pwForm.current || !pwForm.newPw || !pwForm.confirm}
+                >
+                  {pwSaving ? 'Actualizando...' : 'Cambiar contraseña'}
                 </Button>
               </Stack>
             </Stack>

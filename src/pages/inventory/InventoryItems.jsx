@@ -17,6 +17,8 @@ import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid';
 import DownloadIcon from '@mui/icons-material/Download';
 import UploadIcon from '@mui/icons-material/Upload';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import QrCode2Icon from '@mui/icons-material/QrCode2';
+import { QRCodeCanvas } from 'qrcode.react';
 import { inventoryApi, catalogApi } from '../../api/pandoraApi';
 import ExcelImportDialog from '../../components/inventory/ExcelImportDialog';
 import { apiError } from '../../api/apiError';
@@ -87,6 +89,19 @@ export default function InventoryItems() {
 
   // Excel
   const [openImport, setOpenImport] = useState(false);
+
+  // Dialog QR
+  const [qrItem, setQrItem] = useState(null);
+  const [openQR, setOpenQR] = useState(false);
+
+  const handleDownloadQR = () => {
+    const canvas = document.getElementById('inv-qr-canvas');
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = `QR_${qrItem?.inventoryNumber || 'item'}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
 
   // Dialog historial / transferencia
   const [openHistory, setOpenHistory]     = useState(false);
@@ -443,6 +458,11 @@ export default function InventoryItems() {
                   </TableCell>
                   <TableCell align="right">
                     <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                      <Tooltip title="Generar QR">
+                        <IconButton size="small" sx={{ color: 'text.secondary' }} onClick={() => { setQrItem(item); setOpenQR(true); }}>
+                          <QrCode2Icon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Historial">
                         <IconButton size="small" color="primary" onClick={() => openHistoryDialog(item)}>
                           <HistoryIcon fontSize="small" />
@@ -481,6 +501,43 @@ export default function InventoryItems() {
           />
         </TableContainer>
       )}
+
+      {/* ─── Dialog QR ──────────────────────────────────────────────────────── */}
+      <Dialog open={openQR} onClose={() => setOpenQR(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle fontWeight={700}>Código QR — {qrItem?.inventoryNumber}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 2 }}>
+            {qrItem && (
+              <QRCodeCanvas
+                id="inv-qr-canvas"
+                value={[
+                  qrItem.inventoryNumber,
+                  qrItem.name,
+                  qrItem.brand,
+                  qrItem.model,
+                  qrItem.serialNumber,
+                  qrItem.assignedTo,
+                  qrItem.department,
+                ].filter(Boolean).join(' | ')}
+                size={220}
+                level="M"
+                includeMargin
+              />
+            )}
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="subtitle1" fontWeight={700}>{qrItem?.inventoryNumber}</Typography>
+              <Typography variant="body2" color="text.secondary">{qrItem?.name}</Typography>
+              {qrItem?.brand && <Typography variant="caption" color="text.secondary">{qrItem?.brand} {qrItem?.model}</Typography>}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setOpenQR(false)}>Cerrar</Button>
+          <Button variant="contained" startIcon={<DownloadIcon />} onClick={handleDownloadQR}>
+            Descargar PNG
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ─── Dialog CRUD ─────────────────────────────────────────────────────── */}
       <Dialog open={openItem} onClose={() => setOpenItem(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>

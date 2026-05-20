@@ -40,6 +40,9 @@ export const MODULES = {
   // ── Vacaciones ────────────────────────────────────────────────────────────
   VACACIONES:       2097152, // Ver calendario y solicitar vacaciones
   VAC_ADMIN:        4194304, // Gestionar solicitudes, festivos y políticas
+
+  // ── Directorio de empleados ──────────────────────────────────────────────
+  DIRECTORIO:       8388608, // Ver y gestionar el directorio de empleados
 };
 
 export const MODULE_LABELS = {
@@ -60,6 +63,7 @@ export const MODULE_LABELS = {
   1048576: 'Pandora Calendar — Reportes del Calendario',
   2097152: 'Vacaciones — Solicitar y ver calendario',
   4194304: 'Vacaciones — Gestión (aprobar, festivos, políticas)',
+  8388608: 'Directorio de Empleados',
 };
 
 // Sub-módulos agrupados por módulo padre — se usan en Admin.jsx
