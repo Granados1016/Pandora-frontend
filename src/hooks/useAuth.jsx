@@ -92,7 +92,15 @@ export const ROLES = {
 function parseJwt(token) {
   try {
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-    return JSON.parse(atob(base64));
+    // atob() solo maneja Latin-1. Los JWT payload están en UTF-8, por lo que
+    // hay que convertir los bytes a percent-encoding antes de decodificar.
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
   } catch {
     return {};
   }

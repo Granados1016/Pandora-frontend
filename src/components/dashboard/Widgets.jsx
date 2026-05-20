@@ -110,9 +110,11 @@ export function WelcomeWidget({ fullName, username, position, isAdmin }) {
     hour < 19 ? 'Buenas tardes' :
                 'Buenas noches';
 
-  const dateStr = now.toLocaleDateString('es-MX', {
+  const dateStrRaw = now.toLocaleDateString('es-MX', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
+  // Capitalizar solo la primera letra (evita que textTransform capitalice cada palabra)
+  const dateStr = dateStrRaw.charAt(0).toUpperCase() + dateStrRaw.slice(1);
   const timeStr = now.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   return (
@@ -129,7 +131,7 @@ export function WelcomeWidget({ fullName, username, position, isAdmin }) {
             <Typography variant="h5" fontWeight={800} color="white">
               {greeting}, {fullName?.split(' ')[0] || username} 👋
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)', mt: 0.5, textTransform: 'capitalize' }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.75)', mt: 0.5 }}>
               {dateStr}
             </Typography>
             {position && (
