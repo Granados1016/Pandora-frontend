@@ -10,7 +10,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import { printPdf, buildTableHtml } from '../utils/printPdf';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend,
   PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area,
 } from 'recharts';
 import { reportsApi } from '../api/pandoraApi';
@@ -107,7 +107,7 @@ function MailTab({ data }) {
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip {...TOOLTIP_STYLE} />
+              <RechartsTooltip {...TOOLTIP_STYLE} />
               <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
               <Bar dataKey="sent"   name="Enviados" fill="#2e7d32" radius={[3, 3, 0, 0]} />
               <Bar dataKey="failed" name="Fallidos"  fill="#c62828" radius={[3, 3, 0, 0]} />
@@ -125,7 +125,7 @@ function MailTab({ data }) {
                   <Cell key={i} fill={P[i % P.length]} />
                 ))}
               </Pie>
-              <Tooltip {...TOOLTIP_STYLE} />
+              <RechartsTooltip {...TOOLTIP_STYLE} />
               <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
             </PieChart>
           </ChartCard>
@@ -143,7 +143,7 @@ function MailTab({ data }) {
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
                 <XAxis type="number" tick={{ fontSize: 11 }} />
                 <YAxis type="category" dataKey="name" width={200} tick={{ fontSize: 11 }} />
-                <Tooltip {...TOOLTIP_STYLE} />
+                <RechartsTooltip {...TOOLTIP_STYLE} />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="sent"   name="Enviados" fill="#2e7d32" stackId="a" radius={[0, 0, 0, 0]} />
                 <Bar dataKey="failed" name="Fallidos"  fill="#c62828" stackId="a" radius={[0, 3, 3, 0]} />
@@ -190,7 +190,7 @@ function InventoryTab({ data }) {
                 cx="50%" cy="50%" innerRadius={65} outerRadius={95} paddingAngle={3}>
                 {data.byType.map((_, i) => <Cell key={i} fill={P[i % P.length]} />)}
               </Pie>
-              <Tooltip {...TOOLTIP_STYLE} />
+              <RechartsTooltip {...TOOLTIP_STYLE} />
               <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
             </PieChart>
           </ChartCard>
@@ -204,7 +204,7 @@ function InventoryTab({ data }) {
                 cx="50%" cy="50%" outerRadius={90} paddingAngle={3}>
                 {data.byStatus.map((_, i) => <Cell key={i} fill={P[i % P.length]} />)}
               </Pie>
-              <Tooltip {...TOOLTIP_STYLE} />
+              <RechartsTooltip {...TOOLTIP_STYLE} />
               <Legend iconType="circle" wrapperStyle={{ fontSize: 11 }} />
             </PieChart>
           </ChartCard>
@@ -223,7 +223,7 @@ function InventoryTab({ data }) {
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-              <Tooltip {...TOOLTIP_STYLE} />
+              <RechartsTooltip {...TOOLTIP_STYLE} />
               <Area type="monotone" dataKey="count" name="Transferencias"
                 stroke="#6a1b9a" fill="url(#gradTransfer)" strokeWidth={2} dot={{ r: 4 }} />
             </AreaChart>
@@ -238,7 +238,7 @@ function InventoryTab({ data }) {
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f0f0f0" />
                 <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
                 <YAxis type="category" dataKey="name" width={200} tick={{ fontSize: 11 }} />
-                <Tooltip {...TOOLTIP_STYLE} />
+                <RechartsTooltip {...TOOLTIP_STYLE} />
                 <Bar dataKey="value" name="Equipos" fill="#1565c0" radius={[0, 4, 4, 0]}>
                   {data.byDepartment.map((_, i) => <Cell key={i} fill={P[i % P.length]} />)}
                 </Bar>
@@ -281,7 +281,7 @@ function CalendarTab({ data }) {
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-              <Tooltip {...TOOLTIP_STYLE} />
+              <RechartsTooltip {...TOOLTIP_STYLE} />
               <Bar dataKey="value" name="Reservaciones" radius={[4, 4, 0, 0]}>
                 {data.byRoom.map((_, i) => <Cell key={i} fill={P[i % P.length]} />)}
               </Bar>
@@ -296,7 +296,7 @@ function CalendarTab({ data }) {
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-              <Tooltip {...TOOLTIP_STYLE} />
+              <RechartsTooltip {...TOOLTIP_STYLE} />
               <Bar dataKey="value" name="Reservaciones" fill="#00838f" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ChartCard>
@@ -315,7 +315,7 @@ function CalendarTab({ data }) {
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-              <Tooltip {...TOOLTIP_STYLE} />
+              <RechartsTooltip {...TOOLTIP_STYLE} />
               <Area type="monotone" dataKey="count" name="Reservaciones"
                 stroke="#1565c0" fill="url(#gradCalendar)" strokeWidth={2} dot={{ r: 4 }} />
             </AreaChart>
