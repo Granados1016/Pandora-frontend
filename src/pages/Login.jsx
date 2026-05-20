@@ -3,8 +3,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Card, CardContent, TextField, Button,
   Typography, Alert, CircularProgress, Stack,
+  InputAdornment, IconButton,
 } from '@mui/material';
-import LockIcon from '@mui/icons-material/Lock';
+import LockIcon        from '@mui/icons-material/Lock';
+import VisibilityIcon  from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import { useAuth } from '../hooks/useAuth.jsx';
 
 export default function Login() {
@@ -15,6 +18,7 @@ export default function Login() {
   const [form, setForm] = useState({ username: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const from = location.state?.from?.pathname || '/';
 
@@ -71,9 +75,23 @@ export default function Login() {
               autoComplete="username" sx={{ mb: 2 }} required
             />
             <TextField
-              fullWidth label="Contraseña" type="password" value={form.password}
+              fullWidth label="Contraseña" value={form.password}
+              type={showPassword ? 'text' : 'password'}
               onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
               autoComplete="current-password" sx={{ mb: 3 }} required
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowPassword(v => !v)}
+                      edge="end"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
             <Button
               type="submit" variant="contained" fullWidth size="large"

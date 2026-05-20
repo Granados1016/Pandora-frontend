@@ -5,7 +5,7 @@ import {
   ToggleButton, ToggleButtonGroup, CircularProgress, Tooltip, Switch,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   FormGroup, FormControlLabel, Checkbox, Divider, Radio, RadioGroup,
-  ToggleButtonGroup as MuiTBG,
+  ToggleButtonGroup as MuiTBG, InputAdornment,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
@@ -16,7 +16,8 @@ import BackupIcon from '@mui/icons-material/Backup';
 import SaveIcon from '@mui/icons-material/Save';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import BadgeIcon from '@mui/icons-material/Badge';
-import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityIcon    from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import BlockIcon from '@mui/icons-material/Block';
 import { userApi, adminApi, ticketApi } from '../api/pandoraApi';
@@ -81,6 +82,7 @@ export default function Admin() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
 
   // ── Backup ────────────────────────────────────────────────────────────────
   const [backupLoading, setBackupLoading] = useState(false);
@@ -555,8 +557,22 @@ export default function Admin() {
             />
             <TextField
               label={editing ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña'}
-              fullWidth type="password" value={form.password}
+              fullWidth value={form.password}
+              type={showAdminPassword ? 'text' : 'password'}
               onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowAdminPassword(v => !v)}
+                      edge="end"
+                      tabIndex={-1}
+                    >
+                      {showAdminPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
             <Box>
               <Typography variant="subtitle2" fontWeight={600} mb={1}>Rol</Typography>
