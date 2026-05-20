@@ -48,7 +48,6 @@ import EventBusyIcon            from '@mui/icons-material/EventBusy';
 import OpenInNewIcon            from '@mui/icons-material/OpenInNew';
 import DarkModeIcon             from '@mui/icons-material/DarkMode';
 import LightModeIcon            from '@mui/icons-material/LightMode';
-import ContactsIcon             from '@mui/icons-material/Contacts';
 
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 import { useNotifications } from '../hooks/useNotifications';
@@ -234,13 +233,6 @@ export default function Layout({ children }) {
           show: hasModule(MODULES.VACACIONES) || isAdmin },
         { label: 'Gestión Admin',  icon: <HowToRegIcon />,     path: '/vacaciones/admin',
           show: hasModule(MODULES.VAC_ADMIN) || isAdmin },
-      ],
-    },
-    {
-      label: 'Directorio',
-      show: hasModule(MODULES.DIRECTORIO) || isAdmin,
-      items: [
-        { label: 'Directorio', icon: <ContactsIcon />, path: '/directorio', show: hasModule(MODULES.DIRECTORIO) || isAdmin },
       ],
     },
     {

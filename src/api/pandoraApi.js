@@ -385,17 +385,6 @@ export const vacacionesApi = {
   },
 };
 
-export const directorioApi = {
-  getAll:      (params = {}) => api.get('/directorio', { params }),
-  create:      (data)        => api.post('/directorio', data),
-  update:      (id, data)    => api.put(`/directorio/${id}`, data),
-  remove:      (id)          => api.delete(`/directorio/${id}`),
-  uploadPhoto: (id, file)    => {
-    const form = new FormData();
-    form.append('file', file);
-    return api.post(`/directorio/${id}/photo`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
-  },
-};
 
 export const categoriasApi = {
   getAll:  ()          => api.get('/procedimientos/categorias'),

@@ -51,8 +51,6 @@ const AuditPage       = lazy(() => import('./pages/admin/AuditPage'));
 const VacacionesPage      = lazy(() => import('./pages/vacaciones/VacacionesPage'));
 const VacacionesAdminPage = lazy(() => import('./pages/vacaciones/VacacionesAdminPage'));
 
-// Directorio
-const DirectorioPage = lazy(() => import('./pages/DirectorioPage'));
 
 // Calendario
 const CalendarPage        = lazy(() => import('./pages/calendar/CalendarPage'));
@@ -268,13 +266,6 @@ function AppRoutes() {
               <Route path="/vacaciones/admin" element={
                 <ProtectedRoute requiredModule={MODULES.VAC_ADMIN}>
                   <VacacionesAdminPage />
-                </ProtectedRoute>
-              } />
-
-              {/* ── Directorio de empleados ─────────────────────────────── */}
-              <Route path="/directorio" element={
-                <ProtectedRoute requiredModule={MODULES.DIRECTORIO}>
-                  <DirectorioPage />
                 </ProtectedRoute>
               } />
 
