@@ -388,6 +388,9 @@ export const adminApi = {
     a.href = href; a.download = filename; a.click();
     URL.revokeObjectURL(href);
   },
+  getSmtpSettings:  ()      => api.get('/admin/settings/smtp'),
+  saveSmtpSettings: (data)  => api.post('/admin/settings/smtp', data),
+  testSmtp:         (data)  => api.post('/admin/settings/smtp/test', data),
 };
 
 export default api;

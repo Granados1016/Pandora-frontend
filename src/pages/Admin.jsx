@@ -20,6 +20,10 @@ import VisibilityIcon    from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import BlockIcon from '@mui/icons-material/Block';
+import EmailIcon from '@mui/icons-material/Email';
+import SendIcon from '@mui/icons-material/Send';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import LockIcon from '@mui/icons-material/Lock';
 import { userApi, adminApi, ticketApi } from '../api/pandoraApi';
 import { MODULE_LABELS, MODULES, SUB_MODULES, useAuth } from '../hooks/useAuth.jsx';
 
@@ -87,6 +91,82 @@ export default function Admin() {
   // ── Backup ────────────────────────────────────────────────────────────────
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupMsg,     setBackupMsg]     = useState('');
+
+  // ── SMTP Config ───────────────────────────────────────────────────────────
+  const EMPTY_SMTP = { host: '', port: 587, fromEmail: '', password: '', fromName: 'Pandora', useSsl: true };
+  const [smtp,            setSmtp]            = useState(EMPTY_SMTP);
+  const [smtpLoading,     setSmtpLoading]     = useState(false);
+  const [smtpSaving,      setSmtpSaving]      = useState(false);
+  const [smtpMsg,         setSmtpMsg]         = useState('');
+  const [smtpMsgSev,      setSmtpMsgSev]      = useState('success');
+  const [showSmtpPass,    setShowSmtpPass]    = useState(false);
+  const [smtpTesting,     setSmtpTesting]     = useState(false);
+  const [testEmail,       setTestEmail]       = useState('');
+  const [testDialog,      setTestDialog]      = useState(false);
+  const [hasDbPassword,   setHasDbPassword]   = useState(false);
+
+  const loadSmtp = async () => {
+    setSmtpLoading(true);
+    try {
+      const { data } = await adminApi.getSmtpSettings();
+      setSmtp({
+        host:      data.host      ?? '',
+        port:      data.port      ?? 587,
+        fromEmail: data.fromEmail ?? '',
+        password:  '',               // never returned from server
+        fromName:  data.fromName  ?? 'Pandora',
+        useSsl:    data.useSsl    ?? true,
+      });
+      setHasDbPassword(!!data.hasPassword);
+    } catch {
+      setSmtpMsg('❌ Error al cargar la configuración SMTP.');
+      setSmtpMsgSev('error');
+    } finally {
+      setSmtpLoading(false);
+    }
+  };
+
+  React.useEffect(() => { loadSmtp(); }, []);
+
+  const handleSmtpSave = async () => {
+    if (!smtp.host || !smtp.fromEmail) {
+      setSmtpMsg('El servidor y el correo remitente son obligatorios.');
+      setSmtpMsgSev('warning');
+      return;
+    }
+    setSmtpSaving(true);
+    setSmtpMsg('');
+    try {
+      await adminApi.saveSmtpSettings(smtp);
+      setSmtpMsg('✅ Configuración SMTP guardada correctamente.');
+      setSmtpMsgSev('success');
+      setHasDbPassword(true);
+      setSmtp(s => ({ ...s, password: '' }));
+    } catch (e) {
+      setSmtpMsg(`❌ ${e.response?.data || e.message || 'Error al guardar.'}`);
+      setSmtpMsgSev('error');
+    } finally {
+      setSmtpSaving(false);
+    }
+  };
+
+  const handleSmtpTest = async () => {
+    if (!testEmail) return;
+    setSmtpTesting(true);
+    setSmtpMsg('');
+    try {
+      const { data } = await adminApi.testSmtp({ toEmail: testEmail });
+      setSmtpMsg(data?.message ? `✅ ${data.message}` : '✅ Correo de prueba enviado correctamente.');
+      setSmtpMsgSev('success');
+    } catch (e) {
+      const msg = e.response?.data?.error || e.response?.data || e.message || 'Error al enviar el correo de prueba.';
+      setSmtpMsg(`❌ ${msg}`);
+      setSmtpMsgSev('error');
+    } finally {
+      setSmtpTesting(false);
+      setTestDialog(false);
+    }
+  };
 
   const handleBackup = async () => {
     setBackupLoading(true);
@@ -317,6 +397,158 @@ export default function Admin() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* ── Configuración SMTP ──────────────────────────────────────────── */}
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Stack direction="row" alignItems="center" spacing={1.5} mb={0.5}>
+            <EmailIcon color="primary" sx={{ fontSize: 26 }} />
+            <Box>
+              <Typography variant="h6" fontWeight={700}>Configuración de Correo (SMTP)</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Credenciales para el envío de notificaciones por correo electrónico. La contraseña se cifra antes de guardarse.
+              </Typography>
+            </Box>
+          </Stack>
+
+          {smtpMsg && (
+            <Alert severity={smtpMsgSev} sx={{ mb: 2, mt: 1.5 }} onClose={() => setSmtpMsg('')}>
+              {smtpMsg}
+            </Alert>
+          )}
+
+          {smtpLoading ? (
+            <Box textAlign="center" py={4}><CircularProgress /></Box>
+          ) : (
+            <Stack spacing={2} mt={2}>
+              {/* Row 1: Host + Port */}
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <TextField
+                  label="Servidor SMTP (Host)" fullWidth required
+                  value={smtp.host}
+                  onChange={e => setSmtp(s => ({ ...s, host: e.target.value }))}
+                  placeholder="smtp.gmail.com"
+                  InputProps={{ startAdornment: <InputAdornment position="start"><EmailIcon fontSize="small" color="action" /></InputAdornment> }}
+                />
+                <TextField
+                  label="Puerto" type="number" sx={{ minWidth: 110 }}
+                  value={smtp.port}
+                  onChange={e => setSmtp(s => ({ ...s, port: parseInt(e.target.value) || 587 }))}
+                  inputProps={{ min: 1, max: 65535 }}
+                />
+              </Stack>
+
+              {/* Row 2: From Email + From Name */}
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <TextField
+                  label="Correo remitente (From Email)" fullWidth required type="email"
+                  value={smtp.fromEmail}
+                  onChange={e => setSmtp(s => ({ ...s, fromEmail: e.target.value }))}
+                  placeholder="notificaciones@miempresa.com"
+                />
+                <TextField
+                  label="Nombre remitente (From Name)" fullWidth
+                  value={smtp.fromName}
+                  onChange={e => setSmtp(s => ({ ...s, fromName: e.target.value }))}
+                  placeholder="Pandora"
+                />
+              </Stack>
+
+              {/* Row 3: Password + SSL */}
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="flex-start">
+                <TextField
+                  label={hasDbPassword ? 'Contraseña (dejar vacío para no cambiar)' : 'Contraseña de aplicación'}
+                  fullWidth
+                  type={showSmtpPass ? 'text' : 'password'}
+                  value={smtp.password}
+                  onChange={e => setSmtp(s => ({ ...s, password: e.target.value }))}
+                  placeholder={hasDbPassword ? '••••••••' : 'App password de Gmail / contraseña SMTP'}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start"><LockIcon fontSize="small" color="action" /></InputAdornment>,
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton onClick={() => setShowSmtpPass(v => !v)} edge="end" tabIndex={-1}>
+                          {showSmtpPass ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  helperText={hasDbPassword ? '✅ Contraseña almacenada en la base de datos (cifrada).' : 'Se cifrará con AES-256 antes de guardarse.'}
+                />
+                <Box sx={{ pt: { xs: 0, sm: 1 }, minWidth: 160 }}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={smtp.useSsl}
+                        onChange={e => setSmtp(s => ({ ...s, useSsl: e.target.checked }))}
+                        color="primary"
+                      />
+                    }
+                    label={<Box><Typography variant="body2" fontWeight={600}>Usar SSL/TLS</Typography><Typography variant="caption" color="text.secondary">StartTLS (recomendado)</Typography></Box>}
+                  />
+                </Box>
+              </Stack>
+
+              {/* Actions */}
+              <Stack direction="row" spacing={2} flexWrap="wrap" pt={0.5}>
+                <Button
+                  variant="contained"
+                  startIcon={smtpSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
+                  onClick={handleSmtpSave}
+                  disabled={smtpSaving}
+                  sx={{ borderRadius: 2 }}
+                >
+                  {smtpSaving ? 'Guardando...' : 'Guardar configuración'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<SendIcon />}
+                  onClick={() => { setTestEmail(''); setTestDialog(true); }}
+                  disabled={smtpSaving || (!smtp.host && !hasDbPassword)}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Probar conexión
+                </Button>
+              </Stack>
+            </Stack>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Diálogo probar SMTP */}
+      <Dialog open={testDialog} onClose={() => setTestDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle fontWeight={700}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <SendIcon color="primary" />
+            <span>Enviar correo de prueba</span>
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Stack spacing={2} mt={0.5}>
+            <Typography variant="body2" color="text.secondary">
+              Se enviará un correo de prueba usando la configuración guardada actualmente para verificar la conexión SMTP.
+            </Typography>
+            <TextField
+              label="Correo destinatario" fullWidth type="email" autoFocus
+              value={testEmail}
+              onChange={e => setTestEmail(e.target.value)}
+              placeholder="tu@correo.com"
+              onKeyDown={e => { if (e.key === 'Enter' && testEmail) handleSmtpTest(); }}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setTestDialog(false)}>Cancelar</Button>
+          <Button
+            variant="contained"
+            startIcon={smtpTesting ? <CircularProgress size={16} color="inherit" /> : <CheckCircleIcon />}
+            onClick={handleSmtpTest}
+            disabled={smtpTesting || !testEmail}
+          >
+            {smtpTesting ? 'Enviando...' : 'Enviar prueba'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ── Catálogo de Puestos — HelpDesk ──────────────────────────────── */}
       <Card sx={{ mb: 4 }}>
