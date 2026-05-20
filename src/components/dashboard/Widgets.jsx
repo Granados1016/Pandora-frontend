@@ -31,7 +31,12 @@ import HourglassEmptyIcon       from '@mui/icons-material/HourglassEmpty';
 import KeyIcon                  from '@mui/icons-material/Key';
 import NotificationsActiveIcon  from '@mui/icons-material/NotificationsActive';
 
+import BeachAccessIcon from '@mui/icons-material/BeachAccess';
+import EventBusyIcon   from '@mui/icons-material/EventBusy';
+import PendingActionsIcon from '@mui/icons-material/PendingActions';
+
 import { campaignApi, inventoryApi, calendarApi, ticketApi, licenciasApi } from '../../api/pandoraApi';
+import api from '../../api/pandoraApi';
 import { MODULES }    from '../../hooks/useAuth.jsx';
 import { statusColor, statusLabel } from '../../utils/statusHelpers';
 
@@ -498,6 +503,76 @@ export function LicenciasWidget({ refreshKey = 0 }) {
   );
 }
 
+// ─── 9. Vacaciones ────────────────────────────────────────────────────────────
+
+export function VacacionesWidget({ refreshKey = 0 }) {
+  const navigate = useNavigate();
+  const [data, setData]       = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      api.get('/vacaciones/mis-dias').catch(() => null),
+      api.get('/vacaciones/mis-solicitudes').catch(() => null),
+    ]).then(([diasRes, solRes]) => {
+      const dias   = diasRes?.data  ?? {};
+      const solic  = Array.isArray(solRes?.data) ? solRes.data : [];
+      const pendientes = solic.filter(s => s.status === 'Pendiente' || s.status === 'pending').length;
+      const aprobadas  = solic.filter(s => s.status === 'Aprobada'  || s.status === 'approved').length;
+      // Próxima vacación aprobada futura
+      const futura = solic
+        .filter(s => (s.status === 'Aprobada' || s.status === 'approved') && new Date(s.startDate) >= new Date())
+        .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))[0] ?? null;
+
+      setData({
+        disponibles: dias.diasDisponibles ?? dias.availableDays ?? dias.available ?? 0,
+        usados:      dias.diasUsados      ?? dias.usedDays      ?? dias.used      ?? 0,
+        pendientes,
+        aprobadas,
+        proxima: futura ? new Date(futura.startDate).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }) : null,
+      });
+    }).finally(() => setLoading(false));
+  }, [refreshKey]);
+
+  return (
+    <WidgetCard title="Mis Vacaciones" icon={<BeachAccessIcon fontSize="small" />}
+                action="/vacaciones" actionLabel="Ver mis vacaciones" loading={loading} minH={100}>
+      {data ? (
+        <Box>
+          <Grid container spacing={1.5} mb={data.proxima ? 1.5 : 0}>
+            <Grid item xs={6}>
+              <KpiMini label="Días disponibles" value={data.disponibles}
+                icon={<BeachAccessIcon sx={{ fontSize: 16 }} />} color="#2e7d32" />
+            </Grid>
+            <Grid item xs={6}>
+              <KpiMini label="Días usados" value={data.usados}
+                icon={<EventBusyIcon sx={{ fontSize: 16 }} />} color="#e65100" />
+            </Grid>
+            <Grid item xs={6}>
+              <KpiMini label="Solicitudes pendientes" value={data.pendientes}
+                icon={<PendingActionsIcon sx={{ fontSize: 16 }} />} color="#f57c00" />
+            </Grid>
+            <Grid item xs={6}>
+              <KpiMini label="Aprobadas" value={data.aprobadas}
+                icon={<CheckCircleIcon sx={{ fontSize: 16 }} />} color="#1565c0" />
+            </Grid>
+          </Grid>
+          {data.proxima && (
+            <Box sx={{ p: 1.2, borderRadius: 2, bgcolor: 'success.50', border: '1px solid', borderColor: 'success.200', mt: 0.5 }}>
+              <Typography variant="caption" color="success.dark" fontWeight={700}>
+                🏖 Próximas vacaciones: {data.proxima}
+              </Typography>
+            </Box>
+          )}
+        </Box>
+      ) : (
+        <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>Sin datos.</Typography>
+      )}
+    </WidgetCard>
+  );
+}
+
 // ─── Registro de widgets ──────────────────────────────────────────────────────
 
 export const WIDGET_META = {
@@ -509,4 +584,5 @@ export const WIDGET_META = {
   calendar:        { label: 'Reservas de Hoy',          module: MODULES.CALENDARIO, gridProps: { xs: 12, md: 6 } },
   tickets:         { label: 'HelpDesk Tickets',         module: MODULES.HELPDESK,   gridProps: { xs: 12, md: 6 } },
   licencias:       { label: 'Control de Licencias',     module: MODULES.LICENCIAS,  gridProps: { xs: 12, md: 6 } },
+  vacaciones:      { label: 'Mis Vacaciones',            module: MODULES.VACACIONES, gridProps: { xs: 12, md: 6 } },
 };

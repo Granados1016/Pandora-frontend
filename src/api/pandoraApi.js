@@ -46,7 +46,7 @@ api.interceptors.response.use(
     // Sin refresh token: logout inmediato
     if (!refreshToken) {
       localStorage.removeItem('pandora_token');
-      window.location.href = '/login';
+      window.location.href = '/login?expired=1';
       return Promise.reject(err);
     }
 
@@ -90,7 +90,7 @@ api.interceptors.response.use(
       localStorage.removeItem('pandora_token');
       localStorage.removeItem('pandora_refresh_token');
       if (_tokenUpdater) _tokenUpdater(null);
-      window.location.href = '/login';
+      window.location.href = '/login?expired=1';
       return Promise.reject(refreshErr);
 
     } finally {
@@ -196,6 +196,7 @@ export const inventoryApi = {
     });
   },
   importConfirm: (rows) => api.post('/inventory/excel/import/confirm', rows),
+  getChangelog:  (id)   => api.get(`/inventory/items/${id}/changelog`),
 };
 
 export const calendarApi = {

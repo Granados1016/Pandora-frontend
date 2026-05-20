@@ -3,7 +3,7 @@ import {
   Box, Grid, Paper, Typography, Button, TextField, MenuItem,
   Chip, CircularProgress, Alert, Divider, Tooltip,
   LinearProgress, Stack, useTheme, Table, TableBody,
-  TableCell, TableContainer, TableHead, TableRow, IconButton,
+  TableCell, TableContainer, TableHead, TableRow, TablePagination, IconButton,
   Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import ChevronLeftIcon  from '@mui/icons-material/ChevronLeft';
@@ -196,6 +196,10 @@ export default function VacacionesPage() {
   const [docOpen,       setDocOpen]       = useState(false);
   const [docBlobUrl,    setDocBlobUrl]    = useState(null);
   const [docMime,       setDocMime]       = useState('');
+
+  // Paginación historial (#4)
+  const [histPage,         setHistPage]         = useState(0);
+  const [histRowsPerPage,  setHistRowsPerPage]  = useState(10);
 
   // ── Carga datos ─────────────────────────────────────────────────────────────
   const loadCalendar = useCallback(async () => {
@@ -531,7 +535,7 @@ export default function VacacionesPage() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {historial.map(s => {
+                      {historial.slice(histPage * histRowsPerPage, histPage * histRowsPerPage + histRowsPerPage).map(s => {
                         const sc = STATUS_LABEL[s.status] || { color: 'default', label: s.status };
                         return (
                           <TableRow key={s.id} hover>
@@ -600,6 +604,17 @@ export default function VacacionesPage() {
                       })}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    component="div"
+                    count={historial.length}
+                    page={histPage}
+                    onPageChange={(_, p) => setHistPage(p)}
+                    rowsPerPage={histRowsPerPage}
+                    onRowsPerPageChange={e => { setHistRowsPerPage(parseInt(e.target.value, 10)); setHistPage(0); }}
+                    rowsPerPageOptions={[5, 10, 25]}
+                    labelRowsPerPage="Filas:"
+                    labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+                  />
                 </TableContainer>
               )}
             </Box>

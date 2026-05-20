@@ -9,6 +9,7 @@ export const DEFAULT_WIDGET_ORDER = [
   'calendar',
   'tickets',
   'licencias',
+  'vacaciones',
 ];
 
 const DEFAULT_LAYOUT = DEFAULT_WIDGET_ORDER.map(id => ({ id, enabled: true }));

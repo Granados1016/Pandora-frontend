@@ -4,6 +4,7 @@ import {
   Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
   AppBar, Toolbar, Typography, IconButton, Divider, Avatar, Tooltip, Collapse,
   Badge, InputBase, Paper, Chip, Stack, ClickAwayListener, Popper, Dialog,
+  DialogTitle, DialogContent, DialogContentText, DialogActions, Button,
 } from '@mui/material';
 
 // ── Íconos de navegación ──────────────────────────────────────────────────────
@@ -114,12 +115,17 @@ export default function Layout({ children }) {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const handleLogout = () => {
+  // ── Confirmación de cierre de sesión (#1) ──────────────────────────────────
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+
+  const confirmLogout = () => {
     localStorage.removeItem('pandora_profile_photo');
     localStorage.removeItem('pandora_user_position');
     logout();
     navigate('/login');
   };
+
+  const handleLogout = () => setLogoutDialogOpen(true);
 
   const toggleSidebar = useCallback(() => {
     setOpen(prev => {
@@ -257,6 +263,11 @@ export default function Layout({ children }) {
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
   const [notifAnchor, setNotifAnchor] = useState(null);
   const notifOpen = Boolean(notifAnchor);
+
+  // #8 — Título del navegador con contador de no leídas
+  useEffect(() => {
+    document.title = unreadCount > 0 ? `(${unreadCount}) Pandora` : 'Pandora';
+  }, [unreadCount]);
 
   // ── Búsqueda global ──────────────────────────────────────────────────────────
   const [searchOpen,    setSearchOpen]    = useState(false);
@@ -784,6 +795,22 @@ export default function Layout({ children }) {
           </Paper>
         </ClickAwayListener>
       </Popper>
+
+      {/* ── Confirmación de cierre de sesión ─────────────────────────────── */}
+      <Dialog open={logoutDialogOpen} onClose={() => setLogoutDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>¿Cerrar sesión?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Tu sesión activa se cerrará. Deberás iniciar sesión nuevamente para acceder al sistema.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setLogoutDialogOpen(false)} color="inherit">Cancelar</Button>
+          <Button onClick={confirmLogout} variant="contained" color="error" startIcon={<LogoutIcon fontSize="small" />}>
+            Cerrar sesión
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* ── Buscador global (modal Ctrl+K) ────────────────────────────────── */}
       <Dialog

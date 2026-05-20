@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Grid, Card, CardContent, CircularProgress,
-  Alert, Tab, Tabs, Divider,
+  Alert, Tab, Tabs, Divider, Button, Tooltip,
 } from '@mui/material';
 import EmailIcon from '@mui/icons-material/Email';
 import Inventory2Icon from '@mui/icons-material/Inventory2';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import AssessmentIcon from '@mui/icons-material/Assessment';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import { printPdf, buildTableHtml } from '../utils/printPdf';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area,
@@ -362,16 +364,65 @@ export default function Reports() {
     loadTab(TABS[tab].key);
   }, [tab]); // eslint-disable-line
 
-  const activeKey = TABS[tab].key;
+  const activeKey = TABS[tab]?.key;
   const isLoading = loading[activeKey];
   const error     = errors[activeKey];
+  const activeData = data[activeKey];
+
+  // ── Exportar a PDF (#9) ────────────────────────────────────────────────────
+  const handleExportPdf = () => {
+    if (!activeData) return;
+
+    let html = '';
+    const key = activeKey;
+
+    if (key === 'mail') {
+      const d = activeData;
+      html = `
+        <div class="detail-grid">
+          <div class="detail-item"><label>Total Campañas</label><p>${d.totalCampaigns ?? 0}</p></div>
+          <div class="detail-item"><label>Correos Enviados</label><p>${(d.totalEmailsSent ?? 0).toLocaleString('es-MX')}</p></div>
+          <div class="detail-item"><label>Completadas</label><p>${d.completedCampaigns ?? 0}</p></div>
+          <div class="detail-item"><label>Con Errores</label><p>${d.failedCampaigns ?? 0}</p></div>
+        </div>
+      `;
+    } else if (key === 'inventory') {
+      const d = activeData;
+      html = `
+        <div class="detail-grid">
+          <div class="detail-item"><label>Total Equipos</label><p>${d.total ?? 0}</p></div>
+          <div class="detail-item"><label>Activos</label><p>${d.active ?? 0}</p></div>
+          <div class="detail-item"><label>En Mantenimiento</label><p>${d.maintenance ?? 0}</p></div>
+          <div class="detail-item"><label>Dados de Baja</label><p>${d.decommissioned ?? 0}</p></div>
+        </div>
+        ${Array.isArray(d.byDepartment) ? buildTableHtml(
+          ['Departamento', 'Total', 'Activos', 'En Mantenimiento'],
+          ['department', 'total', 'active', 'maintenance'],
+          d.byDepartment
+        ) : ''}
+      `;
+    } else if (key === 'calendar') {
+      const d = activeData;
+      html = `
+        <div class="detail-grid">
+          <div class="detail-item"><label>Total Reservas</label><p>${d.totalReservations ?? 0}</p></div>
+          <div class="detail-item"><label>Salas Activas</label><p>${d.activeRooms ?? 0}</p></div>
+        </div>
+      `;
+    }
+
+    const tabLabel = TABS.find(t => t.key === key)?.label ?? 'Reporte';
+    printPdf(`Reporte — ${tabLabel}`, html, {
+      subtitle: `Pandora · ${new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })}`,
+    });
+  };
 
   return (
     <Box sx={{ p: 4 }}>
       {/* Encabezado */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 3 }}>
         <AssessmentIcon sx={{ fontSize: 32, color: 'primary.main' }} />
-        <Box>
+        <Box flex={1}>
           <Typography variant="h4" fontWeight={800} color="primary.main" lineHeight={1}>
             Reportes
           </Typography>
@@ -379,6 +430,19 @@ export default function Reports() {
             Análisis y estadísticas de todos los módulos
           </Typography>
         </Box>
+        {!isLoading && activeData && (
+          <Tooltip title="Exportar reporte a PDF">
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<PictureAsPdfIcon />}
+              onClick={handleExportPdf}
+              color="error"
+            >
+              PDF
+            </Button>
+          </Tooltip>
+        )}
       </Box>
 
       {/* Sin acceso a ningún módulo */}

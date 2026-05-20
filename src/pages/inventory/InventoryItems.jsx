@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box, Button, Paper, Typography, Table, TableHead, TableBody,
-  TableRow, TableCell, TableContainer, IconButton, Chip, Tooltip,
+  TableRow, TableCell, TableContainer, TablePagination, IconButton, Chip, Tooltip,
   Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, MenuItem, CircularProgress, Alert, Stack, Divider,
   InputAdornment, Grid, Tabs, Tab, Switch, FormControlLabel,
@@ -22,6 +22,9 @@ import ExcelImportDialog from '../../components/inventory/ExcelImportDialog';
 import { apiError } from '../../api/apiError';
 import { useAuth, MODULES } from '../../hooks/useAuth.jsx';
 import { printPdf, buildTableHtml } from '../../utils/printPdf';
+import { usePersistedFilters } from '../../hooks/usePersistedFilters';
+import { TableSkeleton } from '../../components/common/TableSkeleton';
+import { useApiCache } from '../../hooks/useApiCache';
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 const STATUS_OPTIONS = [
@@ -63,10 +66,16 @@ export default function InventoryItems() {
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState('');
 
-  // Filtros
-  const [search, setSearch]     = useState('');
-  const [filterType, setFilterType] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  // Filtros — persistidos en localStorage (#7)
+  const [invFilters, setInvFilter, clearInvFilters] = usePersistedFilters('inventario', {
+    search: '', filterType: '', filterStatus: '',
+  });
+  const search        = invFilters.search;
+  const filterType    = invFilters.filterType;
+  const filterStatus  = invFilters.filterStatus;
+  const setSearch      = (v) => setInvFilter('search', v);
+  const setFilterType  = (v) => setInvFilter('filterType', v);
+  const setFilterStatus = (v) => setInvFilter('filterStatus', v);
 
   // Dialog item
   const [openItem, setOpenItem] = useState(false);
@@ -88,21 +97,22 @@ export default function InventoryItems() {
   const [transferForm, setTransferForm]   = useState(EMPTY_TRANSFER);
   const [sendingTransfer, setSendingTransfer] = useState(false);
 
+  // Catálogos con caché (#18) — se recargan cada 10 min
+  const { data: cachedTypes }       = useApiCache('inv-types',       () => inventoryApi.getTypes(),       { ttl: 10 * 60_000 });
+  const { data: cachedEmployees }   = useApiCache('catalog-employees', () => catalogApi.getEmployees(),   { ttl: 10 * 60_000 });
+  const { data: cachedDepartments } = useApiCache('catalog-departments', () => catalogApi.getDepartments(), { ttl: 10 * 60_000 });
+
+  useEffect(() => {
+    if (cachedTypes)       setTypes(Array.isArray(cachedTypes)       ? cachedTypes       : []);
+    if (cachedEmployees)   setEmployees(Array.isArray(cachedEmployees)   ? cachedEmployees   : []);
+    if (cachedDepartments) setDepartments(Array.isArray(cachedDepartments) ? cachedDepartments : []);
+  }, [cachedTypes, cachedEmployees, cachedDepartments]);
+
   const load = useCallback(() => {
     setLoading(true);
-    Promise.all([
-      inventoryApi.getItems(),
-      inventoryApi.getTypes(),
-      catalogApi.getEmployees(),
-      catalogApi.getDepartments(),
-    ])
-      .then(([ir, tr, er, dr]) => {
-        setItems(ir.data);
-        setTypes(tr.data);
-        setEmployees(er.data);
-        setDepartments(dr.data);
-      })
-      .catch(() => setError('Error al cargar datos.'))
+    inventoryApi.getItems()
+      .then(ir => setItems(ir.data))
+      .catch(() => setError('Error al cargar equipos.'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -117,6 +127,15 @@ export default function InventoryItems() {
     const matchStatus = !filterStatus || i.status === filterStatus;
     return matchSearch && matchType && matchStatus;
   });
+
+  // ─── Paginación (#4) ───────────────────────────────────────────────────
+  const [invPage, setInvPage]               = useState(0);
+  const [invRowsPerPage, setInvRowsPerPage] = useState(25);
+
+  // Resetear página al cambiar filtros
+  React.useEffect(() => { setInvPage(0); }, [search, filterType, filterStatus]);
+
+  const paginatedItems = filtered.slice(invPage * invRowsPerPage, invPage * invRowsPerPage + invRowsPerPage);
 
   // ─── Dialog CRUD ────────────────────────────────────────────────────────
   const openNew = () => {
@@ -227,16 +246,25 @@ export default function InventoryItems() {
     }
   };
 
-  // ─── Historial / Transferencias ─────────────────────────────────────────
+  // ─── Historial / Transferencias + Changelog ─────────────────────────────
+  const [changelog, setChangelog] = useState([]);
+  const [histTab,   setHistTab]   = useState(0); // 0=transferencias, 1=cambios
+
   const openHistoryDialog = async (item) => {
     setHistoryItem(item);
     setOpenHistory(true);
+    setHistTab(0);
     setLoadingHist(true);
     try {
-      const r = await inventoryApi.getTransfers(item.id);
-      setTransfers(r.data);
+      const [transRes, clRes] = await Promise.all([
+        inventoryApi.getTransfers(item.id),
+        inventoryApi.getChangelog(item.id).catch(() => ({ data: [] })),
+      ]);
+      setTransfers(transRes.data);
+      setChangelog(Array.isArray(clRes.data) ? clRes.data : []);
     } catch {
       setTransfers([]);
+      setChangelog([]);
     } finally {
       setLoadingHist(false);
     }
@@ -359,7 +387,7 @@ export default function InventoryItems() {
             </TextField>
           </Grid>
           <Grid item xs={12} sm={1} md={2} sx={{ textAlign: 'right' }}>
-            <Button size="small" onClick={() => { setSearch(''); setFilterType(''); setFilterStatus(''); }}>
+            <Button size="small" onClick={clearInvFilters}>
               Limpiar
             </Button>
           </Grid>
@@ -368,7 +396,7 @@ export default function InventoryItems() {
 
       {/* Tabla */}
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', pt: 6 }}><CircularProgress /></Box>
+        <TableSkeleton rows={8} cols={8} />
       ) : (
         <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
           <Table size="small">
@@ -385,13 +413,13 @@ export default function InventoryItems() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filtered.length === 0 ? (
+              {paginatedItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                     No hay equipos que coincidan con los filtros.
                   </TableCell>
                 </TableRow>
-              ) : filtered.map(item => (
+              ) : paginatedItems.map(item => (
                 <TableRow key={item.id} hover>
                   <TableCell>
                     <Stack direction="row" alignItems="center" spacing={0.5}>
@@ -440,6 +468,17 @@ export default function InventoryItems() {
               ))}
             </TableBody>
           </Table>
+          <TablePagination
+            component="div"
+            count={filtered.length}
+            page={invPage}
+            onPageChange={(_, p) => setInvPage(p)}
+            rowsPerPage={invRowsPerPage}
+            onRowsPerPageChange={e => { setInvRowsPerPage(parseInt(e.target.value, 10)); setInvPage(0); }}
+            rowsPerPageOptions={[10, 25, 50, 100]}
+            labelRowsPerPage="Filas:"
+            labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count}`}
+          />
         </TableContainer>
       )}
 
@@ -630,37 +669,79 @@ export default function InventoryItems() {
             )}
           </Stack>
         </DialogTitle>
+
+        {/* Tabs: Transferencias | Cambios de campo */}
+        <Tabs value={histTab} onChange={(_, v) => setHistTab(v)} sx={{ px: 2, borderBottom: 1, borderColor: 'divider' }}>
+          <Tab label={`Transferencias (${transfers.length})`} />
+          <Tab label={`Cambios (${changelog.length})`} />
+        </Tabs>
+
         <DialogContent dividers>
           {loadingHist ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}><CircularProgress /></Box>
-          ) : transfers.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-              Sin transferencias registradas.
-            </Typography>
-          ) : (
-            <Stack spacing={1.5}>
-              {transfers.map((t, i) => (
-                <Paper key={t.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                    <Box>
-                      <Typography variant="body2" fontWeight={600}>
-                        {t.fromPerson || 'Sin asignar'} → {t.toPerson || 'Sin asignar'}
-                      </Typography>
-                      {(t.fromDepartment || t.toDepartment) && (
-                        <Typography variant="caption" color="text.secondary">
-                          {t.fromDepartment || '—'} → {t.toDepartment || '—'}
+          ) : histTab === 0 ? (
+            transfers.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+                Sin transferencias registradas.
+              </Typography>
+            ) : (
+              <Stack spacing={1.5}>
+                {transfers.map((t) => (
+                  <Paper key={t.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>
+                          {t.fromPerson || 'Sin asignar'} → {t.toPerson || 'Sin asignar'}
                         </Typography>
-                      )}
-                      {t.notes && <Typography variant="caption" display="block" color="text.disabled">{t.notes}</Typography>}
-                    </Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', ml: 1 }}>
-                      {new Date(t.transferDate).toLocaleDateString('es-MX')}
-                    </Typography>
-                  </Stack>
-                  <Typography variant="caption" color="text.disabled">Por: {t.createdBy}</Typography>
-                </Paper>
-              ))}
-            </Stack>
+                        {(t.fromDepartment || t.toDepartment) && (
+                          <Typography variant="caption" color="text.secondary">
+                            {t.fromDepartment || '—'} → {t.toDepartment || '—'}
+                          </Typography>
+                        )}
+                        {t.notes && <Typography variant="caption" display="block" color="text.disabled">{t.notes}</Typography>}
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', ml: 1 }}>
+                        {new Date(t.transferDate).toLocaleDateString('es-MX')}
+                      </Typography>
+                    </Stack>
+                    <Typography variant="caption" color="text.disabled">Por: {t.createdBy}</Typography>
+                  </Paper>
+                ))}
+              </Stack>
+            )
+          ) : (
+            changelog.length === 0 ? (
+              <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+                Sin cambios registrados aún.
+              </Typography>
+            ) : (
+              <Stack spacing={1}>
+                {changelog.map((c) => (
+                  <Box key={c.id} sx={{ p: 1.2, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Chip label={c.fieldName} size="small" color="primary" variant="outlined" />
+                      <Typography variant="caption" color="text.secondary">
+                        {new Date(c.changedAt).toLocaleString('es-MX')}
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" spacing={1} mt={0.5} alignItems="center">
+                      <Typography variant="caption" sx={{ color: 'error.main', textDecoration: 'line-through' }}>
+                        {c.oldValue || '—'}
+                      </Typography>
+                      <Typography variant="caption" color="text.disabled">→</Typography>
+                      <Typography variant="caption" sx={{ color: 'success.main', fontWeight: 600 }}>
+                        {c.newValue || '—'}
+                      </Typography>
+                    </Stack>
+                    {c.changedBy && (
+                      <Typography variant="caption" color="text.disabled" display="block">
+                        Por: {c.changedBy}
+                      </Typography>
+                    )}
+                  </Box>
+                ))}
+              </Stack>
+            )
           )}
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

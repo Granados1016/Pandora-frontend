@@ -372,9 +372,11 @@ function TabFestivos() {
                       color={f.isRecurring ? 'primary' : 'default'} variant="outlined" />
                   </TableCell>
                   <TableCell align="center">
-                    <IconButton size="small" color="error" onClick={() => handleDelete(f.id)}>
-                      <DeleteOutlineIcon fontSize="small" />
-                    </IconButton>
+                    <Tooltip title="Eliminar festivo">
+                      <IconButton size="small" color="error" onClick={() => handleDelete(f.id)}>
+                        <DeleteOutlineIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -551,9 +553,11 @@ function TabPoliticas() {
                         <Button size="small" onClick={() => setEditId(null)}>Cancelar</Button>
                       </Stack>
                     ) : (
-                      <IconButton size="small" onClick={() => { setEditId(p.username); setEditVal(p.totalDays); }}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
+                      <Tooltip title="Editar días disponibles">
+                        <IconButton size="small" onClick={() => { setEditId(p.username); setEditVal(p.totalDays); }}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     )}
                   </TableCell>
                 </TableRow>

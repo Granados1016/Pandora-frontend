@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box, Card, CardContent, TextField, Button,
@@ -21,6 +21,10 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
 
   const from = location.state?.from?.pathname || '/';
+  const sessionExpired = useMemo(
+    () => new URLSearchParams(location.search).get('expired') === '1',
+    [location.search]
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,6 +70,11 @@ export default function Login() {
             </Typography>
           </Stack>
 
+          {sessionExpired && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              Tu sesión ha expirado. Por favor inicia sesión nuevamente.
+            </Alert>
+          )}
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
           <Box component="form" onSubmit={handleSubmit}>
