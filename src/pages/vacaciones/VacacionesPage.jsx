@@ -529,7 +529,7 @@ export default function VacacionesPage() {
                         <TableCell align="center"><strong>Días</strong></TableCell>
                         <TableCell><strong>Estado</strong></TableCell>
                         <TableCell><strong>Nota</strong></TableCell>
-                        <TableCell><strong>Respuesta</strong></TableCell>
+                        <TableCell><strong>Revisión / Evidencia</strong></TableCell>
                         <TableCell align="center"><strong>Documento</strong></TableCell>
                         <TableCell align="center"><strong>Acción</strong></TableCell>
                       </TableRow>
@@ -549,8 +549,33 @@ export default function VacacionesPage() {
                             <TableCell sx={{ maxWidth: 160 }}>
                               <Typography variant="caption">{s.notes || '—'}</Typography>
                             </TableCell>
-                            <TableCell sx={{ maxWidth: 160 }}>
-                              <Typography variant="caption" color="text.secondary">{s.reviewNotes || '—'}</Typography>
+                            {/* Evidencia de revisión (#15) */}
+                            <TableCell sx={{ maxWidth: 200 }}>
+                              {s.reviewedBy ? (
+                                <Box sx={{
+                                  border: '1px solid',
+                                  borderColor: s.status === 'Aprobada' ? 'success.main' : s.status === 'Rechazada' ? 'error.main' : 'divider',
+                                  borderRadius: 1.5,
+                                  p: 0.75,
+                                  bgcolor: s.status === 'Aprobada' ? 'success.50' : s.status === 'Rechazada' ? 'error.50' : 'transparent',
+                                }}>
+                                  <Typography variant="caption" fontWeight={700} display="block" color={s.status === 'Aprobada' ? 'success.dark' : 'error.dark'}>
+                                    {s.status === 'Aprobada' ? '✅' : '❌'} {s.reviewedBy}
+                                  </Typography>
+                                  {s.reviewedAt && (
+                                    <Typography variant="caption" color="text.secondary" display="block">
+                                      {new Date(s.reviewedAt).toLocaleString('es-MX', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </Typography>
+                                  )}
+                                  {s.reviewNotes && (
+                                    <Typography variant="caption" color="text.secondary" display="block" sx={{ fontStyle: 'italic', mt: 0.25 }}>
+                                      "{s.reviewNotes}"
+                                    </Typography>
+                                  )}
+                                </Box>
+                              ) : (
+                                <Typography variant="caption" color="text.disabled">Sin revisar</Typography>
+                              )}
                             </TableCell>
                             {/* Columna Documento */}
                             <TableCell align="center">
