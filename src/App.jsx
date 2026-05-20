@@ -6,8 +6,10 @@ import { AuthProvider, useAuth, MODULES, ROLES } from './hooks/useAuth.jsx';
 import Layout from './components/Layout';
 
 // Páginas críticas (siempre necesarias en el primer render)
-import Login        from './pages/Login';
-import Unauthorized from './pages/Unauthorized';
+import Login          from './pages/Login';
+import Unauthorized   from './pages/Unauthorized';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword  from './pages/ResetPassword';
 
 // ── Lazy chunks — se cargan solo cuando se navega a esa ruta ──────────────────
 const Dashboard    = lazy(() => import('./pages/Dashboard'));
@@ -105,8 +107,10 @@ function AppRoutes() {
     <Suspense fallback={<PageLoader />}>
     <Routes>
       {/* Pública */}
-      <Route path="/login"        element={<Login />} />
-      <Route path="/unauthorized" element={<Unauthorized />} />
+      <Route path="/login"             element={<Login />} />
+      <Route path="/forgot-password"   element={<ForgotPassword />} />
+      <Route path="/reset-password"    element={<ResetPassword />} />
+      <Route path="/unauthorized"      element={<Unauthorized />} />
 
       {/* Protegidas */}
       <Route path="/*" element={

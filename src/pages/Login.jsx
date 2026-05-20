@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   Box, Card, CardContent, TextField, Button,
   Typography, Alert, CircularProgress, Stack,
@@ -109,6 +109,11 @@ export default function Login() {
             >
               {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </Button>
+            <Box textAlign="center" mt={1.5}>
+              <Link to="/forgot-password" style={{ color: 'inherit', fontSize: '0.82rem', opacity: 0.65 }}>
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </Box>
           </Box>
         </CardContent>
       </Card>
