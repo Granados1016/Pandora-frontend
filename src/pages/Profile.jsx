@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Box, Typography, Paper, Stack, TextField, Button, Alert,
   CircularProgress, Divider, Chip, InputAdornment, IconButton,
-  Avatar, Tooltip, Grid,
+  Avatar, Tooltip, Grid, LinearProgress,
 } from '@mui/material';
 import EmailIcon from '@mui/icons-material/Email';
 import PersonIcon from '@mui/icons-material/Person';
@@ -478,6 +478,27 @@ export default function Profile() {
                   ),
                 }}
               />
+              {/* Indicador de fortaleza */}
+              {pwForm.newPw.length > 0 && (() => {
+                const pw = pwForm.newPw;
+                let score = 0;
+                if (pw.length >= 8)  score++;
+                if (pw.length >= 12) score++;
+                if (/[A-Z]/.test(pw)) score++;
+                if (/[0-9]/.test(pw)) score++;
+                if (/[^A-Za-z0-9]/.test(pw)) score++;
+                const labels = ['Muy débil', 'Débil', 'Regular', 'Buena', 'Fuerte'];
+                const colors = ['error', 'error', 'warning', 'info', 'success'];
+                return (
+                  <Box>
+                    <LinearProgress variant="determinate" value={(score / 5) * 100}
+                      color={colors[score - 1] || 'error'} sx={{ borderRadius: 2, height: 6 }} />
+                    <Typography variant="caption" color={`${colors[score - 1] || 'error'}.main`}>
+                      Fortaleza: {labels[score - 1] || 'Muy débil'}
+                    </Typography>
+                  </Box>
+                );
+              })()}
               <TextField
                 label="Confirmar nueva contraseña" size="small" fullWidth
                 type="password"

@@ -13,6 +13,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import DownloadIcon from '@mui/icons-material/Download';
 import { calendarApi, catalogApi } from '../../api/pandoraApi';
 import ReservationModal from './ReservationModal';
 import { useAuth, MODULES } from '../../hooks/useAuth.jsx';
@@ -164,6 +165,15 @@ export default function CalendarPage() {
                 Nueva reserva
               </Button>
             )}
+
+            {/* Exportar iCal */}
+            <Tooltip title="Exportar como archivo iCalendar (.ics)">
+              <Button variant="outlined" size="small" startIcon={<DownloadIcon />}
+                onClick={() => calendarApi.exportICal().catch(e => alert(e.message))}
+                sx={{ borderRadius: 2 }}>
+                .ics
+              </Button>
+            </Tooltip>
 
             {/* Solicitar sala — para usuarios con CAL_REQUEST */}
             {canRequest && (

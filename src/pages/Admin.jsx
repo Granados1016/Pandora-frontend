@@ -24,7 +24,9 @@ import EmailIcon from '@mui/icons-material/Email';
 import SendIcon from '@mui/icons-material/Send';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LockIcon from '@mui/icons-material/Lock';
-import { userApi, adminApi, ticketApi } from '../api/pandoraApi';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import SecurityIcon from '@mui/icons-material/Security';
+import { userApi, adminApi, ticketApi, authApi } from '../api/pandoraApi';
 import { MODULE_LABELS, MODULES, SUB_MODULES, useAuth } from '../hooks/useAuth.jsx';
 
 const ALL_MODULES = Object.entries(MODULE_LABELS).map(([value, label]) => ({
@@ -104,6 +106,65 @@ export default function Admin() {
   const [testEmail,       setTestEmail]       = useState('');
   const [testDialog,      setTestDialog]      = useState(false);
   const [hasDbPassword,   setHasDbPassword]   = useState(false);
+
+  // ── CSV Import ────────────────────────────────────────────────────────────
+  const [csvOpen,     setCsvOpen]     = useState(false);
+  const [csvRows,     setCsvRows]     = useState([]);
+  const [csvError,    setCsvError]    = useState('');
+  const [csvResult,   setCsvResult]   = useState(null);
+  const [csvImporting,setCsvImporting]= useState(false);
+  const csvFileRef = React.useRef();
+
+  const handleCsvFile = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const lines = ev.target.result.split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length < 2) { setCsvError('El archivo debe tener encabezado y al menos una fila.'); return; }
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const rows = lines.slice(1).map(line => {
+          const vals = line.split(',').map(v => v.trim().replace(/^"|"$/g,''));
+          const row = {};
+          headers.forEach((h, i) => { row[h] = vals[i] || ''; });
+          return {
+            username:  row.username || row.user || '',
+            fullName:  row.fullname || row['nombre completo'] || row.nombre || '',
+            email:     row.email || row.correo || '',
+            position:  row.position || row.puesto || '',
+            password:  row.password || row.contraseña || 'Pandora123!',
+            role:      row.role || row.rol || 'User',
+            modules:   parseInt(row.modules || row.modulos || '0') || 0,
+          };
+        }).filter(r => r.username);
+        setCsvRows(rows);
+        setCsvError('');
+        setCsvResult(null);
+      } catch { setCsvError('Error al parsear el archivo CSV.'); }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCsvImport = async () => {
+    setCsvImporting(true);
+    try {
+      const res = await userApi.importCsv(csvRows);
+      setCsvResult(res.data);
+      const { data: u } = await userApi.getAll();
+      setUsers(u);
+    } catch (e) { setCsvError(e.response?.data || e.message); }
+    finally { setCsvImporting(false); }
+  };
+
+  // ── 2FA Toggle ────────────────────────────────────────────────────────────
+  const handle2FA = async (username, currentState) => {
+    try {
+      await authApi.toggle2FA(username, !currentState);
+      const { data: u } = await userApi.getAll();
+      setUsers(u);
+    } catch (e) { setError(e.response?.data || e.message); }
+  };
 
   const loadSmtp = async () => {
     setSmtpLoading(true);
@@ -368,7 +429,12 @@ export default function Admin() {
           <AdminPanelSettingsIcon color="primary" sx={{ fontSize: 32 }} />
           <Typography variant="h4" fontWeight={800} color="primary.main">Administración</Typography>
         </Stack>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openNew}>Nuevo Usuario</Button>
+        <Stack direction="row" gap={1}>
+          <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => { setCsvRows([]); setCsvResult(null); setCsvError(''); setCsvOpen(true); }}>
+            Importar CSV
+          </Button>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openNew}>Nuevo Usuario</Button>
+        </Stack>
       </Stack>
 
       {error && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>{error}</Alert>}
@@ -733,6 +799,12 @@ export default function Admin() {
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
+                        <Tooltip title={u.twoFactorEnabled ? 'Deshabilitar 2FA' : 'Habilitar 2FA'}>
+                          <IconButton size="small" color={u.twoFactorEnabled ? 'success' : 'default'}
+                            onClick={() => handle2FA(u.username, u.twoFactorEnabled)}>
+                            <SecurityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                         <Tooltip title={u.username === currentUser ? 'No puedes eliminarte a ti mismo' : 'Eliminar'}>
                           <span>
                             <IconButton
@@ -986,6 +1058,75 @@ export default function Admin() {
               !form.fullName.trim() || (!editing && !form.username.trim())}
           >
             {saving ? <CircularProgress size={18} /> : (editing ? 'Guardar Cambios' : 'Crear Usuario')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── CSV Import Dialog ──────────────────────────────────────────────── */}
+      <Dialog open={csvOpen} onClose={() => setCsvOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Importar Usuarios desde CSV</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            El archivo CSV debe tener columnas: <strong>username, fullname, email, position, password, role, modules</strong>.<br />
+            Si no se especifica <em>password</em>, se usará <code>Pandora123!</code>. Si ya existe el usuario, se omite.
+          </Typography>
+          <Button component="label" variant="outlined" startIcon={<UploadFileIcon />} sx={{ mb: 2 }}>
+            Seleccionar archivo CSV
+            <input type="file" accept=".csv" hidden ref={csvFileRef} onChange={handleCsvFile} />
+          </Button>
+          {csvError && <Alert severity="error" sx={{ mb: 1 }}>{csvError}</Alert>}
+          {csvResult && (
+            <Alert severity="success" sx={{ mb: 1 }}>
+              Resultado: <strong>{csvResult.created}</strong> creados, <strong>{csvResult.skipped}</strong> omitidos
+              {csvResult.errors?.length > 0 && ` — Errores: ${csvResult.errors.join(', ')}`}
+            </Alert>
+          )}
+          {csvRows.length > 0 && !csvResult && (
+            <Box>
+              <Typography variant="caption" color="text.secondary" gutterBottom display="block">
+                {csvRows.length} fila(s) detectadas:
+              </Typography>
+              <TableContainer component={Paper} variant="outlined" sx={{ maxHeight: 240 }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      {['Username','Nombre','Email','Puesto','Rol','Módulos'].map(h => (
+                        <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
+                      ))}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {csvRows.slice(0, 10).map((r, i) => (
+                      <TableRow key={i}>
+                        <TableCell>{r.username}</TableCell>
+                        <TableCell>{r.fullName}</TableCell>
+                        <TableCell>{r.email}</TableCell>
+                        <TableCell>{r.position}</TableCell>
+                        <TableCell>{r.role}</TableCell>
+                        <TableCell>{r.modules}</TableCell>
+                      </TableRow>
+                    ))}
+                    {csvRows.length > 10 && (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center" sx={{ color: 'text.secondary' }}>
+                          ...y {csvRows.length - 10} más
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCsvOpen(false)}>Cerrar</Button>
+          <Button
+            variant="contained" onClick={handleCsvImport}
+            disabled={csvRows.length === 0 || csvImporting || !!csvResult}
+            startIcon={csvImporting ? <CircularProgress size={16} color="inherit" /> : <UploadFileIcon />}
+          >
+            {csvImporting ? 'Importando...' : `Importar ${csvRows.length} usuarios`}
           </Button>
         </DialogActions>
       </Dialog>

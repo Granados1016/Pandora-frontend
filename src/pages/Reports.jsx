@@ -8,13 +8,14 @@ import Inventory2Icon from '@mui/icons-material/Inventory2';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import BeachAccessIcon from '@mui/icons-material/BeachAccess';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import { printPdf, buildTableHtml } from '../utils/printPdf';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend,
   PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area,
 } from 'recharts';
-import { reportsApi } from '../api/pandoraApi';
+import { reportsApi, ticketApi } from '../api/pandoraApi';
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 
 // ─── Paleta ───────────────────────────────────────────────────────────────────
@@ -430,13 +431,110 @@ function VacacionesTab({ data, onYearChange }) {
   );
 }
 
+// ─── Tickets Tab ─────────────────────────────────────────────────────────────
+const MONTH_NAMES_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function TicketsTab({ data }) {
+  if (!data) return null;
+  const bs = data.byStatus || {};
+  const open       = bs['Abierto'] ?? 0;
+  const inProgress = bs['En Progreso'] ?? 0;
+  const closed     = bs['Cerrado'] ?? 0;
+  const resolved   = bs['Resuelto'] ?? 0;
+  const COLORS_STATUS = { Abierto: '#1565c0', 'En Progreso': '#e65100', Cerrado: '#2e7d32', Resuelto: '#00838f' };
+  const statusPie = Object.entries(bs).map(([name, value]) => ({ name, value }));
+  const prioPie   = Object.entries(data.byPriority || {}).map(([name, value]) => ({ name, value }));
+  // byMonth is array of 12 ints
+  const monthChart = (data.byMonth || []).map((v, i) => ({ month: MONTH_NAMES_SHORT[i], created: v }));
+  return (
+    <Box>
+      <Grid container spacing={2} mb={3}>
+        {[
+          { label: 'Total Tickets',       value: data.total ?? 0,  color: 'primary.main' },
+          { label: 'Abiertos',            value: open,             color: 'info.main' },
+          { label: 'En Progreso',         value: inProgress,       color: 'warning.main' },
+          { label: 'Cerrados/Resueltos',  value: closed + resolved, color: 'success.main' },
+        ].map(k => (
+          <Grid item xs={6} md={3} key={k.label}>
+            <KpiCard label={k.label} value={k.value} color={k.color} />
+          </Grid>
+        ))}
+      </Grid>
+      {data.avgResolutionDays > 0 && (
+        <Grid container spacing={2} mb={3}>
+          <Grid item xs={12} md={4}>
+            <KpiCard label="Tiempo Promedio de Resolución" value={`${data.avgResolutionDays} días`} color="secondary.main" />
+          </Grid>
+        </Grid>
+      )}
+      <Grid container spacing={3}>
+        {statusPie.length > 0 && (
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" gutterBottom>Tickets por Estado</Typography>
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie data={statusPie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  {statusPie.map((e, i) => <Cell key={i} fill={COLORS_STATUS[e.name] || P[i % P.length]} />)}
+                </Pie>
+                <RechartsTooltip {...TOOLTIP_STYLE} />
+              </PieChart>
+            </ResponsiveContainer>
+          </Grid>
+        )}
+        {prioPie.length > 0 && (
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" gutterBottom>Tickets por Prioridad</Typography>
+            <ResponsiveContainer width="100%" height={240}>
+              <PieChart>
+                <Pie data={prioPie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  {prioPie.map((e, i) => <Cell key={i} fill={P[i % P.length]} />)}
+                </Pie>
+                <RechartsTooltip {...TOOLTIP_STYLE} />
+              </PieChart>
+            </ResponsiveContainer>
+          </Grid>
+        )}
+        {monthChart.some(m => m.created > 0) && (
+          <Grid item xs={12}>
+            <Typography variant="subtitle2" gutterBottom>Tickets Creados por Mes</Typography>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={monthChart} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <RechartsTooltip {...TOOLTIP_STYLE} />
+                <Bar dataKey="created" name="Creados" fill={P[0]} radius={[4,4,0,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Grid>
+        )}
+        {data.byArea?.length > 0 && (
+          <Grid item xs={12} md={6}>
+            <Typography variant="subtitle2" gutterBottom>Top Áreas con más Tickets</Typography>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={data.byArea.slice(0,8)} layout="vertical" margin={{ left: 60, right: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                <YAxis type="category" dataKey="area" tick={{ fontSize: 10 }} width={60} />
+                <RechartsTooltip {...TOOLTIP_STYLE} />
+                <Bar dataKey="total" name="Tickets" fill={P[2]} radius={[0,4,4,0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Grid>
+        )}
+      </Grid>
+    </Box>
+  );
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 const ALL_TABS = [
   { label: 'Mail+',       icon: <EmailIcon />,         key: 'mail',      module: MODULES.MAIL_PLUS   },
   { label: 'Inventario',  icon: <Inventory2Icon />,     key: 'inventory', module: MODULES.INVENTARIO  },
   { label: 'Calendario',  icon: <CalendarMonthIcon />,  key: 'calendar',  module: MODULES.CALENDARIO  },
-  { label: 'Vacaciones',  icon: <BeachAccessIcon />,    key: 'vacaciones',module: MODULES.VAC_ADMIN   },
+  { label: 'Vacaciones',  icon: <BeachAccessIcon />,         key: 'vacaciones', module: MODULES.VAC_ADMIN },
+  { label: 'Tickets',    icon: <ConfirmationNumberIcon />,  key: 'tickets',    module: MODULES.HELPDESK  },
 ];
 
 export default function Reports() {
@@ -446,13 +544,13 @@ export default function Reports() {
   const TABS = ALL_TABS.filter(t => hasModule(t.module) || isAdmin);
 
   const [tab,         setTab]        = useState(0);
-  const [data,        setData]       = useState({ mail: null, inventory: null, calendar: null, vacaciones: null });
+  const [data,        setData]       = useState({ mail: null, inventory: null, calendar: null, vacaciones: null, tickets: null });
   const [loading,     setLoading]    = useState({});
   const [errors,      setErrors]     = useState({});
   const [vacYear,     setVacYear]    = useState(new Date().getFullYear());
 
   const loadTab = useCallback(async (key, forceYear) => {
-    if (key !== 'vacaciones' && data[key]) return; // ya cargado (vacaciones siempre recarga si cambia año)
+    if (key !== 'vacaciones' && key !== 'tickets' && data[key]) return; // ya cargado (vacaciones/tickets siempre recarga si cambia año)
     setLoading(l => ({ ...l, [key]: true }));
     setErrors(e => ({ ...e, [key]: null }));
     try {
@@ -462,6 +560,7 @@ export default function Reports() {
         inventory:  () => reportsApi.getInventory(),
         calendar:   () => reportsApi.getCalendar(),
         vacaciones: () => reportsApi.getVacaciones(y),
+        tickets:    () => ticketApi.getStats(y),
       };
       const { data: result } = await fetchers[key]();
       setData(d => ({ ...d, [key]: result }));
@@ -623,6 +722,7 @@ export default function Reports() {
               {TABS[tab]?.key === 'inventory'  && <InventoryTab  data={data.inventory}  />}
               {TABS[tab]?.key === 'calendar'   && <CalendarTab   data={data.calendar}   />}
               {TABS[tab]?.key === 'vacaciones' && <VacacionesTab data={data.vacaciones} />}
+              {TABS[tab]?.key === 'tickets'    && <TicketsTab    data={data.tickets}    />}
             </>
           )}
         </>

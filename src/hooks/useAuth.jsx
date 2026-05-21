@@ -41,6 +41,9 @@ export const MODULES = {
   VACACIONES:       2097152, // Ver calendario y solicitar vacaciones
   VAC_ADMIN:        4194304, // Gestionar solicitudes, festivos y políticas
 
+  // ── Nuevos módulos ─────────────────────────────────────────────────────────
+  CAPACITACIONES:   8388608,  // Módulo de capacitaciones y entrenamientos
+  ACTIVOS_FIJOS:    16777216, // Módulo de activos fijos y depreciación
 };
 
 export const MODULE_LABELS = {
@@ -61,6 +64,8 @@ export const MODULE_LABELS = {
   1048576: 'Pandora Calendar — Reportes del Calendario',
   2097152: 'Vacaciones — Solicitar y ver calendario',
   4194304: 'Vacaciones — Gestión (aprobar, festivos, políticas)',
+  8388608:  'Capacitaciones — Cursos y entrenamientos',
+  16777216: 'Activos Fijos — Registro y depreciación',
 };
 
 // Sub-módulos agrupados por módulo padre — se usan en Admin.jsx
@@ -180,6 +185,22 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // loginWithToken — usado por el flujo 2FA cuando el OTP ya fue verificado
+  const loginWithToken = useCallback(async (jwtToken, refreshToken) => {
+    localStorage.setItem('pandora_token', jwtToken);
+    if (refreshToken) localStorage.setItem('pandora_refresh_token', refreshToken);
+    setToken(jwtToken);
+    try {
+      const me = await api.get('/users/me', { headers: { Authorization: `Bearer ${jwtToken}` } });
+      const mvo = me.data?.modulesViewOnly ?? 0;
+      localStorage.setItem('pandora_mvo', String(mvo));
+      setModulesViewOnly(mvo);
+    } catch {
+      localStorage.setItem('pandora_mvo', '0');
+      setModulesViewOnly(0);
+    }
+  }, []);
+
   const logout = useCallback(() => {
     // Invalidar refresh token en el servidor (best-effort, no bloquea el logout)
     const refreshToken = localStorage.getItem('pandora_refresh_token');
@@ -196,7 +217,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       token, username, fullName, role, modules, modulesViewOnly, isAdmin,
-      hasModule, hasSubModule, hasModuleWrite, hasRole, login, logout, isAuthenticated: !!token,
+      hasModule, hasSubModule, hasModuleWrite, hasRole, login, loginWithToken, logout, isAuthenticated: !!token,
     }}>
       {children}
     </AuthContext.Provider>

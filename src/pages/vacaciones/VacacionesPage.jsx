@@ -381,6 +381,11 @@ export default function VacacionesPage() {
                   <Typography variant="caption" color="text.secondary">
                     {diasInfo.usedDays} usado(s) · {diasInfo.year}
                   </Typography>
+                  {diasInfo.pendingDays > 0 && (
+                    <Typography variant="caption" color="warning.main" display="block">
+                      {diasInfo.pendingDays} día(s) en revisión
+                    </Typography>
+                  )}
                 </>
               ) : <CircularProgress size={24} sx={{ display: 'block', mx: 'auto', my: 1 }} />}
 

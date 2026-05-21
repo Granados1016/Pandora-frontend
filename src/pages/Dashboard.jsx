@@ -23,6 +23,7 @@ import {
   TicketsWidget,
   LicenciasWidget,
   VacacionesWidget,
+  BirthdaysWidget,
   WIDGET_META,
 } from '../components/dashboard/Widgets.jsx';
 
@@ -40,6 +41,7 @@ function WidgetRenderer({ id, extraProps }) {
     case 'tickets':         return <TicketsWidget refreshKey={refreshKey} />;
     case 'licencias':       return <LicenciasWidget refreshKey={refreshKey} />;
     case 'vacaciones':      return <VacacionesWidget refreshKey={refreshKey} />;
+    case 'birthdays':       return <BirthdaysWidget />;
     default:                return null;
   }
 }

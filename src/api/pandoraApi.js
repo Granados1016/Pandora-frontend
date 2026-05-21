@@ -205,6 +205,13 @@ export const userApi = {
   deletePhoto: () => api.delete('/users/me/photo'),
   uploadBanner: (file) => uploadForm('/users/me/banner', file),
   deleteBanner: () => api.delete('/users/me/banner'),
+  importCsv:    (users) => api.post('/users/import-csv', users),
+};
+
+export const authApi = {
+  sendOtp:    (username)      => api.post('/auth/send-otp',    { username }),
+  verifyOtp:  (data)          => api.post('/auth/verify-otp',  data),
+  toggle2FA:  (username, enable) => api.post(`/auth/toggle-2fa/${username}`, { enable }),
 };
 
 export const catalogApi = {
@@ -273,6 +280,18 @@ export const calendarApi = {
   updateReservation: (id, data) => api.put(`/calendar/reservations/${id}`, data),
   deleteReservation: (id, deleteAll = false) =>
     api.delete(`/calendar/reservations/${id}`, { params: { deleteAll } }),
+  exportICal: async () => {
+    const token = localStorage.getItem('pandora_token');
+    const res   = await fetch(`${BASE_URL}/calendar/export-ical`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const href = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = href; a.download = 'pandora-calendar.ics'; a.click();
+    URL.revokeObjectURL(href);
+  },
 };
 
 export const roomRequestApi = {
@@ -464,6 +483,27 @@ export const notificacionesApi = {
 
 export const searchApi = {
   global: (q) => api.get('/search', { params: { q } }),
+};
+
+export const capacitacionesApi = {
+  getAll:          (params)     => api.get('/capacitaciones', { params }),
+  getById:         (id)         => api.get(`/capacitaciones/${id}`),
+  create:          (data)       => api.post('/capacitaciones', data),
+  update:          (id, data)   => api.put(`/capacitaciones/${id}`, data),
+  remove:          (id)         => api.delete(`/capacitaciones/${id}`),
+  getCategorias:   ()           => api.get('/capacitaciones/categorias'),
+  addParticipante: (id, data)   => api.post(`/capacitaciones/${id}/participantes`, data),
+  updateParticipante: (id, partId, data) => api.put(`/capacitaciones/${id}/participantes/${partId}`, data),
+};
+
+export const activosFijosApi = {
+  getAll:       (params)     => api.get('/activos-fijos', { params }),
+  getById:      (id)         => api.get(`/activos-fijos/${id}`),
+  create:       (data)       => api.post('/activos-fijos', data),
+  update:       (id, data)   => api.put(`/activos-fijos/${id}`, data),
+  remove:       (id)         => api.delete(`/activos-fijos/${id}`),
+  getStats:     ()           => api.get('/activos-fijos/stats'),
+  addMovimiento:(id, data)   => api.post(`/activos-fijos/${id}/movimientos`, data),
 };
 
 export const adminApi = {

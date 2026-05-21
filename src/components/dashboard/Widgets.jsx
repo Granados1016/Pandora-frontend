@@ -35,7 +35,7 @@ import BeachAccessIcon from '@mui/icons-material/BeachAccess';
 import EventBusyIcon   from '@mui/icons-material/EventBusy';
 import PendingActionsIcon from '@mui/icons-material/PendingActions';
 
-import { campaignApi, inventoryApi, calendarApi, ticketApi, licenciasApi } from '../../api/pandoraApi';
+import { campaignApi, inventoryApi, calendarApi, ticketApi, licenciasApi, catalogApi } from '../../api/pandoraApi';
 import api from '../../api/pandoraApi';
 import { MODULES }    from '../../hooks/useAuth.jsx';
 import { statusColor, statusLabel } from '../../utils/statusHelpers';
@@ -575,6 +575,65 @@ export function VacacionesWidget({ refreshKey = 0 }) {
   );
 }
 
+// ─── Widget de Cumpleaños del mes ─────────────────────────────────────────────
+export function BirthdaysWidget() {
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading]     = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const res  = await catalogApi.getEmployees();
+        const now  = new Date();
+        const month = now.getMonth() + 1; // 1-12
+        const today = now.getDate();
+        const list  = (res.data || []).filter(e => {
+          if (!e.birthDate) return false;
+          const d = new Date(e.birthDate);
+          return d.getMonth() + 1 === month;
+        }).map(e => {
+          const d   = new Date(e.birthDate);
+          const day = d.getDate();
+          return { ...e, birthDay: day, isToday: day === today };
+        }).sort((a, b) => a.birthDay - b.birthDay);
+        setEmployees(list);
+      } catch { /* tabla puede no tener birthDate */ }
+      finally { setLoading(false); }
+    })();
+  }, []);
+
+  const monthName = new Date().toLocaleDateString('es-MX', { month: 'long' });
+
+  return (
+    <WidgetCard title={`Cumpleaños de ${monthName.charAt(0).toUpperCase() + monthName.slice(1)}`}
+      icon={<span style={{ fontSize: 18 }}>🎂</span>} loading={loading}>
+      {employees.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" textAlign="center" py={1}>
+          Sin cumpleaños este mes.
+        </Typography>
+      ) : (
+        <Stack spacing={1}>
+          {employees.map(e => (
+            <Box key={e.id} sx={{
+              display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.5, borderRadius: 1,
+              bgcolor: e.isToday ? 'primary.50' : 'transparent',
+              border: e.isToday ? '1px solid' : 'none',
+              borderColor: 'primary.light',
+            }}>
+              <Typography variant="body2" fontWeight={e.isToday ? 700 : 400} sx={{ flex: 1 }}>
+                {e.isToday && '🎉 '}{e.firstName} {e.lastName}
+              </Typography>
+              <Chip label={`Día ${e.birthDay}`} size="small"
+                color={e.isToday ? 'primary' : 'default'} />
+            </Box>
+          ))}
+        </Stack>
+      )}
+    </WidgetCard>
+  );
+}
+
 // ─── Registro de widgets ──────────────────────────────────────────────────────
 
 export const WIDGET_META = {
@@ -587,4 +646,5 @@ export const WIDGET_META = {
   tickets:         { label: 'HelpDesk Tickets',         module: MODULES.HELPDESK,   gridProps: { xs: 12, md: 6 } },
   licencias:       { label: 'Control de Licencias',     module: MODULES.LICENCIAS,  gridProps: { xs: 12, md: 6 } },
   vacaciones:      { label: 'Mis Vacaciones',            module: MODULES.VACACIONES, gridProps: { xs: 12, md: 6 } },
+  birthdays:       { label: 'Cumpleaños del mes',        module: null,               gridProps: { xs: 12, md: 4 } },
 };

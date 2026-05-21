@@ -59,6 +59,10 @@ const RoomRequestForm     = lazy(() => import('./pages/calendar/RoomRequestForm'
 const RoomRequestsManager = lazy(() => import('./pages/calendar/RoomRequestsManager'));
 const CalendarReports     = lazy(() => import('./pages/calendar/CalendarReports'));
 
+// Nuevos módulos
+const CapacitacionesPage = lazy(() => import('./pages/capacitaciones/CapacitacionesPage'));
+const ActivosFijosPage   = lazy(() => import('./pages/activos/ActivosFijosPage'));
+
 // ── Fallback global para Suspense ─────────────────────────────────────────────
 function PageLoader() {
   return <LinearProgress sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }} />;
@@ -273,6 +277,20 @@ function AppRoutes() {
               <Route path="/admin/audit" element={
                 <ProtectedRoute adminOnly>
                   <AuditPage />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Capacitaciones ──────────────────────────────────────── */}
+              <Route path="/capacitaciones" element={
+                <ProtectedRoute module={MODULES.CAPACITACIONES}>
+                  <CapacitacionesPage />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Activos Fijos ────────────────────────────────────────── */}
+              <Route path="/activos-fijos" element={
+                <ProtectedRoute module={MODULES.ACTIVOS_FIJOS}>
+                  <ActivosFijosPage />
                 </ProtectedRoute>
               } />
 

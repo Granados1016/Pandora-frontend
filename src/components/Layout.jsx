@@ -48,11 +48,14 @@ import EventBusyIcon            from '@mui/icons-material/EventBusy';
 import OpenInNewIcon            from '@mui/icons-material/OpenInNew';
 import DarkModeIcon             from '@mui/icons-material/DarkMode';
 import LightModeIcon            from '@mui/icons-material/LightMode';
+import SchoolIcon               from '@mui/icons-material/School';
+import AccountBalanceIcon       from '@mui/icons-material/AccountBalance';
 
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 import { useNotifications } from '../hooks/useNotifications';
 import { searchApi } from '../api/pandoraApi';
 import { useThemeMode } from '../hooks/useThemeMode';
+import SessionWarning from './SessionWarning';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const EXPANDED_W  = 260;
@@ -236,6 +239,20 @@ export default function Layout({ children }) {
       ],
     },
     {
+      label: 'Capacitaciones',
+      show: hasModule(MODULES.CAPACITACIONES) || isAdmin,
+      items: [
+        { label: 'Capacitaciones', icon: <SchoolIcon />, path: '/capacitaciones', show: hasModule(MODULES.CAPACITACIONES) || isAdmin },
+      ],
+    },
+    {
+      label: 'Activos Fijos',
+      show: hasModule(MODULES.ACTIVOS_FIJOS) || isAdmin,
+      items: [
+        { label: 'Activos Fijos', icon: <AccountBalanceIcon />, path: '/activos-fijos', show: hasModule(MODULES.ACTIVOS_FIJOS) || isAdmin },
+      ],
+    },
+    {
       label: 'Reportes',
       show: hasModule(MODULES.REPORTS) || isAdmin,
       items: [
@@ -334,6 +351,8 @@ export default function Layout({ children }) {
     inventario:    { label: 'Inventario',    color: 'success' },
     licencia:      { label: 'Licencia',      color: 'secondary' },
     usuario:       { label: 'Usuario',       color: 'default' },
+    vacacion:      { label: 'Vacación',      color: 'info' },
+    ticket:        { label: 'Ticket',        color: 'error' },
   };
 
   // ── Ítem de navegación ──────────────────────────────────────────────────────
@@ -560,6 +579,7 @@ export default function Layout({ children }) {
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <SessionWarning />
 
       {/* ── AppBar solo móvil ──────────────────────────────────────────────── */}
       <AppBar
