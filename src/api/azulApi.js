@@ -15,7 +15,7 @@ export const azulApi = {
     });
     if (!res.ok) throw new Error('Credenciales incorrectas');
     const data = await res.json();
-    localStorage.setItem(TOKEN_KEY, data.token);
+    localStorage.setItem(TOKEN_KEY, data.accessToken);
     return data;
   },
 

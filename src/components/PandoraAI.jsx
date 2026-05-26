@@ -121,31 +121,33 @@ export default function PandoraAI() {
         content,
         onChunk: (delta) => {
           setMessages(prev => {
-            const updated = [...prev];
-            const last    = updated[updated.length - 1];
-            if (last?.streaming) last.text += delta;
-            return updated;
+            const last = prev[prev.length - 1];
+            if (!last?.streaming) return prev;
+            return [
+              ...prev.slice(0, -1),
+              { ...last, text: last.text + delta },
+            ];
           });
         },
         onDone: () => {
           setMessages(prev => {
-            const updated = [...prev];
-            const last    = updated[updated.length - 1];
-            if (last?.streaming) last.streaming = false;
-            return updated;
+            const last = prev[prev.length - 1];
+            if (!last?.streaming) return prev;
+            return [
+              ...prev.slice(0, -1),
+              { ...last, streaming: false },
+            ];
           });
           setSending(false);
         },
         onError: (err) => {
           setMessages(prev => {
-            const updated = [...prev];
-            const last    = updated[updated.length - 1];
-            if (last?.streaming) {
-              last.text      = `Error: ${err}`;
-              last.streaming = false;
-              last.error     = true;
-            }
-            return updated;
+            const last = prev[prev.length - 1];
+            if (!last?.streaming) return prev;
+            return [
+              ...prev.slice(0, -1),
+              { ...last, text: `Error: ${err}`, streaming: false, error: true },
+            ];
           });
           setSending(false);
         },
