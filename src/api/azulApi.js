@@ -1,11 +1,23 @@
-const BASE      = import.meta.env.VITE_AZUL_API_URL ?? 'http://localhost:5016';
-const TOKEN_KEY = 'pandora_azul_token';
-const CONV_KEY  = 'pandora_azul_conv_id';
+const BASE         = import.meta.env.VITE_AZUL_API_URL  ?? 'http://localhost:5016';
+const PANDORA_BASE = import.meta.env.VITE_BACKEND_URL   ?? 'http://localhost:5000';
+const TOKEN_KEY    = 'pandora_azul_token';
+const CONV_KEY     = 'pandora_azul_conv_id';
 
 const token = () => localStorage.getItem(TOKEN_KEY);
 
 export const azulApi = {
   isConnected: () => !!token(),
+
+  /** Genera un token SSO y devuelve la URL de Azul con el token incluido. */
+  async getSsoToken() {
+    const pandoraJwt = localStorage.getItem('pandora_token') ?? '';
+    const res = await fetch(`${PANDORA_BASE}/api/azul-sso/token`, {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${pandoraJwt}` },
+    });
+    if (!res.ok) throw new Error('No se pudo generar el token SSO');
+    return res.json(); // { token, url }
+  },
 
   async login(email, password) {
     const res = await fetch(`${BASE}/api/auth/login`, {

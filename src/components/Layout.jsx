@@ -56,8 +56,10 @@ import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 import PandoraAI            from './PandoraAI';
 import { useNotifications } from '../hooks/useNotifications';
 import { searchApi } from '../api/pandoraApi';
+import { azulApi }  from '../api/azulApi';
 import { useThemeMode } from '../hooks/useThemeMode';
 import SessionWarning from './SessionWarning';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const EXPANDED_W  = 260;
@@ -510,6 +512,59 @@ export default function Layout({ children }) {
           );
         })}
       </List>
+
+      <Divider sx={{ borderColor: 'rgba(255,255,255,0.12)' }} />
+
+      {/* Abrir Azul AI ──────────────────────────────────────────────────────── */}
+      <Box sx={{ px: open ? 2 : 1, py: 1 }}>
+        {open ? (
+          <Button
+            fullWidth
+            startIcon={<AutoAwesomeIcon fontSize="small" />}
+            onClick={async () => {
+              try {
+                const { url } = await azulApi.getSsoToken();
+                window.open(url, '_blank', 'noopener');
+              } catch {
+                window.open(import.meta.env.VITE_AZUL_FRONTEND_URL ?? 'http://localhost:5174', '_blank', 'noopener');
+              }
+            }}
+            sx={{
+              background: 'linear-gradient(135deg, #1a3a6b 0%, #2563eb 100%)',
+              color: 'white',
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: 13,
+              py: 1,
+              '&:hover': { background: 'linear-gradient(135deg, #1e4080 0%, #3b82f6 100%)' },
+            }}
+          >
+            Abrir Azul AI
+          </Button>
+        ) : (
+          <Tooltip title="Abrir Azul AI" placement="right" arrow>
+            <IconButton
+              onClick={async () => {
+                try {
+                  const { url } = await azulApi.getSsoToken();
+                  window.open(url, '_blank', 'noopener');
+                } catch {
+                  window.open(import.meta.env.VITE_AZUL_FRONTEND_URL ?? 'http://localhost:5174', '_blank', 'noopener');
+                }
+              }}
+              sx={{
+                background: 'linear-gradient(135deg, #1a3a6b, #2563eb)',
+                color: 'white',
+                width: 40, height: 40,
+                '&:hover': { background: 'linear-gradient(135deg, #1e4080, #3b82f6)' },
+              }}
+            >
+              <AutoAwesomeIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+      </Box>
 
       <Divider sx={{ borderColor: 'rgba(255,255,255,0.12)' }} />
 
