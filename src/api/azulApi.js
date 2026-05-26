@@ -31,6 +31,29 @@ export const azulApi = {
     return data;
   },
 
+  /** SSO automático: obtiene token de Pandora y lo intercambia en Azul. */
+  async loginFromPandora() {
+    // 1. Pedir un token SSO a Pandora backend
+    const pandoraJwt = localStorage.getItem('pandora_token') ?? '';
+    const ssoRes = await fetch(`${PANDORA_BASE}/api/azul-sso/token`, {
+      method:  'POST',
+      headers: { 'Authorization': `Bearer ${pandoraJwt}` },
+    });
+    if (!ssoRes.ok) throw new Error('No se pudo obtener token SSO de Pandora');
+    const { token: ssoToken } = await ssoRes.json();
+
+    // 2. Intercambiar el token SSO por un JWT de Azul
+    const azulRes = await fetch(`${BASE}/api/auth/from-pandora`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ pandoraToken: ssoToken }),
+    });
+    if (!azulRes.ok) throw new Error('SSO rechazado por Azul');
+    const data = await azulRes.json();
+    localStorage.setItem(TOKEN_KEY, data.accessToken);
+    return data;
+  },
+
   logout() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(CONV_KEY);

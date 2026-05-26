@@ -43,10 +43,8 @@ export default function PandoraAI() {
   const [messages, setMessages]       = useState([]);
   const [input, setInput]             = useState('');
   const [sending, setSending]         = useState(false);
-  const [loginEmail, setLoginEmail]   = useState('');
-  const [loginPass, setLoginPass]     = useState('');
-  const [loginLoading, setLoginLoading] = useState(false);
-  const [loginError, setLoginError]   = useState('');
+  const [ssoLoading, setSsoLoading]   = useState(false);
+  const [ssoError, setSsoError]       = useState('');
   const [pulse, setPulse]             = useState(true);
   const [firstMsg, setFirstMsg]       = useState(true);
 
@@ -80,19 +78,16 @@ export default function PandoraAI() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleLogin = async () => {
-    if (!loginEmail || !loginPass) return;
-    setLoginLoading(true);
-    setLoginError('');
-    try {
-      await azulApi.login(loginEmail, loginPass);
-      setConnected(true);
-    } catch (e) {
-      setLoginError(e.message || 'Error de conexión con Azul');
-    } finally {
-      setLoginLoading(false);
-    }
-  };
+  // SSO automático al abrir el drawer si no está conectado
+  useEffect(() => {
+    if (!open || connected) return;
+    setSsoLoading(true);
+    setSsoError('');
+    azulApi.loginFromPandora()
+      .then(() => setConnected(true))
+      .catch(e => setSsoError(e.message || 'No se pudo conectar con Azul AI'))
+      .finally(() => setSsoLoading(false));
+  }, [open]);
 
   const buildContext = () => {
     const page = ROUTE_LABELS[pathname] || pathname;
@@ -275,61 +270,42 @@ export default function PandoraAI() {
           </IconButton>
         </Box>
 
-        {/* ── Sin conexión: formulario de login ─────────────────────────── */}
+        {/* ── Sin conexión: SSO automático ──────────────────────────────── */}
         {!connected ? (
           <Box sx={{
             flex: 1, display: 'flex', flexDirection: 'column',
-            justifyContent: 'center', p: 3, gap: 2,
+            justifyContent: 'center', alignItems: 'center', p: 3, gap: 2,
           }}>
-            <Box textAlign="center" mb={1}>
-              <AutoAwesomeIcon sx={{ fontSize: 52, color: '#1a2744', mb: 1 }} />
-              <Typography variant="h6" fontWeight={700} color="#1a2744">
-                Conectar con Azul AI
-              </Typography>
-              <Typography variant="body2" color="text.secondary" mt={0.5}>
-                Ingresa tus credenciales de Azul para acceder al asistente inteligente
-              </Typography>
-            </Box>
+            <AutoAwesomeIcon sx={{ fontSize: 52, color: '#1a2744' }} />
 
-            {loginError && (
-              <Alert severity="error" sx={{ py: 0.5 }}>{loginError}</Alert>
+            {ssoLoading && (
+              <>
+                <CircularProgress size={32} sx={{ color: '#1a2744' }} />
+                <Typography variant="body2" color="text.secondary">
+                  Conectando con Azul AI…
+                </Typography>
+              </>
             )}
 
-            <TextField
-              label="Correo de Azul"
-              type="email"
-              size="small"
-              fullWidth
-              value={loginEmail}
-              onChange={e => setLoginEmail(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleLogin()}
-              autoFocus
-            />
-            <TextField
-              label="Contraseña"
-              type="password"
-              size="small"
-              fullWidth
-              value={loginPass}
-              onChange={e => setLoginPass(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleLogin()}
-            />
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={handleLogin}
-              disabled={loginLoading || !loginEmail || !loginPass}
-              sx={{
-                bgcolor: '#1a2744',
-                '&:hover': { bgcolor: '#2d4a8a' },
-                py: 1.2,
-                borderRadius: 2,
-              }}
-            >
-              {loginLoading
-                ? <CircularProgress size={20} sx={{ color: 'white' }} />
-                : 'Conectar'}
-            </Button>
+            {!ssoLoading && ssoError && (
+              <>
+                <Alert severity="error" sx={{ width: '100%' }}>{ssoError}</Alert>
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    setSsoError('');
+                    setSsoLoading(true);
+                    azulApi.loginFromPandora()
+                      .then(() => setConnected(true))
+                      .catch(e => setSsoError(e.message || 'Error de conexión'))
+                      .finally(() => setSsoLoading(false));
+                  }}
+                  sx={{ bgcolor: '#1a2744', '&:hover': { bgcolor: '#2d4a8a' }, borderRadius: 2 }}
+                >
+                  Reintentar
+                </Button>
+              </>
+            )}
           </Box>
         ) : (
           <>
