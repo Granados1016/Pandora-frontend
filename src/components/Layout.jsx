@@ -52,6 +52,7 @@ import SchoolIcon               from '@mui/icons-material/School';
 import AccountBalanceIcon       from '@mui/icons-material/AccountBalance';
 
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
+import PandoraAI            from './PandoraAI';
 import { useNotifications } from '../hooks/useNotifications';
 import { searchApi } from '../api/pandoraApi';
 import { useThemeMode } from '../hooks/useThemeMode';
@@ -722,6 +723,9 @@ export default function Layout({ children }) {
 
         {children}
       </Box>
+
+      {/* ── Azul AI — botón flotante + drawer ─────────────────────────────── */}
+      <PandoraAI />
 
       {/* ── Panel de notificaciones (Popper) ──────────────────────────────── */}
       <Popper open={notifOpen} anchorEl={notifAnchor} placement="bottom-end" style={{ zIndex: 1400 }}>
