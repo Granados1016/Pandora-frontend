@@ -1,19 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box, Paper, Typography, Stack, Button, Chip, IconButton, Tooltip,
   TextField, MenuItem, Select, FormControl, InputLabel, Table, TableBody,
   TableCell, TableContainer, TableHead, TableRow, Dialog, DialogTitle,
-  DialogContent, DialogActions, Divider, Tab, Tabs, CircularProgress,
-  Alert, Badge,
+  DialogContent, CircularProgress,
 } from '@mui/material';
 import AddIcon            from '@mui/icons-material/Add';
-import EditIcon           from '@mui/icons-material/Edit';
 import DeleteIcon         from '@mui/icons-material/Delete';
 import DownloadIcon       from '@mui/icons-material/Download';
 import SearchIcon         from '@mui/icons-material/Search';
-import FilterListIcon     from '@mui/icons-material/FilterList';
 import BookIcon           from '@mui/icons-material/Book';
-import AddCommentIcon     from '@mui/icons-material/AddComment';
 import CheckCircleIcon    from '@mui/icons-material/CheckCircle';
 import AccessTimeIcon     from '@mui/icons-material/AccessTime';
 import WarningAmberIcon   from '@mui/icons-material/WarningAmber';
@@ -29,12 +26,6 @@ const TIPOS_SEG = ['Seguimiento', 'Escalación', 'Diagnóstico', 'Cierre'];
 
 const PRIORIDAD_COLOR  = { Alta: 'error', Media: 'warning', Baja: 'success' };
 const ESTADO_COLOR     = { Abierta: 'info', 'En Proceso': 'warning', Resuelta: 'success', Cerrada: 'default' };
-const ESTADO_ICON      = {
-  Abierta:     <AccessTimeIcon fontSize="small" />,
-  'En Proceso': <WarningAmberIcon fontSize="small" />,
-  Resuelta:    <CheckCircleIcon fontSize="small" />,
-  Cerrada:     <CheckCircleIcon fontSize="small" />,
-};
 
 function fmtDate(d) {
   if (!d) return '—';
@@ -139,187 +130,11 @@ function EntryForm({ initial, onSave, onClose, saving }) {
   );
 }
 
-// ── Modal de detalle ──────────────────────────────────────────────────────────
-function DetailModal({ id, onClose, onEdited, isAdmin }) {
-  const [tab, setTab]     = useState(0);
-  const [data, setData]   = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [nota, setNota]   = useState('');
-  const [tipoSeg, setTipoSeg] = useState('Seguimiento');
-  const [sending, setSending] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving]   = useState(false);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try { const r = await bitacoraApi.getById(id); setData(r.data); }
-    catch { }
-    finally { setLoading(false); }
-  }, [id]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const handleAddSeguimiento = async () => {
-    if (!nota.trim()) return;
-    setSending(true);
-    try {
-      await bitacoraApi.addSeguimiento(id, { nota, tipo: tipoSeg });
-      setNota(''); await load();
-    } catch { } finally { setSending(false); }
-  };
-
-  const handleSave = async (form) => {
-    setSaving(true);
-    try {
-      await bitacoraApi.update(id, {
-        titulo: form.titulo, descripcion: form.descripcion,
-        categoria: form.categoria, prioridad: form.prioridad, estado: form.estado,
-        impacto: form.impacto || null, sistemaAfectado: form.sistemaAfectado || null,
-        usuarioAfectado: form.usuarioAfectado || null, asignadoA: form.asignadoA || null,
-        fechaIncidencia: form.fechaIncidencia ? new Date(form.fechaIncidencia).toISOString() : null,
-        fechaResolucion: form.fechaResolucion ? new Date(form.fechaResolucion).toISOString() : null,
-        resolucion: form.resolucion || null,
-      });
-      setEditing(false); await load(); onEdited();
-    } catch { } finally { setSaving(false); }
-  };
-
-  const e = data?.entry;
-
-  return (
-    <Dialog open fullWidth maxWidth="md" onClose={onClose}>
-      <DialogTitle sx={{ pb: 0 }}>
-        {loading ? 'Cargando…' : (
-          <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
-            <Typography variant="caption" color="text.secondary" fontWeight={700}>{e?.folio}</Typography>
-            <Chip size="small" label={e?.prioridad} color={PRIORIDAD_COLOR[e?.prioridad] || 'default'} />
-            <Chip size="small" label={e?.estado} color={ESTADO_COLOR[e?.estado] || 'default'} icon={ESTADO_ICON[e?.estado]} />
-            <Typography variant="subtitle1" fontWeight={700} sx={{ flexGrow: 1 }}>{e?.titulo}</Typography>
-          </Stack>
-        )}
-      </DialogTitle>
-
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ px: 3 }}>
-        <Tab label="Información" />
-        <Tab label={<Badge badgeContent={data?.seguimientos?.length || 0} color="primary">Seguimientos</Badge>} />
-        {(isAdmin || true) && <Tab label="Editar" />}
-      </Tabs>
-      <Divider />
-
-      <DialogContent>
-        {loading ? <Box textAlign="center" py={4}><CircularProgress /></Box> : (
-          <>
-            {/* ── Tab 0: Info ── */}
-            {tab === 0 && (
-              <Stack spacing={2}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                  {[
-                    ['Categoría', e?.categoria],
-                    ['Sistema afectado', e?.sistemaAfectado || '—'],
-                    ['Usuario / Área', e?.usuarioAfectado || '—'],
-                  ].map(([label, val]) => (
-                    <Box key={label} flex={1}>
-                      <Typography variant="caption" color="text.secondary">{label}</Typography>
-                      <Typography variant="body2" fontWeight={600}>{val}</Typography>
-                    </Box>
-                  ))}
-                </Stack>
-
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Descripción</Typography>
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mt: 0.5 }}>{e?.descripcion}</Typography>
-                </Box>
-
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                  {[
-                    ['Reportado por', e?.reportadoPor],
-                    ['Asignado a', e?.asignadoA || '—'],
-                    ['Impacto', e?.impacto || '—'],
-                  ].map(([label, val]) => (
-                    <Box key={label} flex={1}>
-                      <Typography variant="caption" color="text.secondary">{label}</Typography>
-                      <Typography variant="body2" fontWeight={600}>{val}</Typography>
-                    </Box>
-                  ))}
-                </Stack>
-
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                  {[
-                    ['Fecha incidente', fmtDate(e?.fechaIncidencia)],
-                    ['Fecha resolución', fmtDate(e?.fechaResolucion)],
-                    ['Tiempo resolución', fmtMin(e?.tiempoResolucion)],
-                  ].map(([label, val]) => (
-                    <Box key={label} flex={1}>
-                      <Typography variant="caption" color="text.secondary">{label}</Typography>
-                      <Typography variant="body2" fontWeight={600}>{val}</Typography>
-                    </Box>
-                  ))}
-                </Stack>
-
-                {e?.resolucion && (
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">Resolución</Typography>
-                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mt: 0.5 }}>{e.resolucion}</Typography>
-                  </Box>
-                )}
-              </Stack>
-            )}
-
-            {/* ── Tab 1: Seguimientos ── */}
-            {tab === 1 && (
-              <Stack spacing={2}>
-                {data?.seguimientos?.length === 0 && (
-                  <Alert severity="info">Sin seguimientos aún.</Alert>
-                )}
-                {data?.seguimientos?.map(s => (
-                  <Paper key={s.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-                    <Stack direction="row" justifyContent="space-between" mb={0.5}>
-                      <Chip size="small" label={s.tipo} variant="outlined" />
-                      <Typography variant="caption" color="text.secondary">
-                        {s.creadoPor} · {fmtDate(s.creadoEn)}
-                      </Typography>
-                    </Stack>
-                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{s.nota}</Typography>
-                  </Paper>
-                ))}
-
-                <Divider />
-                <Typography variant="subtitle2">Agregar nota</Typography>
-                <Stack direction="row" spacing={1}>
-                  <FormControl size="small" sx={{ minWidth: 140 }}>
-                    <InputLabel>Tipo</InputLabel>
-                    <Select value={tipoSeg} label="Tipo" onChange={e => setTipoSeg(e.target.value)}>
-                      {TIPOS_SEG.map(t => <MenuItem key={t} value={t}>{t}</MenuItem>)}
-                    </Select>
-                  </FormControl>
-                  <TextField size="small" placeholder="Escribe una nota…" value={nota}
-                    onChange={e => setNota(e.target.value)} fullWidth multiline maxRows={3} />
-                  <Button variant="contained" onClick={handleAddSeguimiento} disabled={sending || !nota.trim()}
-                    sx={{ minWidth: 90 }}>
-                    {sending ? <CircularProgress size={16} /> : 'Agregar'}
-                  </Button>
-                </Stack>
-              </Stack>
-            )}
-
-            {/* ── Tab 2: Editar ── */}
-            {tab === 2 && (
-              <EntryForm initial={e} onSave={handleSave} onClose={() => setTab(0)} saving={saving} />
-            )}
-          </>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Cerrar</Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
 // ── Página principal ──────────────────────────────────────────────────────────
 export default function BitacoraPage() {
   const { isAdmin, hasModuleWrite } = useAuth();
-  const canWrite = isAdmin || hasModuleWrite(MODULES.BITACORA);
+  const navigate  = useNavigate();
+  const canWrite  = isAdmin || hasModuleWrite(MODULES.BITACORA);
 
   const [rows, setRows]         = useState([]);
   const [loading, setLoading]   = useState(false);
@@ -329,7 +144,6 @@ export default function BitacoraPage() {
   const [fPrioridad, setFPrio]  = useState('');
   const [creating, setCreating] = useState(false);
   const [saving, setSaving]     = useState(false);
-  const [detailId, setDetailId] = useState(null);
   const [stats, setStats]       = useState(null);
 
   const load = useCallback(async () => {
@@ -478,7 +292,7 @@ export default function BitacoraPage() {
               )}
               {rows.map(row => (
                 <TableRow key={row.id} hover sx={{ cursor: 'pointer' }}
-                  onClick={() => setDetailId(row.id)}>
+                  onClick={() => navigate(`/bitacora/${row.id}`)}>
                   <TableCell sx={{ fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}>
                     {row.folio}
                   </TableCell>
@@ -530,15 +344,6 @@ export default function BitacoraPage() {
         </Dialog>
       )}
 
-      {/* Modal detalle */}
-      {detailId && (
-        <DetailModal
-          id={detailId}
-          onClose={() => setDetailId(null)}
-          onEdited={load}
-          isAdmin={isAdmin}
-        />
-      )}
     </Box>
   );
 }
