@@ -71,8 +71,8 @@ function buildColumns(navigate) {
     {
       field: 'title', headerName: 'Título', flex: 1, minWidth: 200,
       renderCell: ({ value, row }) => (
-        <Box>
-          <Typography variant="body2" fontWeight={600} noWrap>{value}</Typography>
+        <Box sx={{ width: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0.25 }}>
+          <Typography variant="body2" fontWeight={600} noWrap title={value}>{value}</Typography>
           {row.department && (
             <Typography variant="caption" color="text.secondary" noWrap>{row.department}</Typography>
           )}
@@ -279,7 +279,7 @@ export default function TicketsListPage() {
             border: 'none',
             '& .MuiDataGrid-row': { cursor: 'pointer', '&:hover': { bgcolor: 'primary.50' } },
             '& .MuiDataGrid-columnHeaders': { bgcolor: 'grey.50', fontWeight: 700 },
-            '& .MuiDataGrid-cell': { borderColor: 'divider', display: 'flex', alignItems: 'center' },
+            '& .MuiDataGrid-cell': { borderColor: 'divider', display: 'flex', alignItems: 'center', overflow: 'hidden' },
             '& .MuiDataGrid-columnSeparator': { display: 'none' },
           }}
         />
