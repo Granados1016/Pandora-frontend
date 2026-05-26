@@ -62,6 +62,7 @@ const CalendarReports     = lazy(() => import('./pages/calendar/CalendarReports'
 // Nuevos módulos
 const CapacitacionesPage = lazy(() => import('./pages/capacitaciones/CapacitacionesPage'));
 const ActivosFijosPage   = lazy(() => import('./pages/activos/ActivosFijosPage'));
+const BitacoraPage       = lazy(() => import('./pages/bitacora/BitacoraPage'));
 
 // ── Fallback global para Suspense ─────────────────────────────────────────────
 function PageLoader() {
@@ -291,6 +292,13 @@ function AppRoutes() {
               <Route path="/activos-fijos" element={
                 <ProtectedRoute module={MODULES.ACTIVOS_FIJOS}>
                   <ActivosFijosPage />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Bitácora ─────────────────────────────────────────────── */}
+              <Route path="/bitacora" element={
+                <ProtectedRoute requiredModule={MODULES.BITACORA}>
+                  <BitacoraPage />
                 </ProtectedRoute>
               } />
 

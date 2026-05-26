@@ -525,4 +525,14 @@ export const adminApi = {
   testSmtp:         (data)  => api.post('/admin/settings/smtp/test', data),
 };
 
+export const bitacoraApi = {
+  getAll:          (params = {}) => api.get('/bitacora', { params }),
+  getById:         (id)          => api.get(`/bitacora/${id}`),
+  create:          (data)        => api.post('/bitacora', data),
+  update:          (id, data)    => api.put(`/bitacora/${id}`, data),
+  remove:          (id)          => api.delete(`/bitacora/${id}`),
+  addSeguimiento:  (id, data)    => api.post(`/bitacora/${id}/seguimiento`, data),
+  getStats:        ()            => api.get('/bitacora/stats'),
+};
+
 export default api;

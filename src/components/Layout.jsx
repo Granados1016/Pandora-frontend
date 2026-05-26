@@ -50,6 +50,7 @@ import DarkModeIcon             from '@mui/icons-material/DarkMode';
 import LightModeIcon            from '@mui/icons-material/LightMode';
 import SchoolIcon               from '@mui/icons-material/School';
 import AccountBalanceIcon       from '@mui/icons-material/AccountBalance';
+import MenuBookIcon             from '@mui/icons-material/MenuBook';
 
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 import PandoraAI            from './PandoraAI';
@@ -251,6 +252,13 @@ export default function Layout({ children }) {
       show: hasModule(MODULES.ACTIVOS_FIJOS) || isAdmin,
       items: [
         { label: 'Activos Fijos', icon: <AccountBalanceIcon />, path: '/activos-fijos', show: hasModule(MODULES.ACTIVOS_FIJOS) || isAdmin },
+      ],
+    },
+    {
+      label: 'Bitácora',
+      show: hasModule(MODULES.BITACORA) || isAdmin,
+      items: [
+        { label: 'Bitácora', icon: <MenuBookIcon />, path: '/bitacora', show: hasModule(MODULES.BITACORA) || isAdmin },
       ],
     },
     {
