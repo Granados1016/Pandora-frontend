@@ -306,8 +306,7 @@ export default function BitacoraPage() {
                     <Chip size="small" label={row.prioridad} color={PRIORIDAD_COLOR[row.prioridad] || 'default'} />
                   </TableCell>
                   <TableCell>
-                    <Chip size="small" label={row.estado} color={ESTADO_COLOR[row.estado] || 'default'}
-                      icon={ESTADO_ICON[row.estado]} />
+                    <Chip size="small" label={row.estado} color={ESTADO_COLOR[row.estado] || 'default'} />
                   </TableCell>
                   <TableCell sx={{ maxWidth: 150 }}>
                     <Typography variant="caption" noWrap display="block">{row.sistemaAfectado || '—'}</Typography>
