@@ -54,6 +54,7 @@ import MenuBookIcon             from '@mui/icons-material/MenuBook';
 import EngineeringIcon          from '@mui/icons-material/Engineering';
 import BadgeIcon                from '@mui/icons-material/Badge';
 import AccessTimeIcon           from '@mui/icons-material/AccessTime';
+import TrendingUpIcon           from '@mui/icons-material/TrendingUp';
 
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 import PandoraAI            from './PandoraAI';
@@ -149,7 +150,8 @@ export default function Layout({ children }) {
   const navSections = [
     {
       items: [
-        { label: 'Dashboard', icon: <DashboardIcon />, path: '/', show: true },
+        { label: 'Dashboard',          icon: <DashboardIcon />,  path: '/',          show: true },
+        { label: 'Dashboard Ejecutivo',icon: <TrendingUpIcon />, path: '/ejecutivo', show: isAdmin },
       ],
     },
     {

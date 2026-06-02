@@ -525,6 +525,10 @@ export const adminApi = {
   testSmtp:         (data)  => api.post('/admin/settings/smtp/test', data),
 };
 
+export const ejecutivoApi = {
+  getStats: () => api.get('/ejecutivo/stats'),
+};
+
 export const bitacoraApi = {
   getAll:          (params = {}) => api.get('/bitacora', { params }),
   getById:         (id)          => api.get(`/bitacora/${id}`),

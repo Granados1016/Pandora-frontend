@@ -66,6 +66,9 @@ const ActivosFijosPage   = lazy(() => import('./pages/activos/ActivosFijosPage')
 const BitacoraPage       = lazy(() => import('./pages/bitacora/BitacoraPage'));
 const BitacoraDetailPage = lazy(() => import('./pages/bitacora/BitacoraDetailPage'));
 
+// Dashboard Ejecutivo
+const DashboardEjecutivo = lazy(() => import('./pages/ejecutivo/DashboardEjecutivo'));
+
 // Mantenimiento
 const MantenimientoPage       = lazy(() => import('./pages/mantenimiento/MantenimientoPage'));
 const MantenimientoDetailPage = lazy(() => import('./pages/mantenimiento/MantenimientoDetailPage'));
@@ -303,6 +306,13 @@ function AppRoutes() {
               <Route path="/activos-fijos" element={
                 <ProtectedRoute module={MODULES.ACTIVOS_FIJOS}>
                   <ActivosFijosPage />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Dashboard Ejecutivo — solo Admin ────────────────────── */}
+              <Route path="/ejecutivo" element={
+                <ProtectedRoute adminOnly>
+                  <DashboardEjecutivo />
                 </ProtectedRoute>
               } />
 
