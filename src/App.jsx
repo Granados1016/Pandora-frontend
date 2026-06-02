@@ -70,6 +70,10 @@ const BitacoraDetailPage = lazy(() => import('./pages/bitacora/BitacoraDetailPag
 const MantenimientoPage       = lazy(() => import('./pages/mantenimiento/MantenimientoPage'));
 const MantenimientoDetailPage = lazy(() => import('./pages/mantenimiento/MantenimientoDetailPage'));
 
+// Checador
+const CheckadorPage      = lazy(() => import('./pages/checador/CheckadorPage'));
+const CheckadorAdminPage = lazy(() => import('./pages/checador/CheckadorAdminPage'));
+
 // ── Fallback global para Suspense ─────────────────────────────────────────────
 function PageLoader() {
   return <LinearProgress sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }} />;
@@ -299,6 +303,18 @@ function AppRoutes() {
               <Route path="/activos-fijos" element={
                 <ProtectedRoute module={MODULES.ACTIVOS_FIJOS}>
                   <ActivosFijosPage />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Checador ────────────────────────────────────────────── */}
+              <Route path="/checador" element={
+                <ProtectedRoute requiredModule={MODULES.CHECADOR}>
+                  <CheckadorPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/checador/admin" element={
+                <ProtectedRoute requiredModule={MODULES.CHECADOR}>
+                  <CheckadorAdminPage />
                 </ProtectedRoute>
               } />
 

@@ -45,7 +45,8 @@ export const MODULES = {
   CAPACITACIONES:   8388608,  // Módulo de capacitaciones y entrenamientos
   ACTIVOS_FIJOS:    16777216, // Módulo de activos fijos y depreciación
   BITACORA:         33554432, // Módulo de bitácora de incidencias
-  MANTENIMIENTO:    67108864, // Módulo de mantenimiento de equipos
+  MANTENIMIENTO:    67108864,  // Módulo de mantenimiento de equipos
+  CHECADOR:         134217728, // Módulo de checador de asistencia
 };
 
 export const MODULE_LABELS = {
@@ -69,7 +70,8 @@ export const MODULE_LABELS = {
   8388608:  'Capacitaciones — Cursos y entrenamientos',
   16777216: 'Activos Fijos — Registro y depreciación',
   33554432: 'Bitácora — Registro de incidencias',
-  67108864: 'Mantenimiento — Gestión de equipos',
+  67108864:  'Mantenimiento — Gestión de equipos',
+  134217728: 'Checador — Registro de asistencia con GPS',
 };
 
 // Sub-módulos agrupados por módulo padre — se usan en Admin.jsx

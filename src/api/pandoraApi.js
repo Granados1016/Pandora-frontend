@@ -552,4 +552,18 @@ export const mantenimientoApi = {
   exportCsv:       ()            => api.get('/mantenimiento/export', { responseType: 'blob' }),
 };
 
+export const checadorApi = {
+  marcar:       (data)         => api.post('/checador/marcar', data),
+  marcarFoto:   (formData)     => api.post('/checador/marcar-foto', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  getHoy:       ()             => api.get('/checador/hoy'),
+  getRegistros: (params = {})  => api.get('/checador/registros', { params }),
+  getStats:     ()             => api.get('/checador/stats'),
+  exportCsv:    (params = {})  => api.get('/checador/export', { params, responseType: 'blob' }),
+  getFotoUrl:   (id)           => `${BASE_URL}/checador/foto/${id}`,
+  getSitios:    ()             => api.get('/checador/sitios'),
+  createSitio:  (data)         => api.post('/checador/sitios', data),
+  updateSitio:  (id, data)     => api.put(`/checador/sitios/${id}`, data),
+  deleteSitio:  (id)           => api.delete(`/checador/sitios/${id}`),
+};
+
 export default api;
