@@ -12,9 +12,15 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { checadorApi }    from '../../api/pandoraApi';
 import { useAuth }        from '../../hooks/useAuth.jsx';
 
+// Normaliza fechas UTC del backend (sin 'Z') para que JS las interprete correctamente
+function utc(d) {
+  if (!d) return null;
+  const s = String(d);
+  return new Date(s.endsWith('Z') || s.includes('+') ? s : s + 'Z');
+}
 function fmtTime(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return utc(d).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 function fmtDate(d) {
   if (!d) return '';

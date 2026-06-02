@@ -15,9 +15,14 @@ import WarningIcon     from '@mui/icons-material/Warning';
 import MapIcon         from '@mui/icons-material/Map';
 import { checadorApi } from '../../api/pandoraApi';
 
+function utc(d) {
+  if (!d) return null;
+  const s = String(d);
+  return new Date(s.endsWith('Z') || s.includes('+') ? s : s + 'Z');
+}
 function fmtDateTime(d) {
   if (!d) return '—';
-  return new Date(d).toLocaleString('es-MX', { dateStyle:'short', timeStyle:'short' });
+  return utc(d).toLocaleString('es-MX', { dateStyle:'short', timeStyle:'short' });
 }
 
 export default function CheckadorAdminPage() {
