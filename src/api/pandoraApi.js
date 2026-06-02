@@ -535,4 +535,21 @@ export const bitacoraApi = {
   getStats:        ()            => api.get('/bitacora/stats'),
 };
 
+export const mantenimientoApi = {
+  getAll:          (params = {}) => api.get('/mantenimiento', { params }),
+  getById:         (id)          => api.get(`/mantenimiento/${id}`),
+  create:          (data)        => api.post('/mantenimiento', data),
+  update:          (id, data)    => api.put(`/mantenimiento/${id}`, data),
+  remove:          (id)          => api.delete(`/mantenimiento/${id}`),
+  addSeguimiento:  (id, data)    => api.post(`/mantenimiento/${id}/seguimiento`, data),
+  getStats:        ()            => api.get('/mantenimiento/stats'),
+  uploadEvidencia: (id, file)    => {
+    const form = new FormData(); form.append('file', file);
+    return api.post(`/mantenimiento/${id}/evidencia`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  deleteEvidencia: (id, evId)    => api.delete(`/mantenimiento/${id}/evidencia/${evId}`),
+  getEvidenciaUrl: (id, evId)    => `${BASE_URL}/mantenimiento/${id}/evidencia/${evId}`,
+  exportCsv:       ()            => api.get('/mantenimiento/export', { responseType: 'blob' }),
+};
+
 export default api;

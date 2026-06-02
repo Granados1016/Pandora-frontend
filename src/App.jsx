@@ -4,6 +4,7 @@ import { ThemeProvider, CssBaseline, LinearProgress } from '@mui/material';
 import { ThemeModeProvider, useThemeMode } from './hooks/useThemeMode';
 import { AuthProvider, useAuth, MODULES, ROLES } from './hooks/useAuth.jsx';
 import Layout from './components/Layout';
+import AzulWidget from './components/AzulWidget';
 
 // Páginas críticas (siempre necesarias en el primer render)
 import Login          from './pages/Login';
@@ -65,6 +66,10 @@ const ActivosFijosPage   = lazy(() => import('./pages/activos/ActivosFijosPage')
 const BitacoraPage       = lazy(() => import('./pages/bitacora/BitacoraPage'));
 const BitacoraDetailPage = lazy(() => import('./pages/bitacora/BitacoraDetailPage'));
 
+// Mantenimiento
+const MantenimientoPage       = lazy(() => import('./pages/mantenimiento/MantenimientoPage'));
+const MantenimientoDetailPage = lazy(() => import('./pages/mantenimiento/MantenimientoDetailPage'));
+
 // ── Fallback global para Suspense ─────────────────────────────────────────────
 function PageLoader() {
   return <LinearProgress sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }} />;
@@ -111,6 +116,7 @@ function ProtectedRoute({
 // ── Rutas de la aplicación ────────────────────────────────────────────────────
 function AppRoutes() {
   return (
+    <>
     <Suspense fallback={<PageLoader />}>
     <Routes>
       {/* Pública */}
@@ -296,6 +302,18 @@ function AppRoutes() {
                 </ProtectedRoute>
               } />
 
+              {/* ── Mantenimiento ───────────────────────────────────────── */}
+              <Route path="/mantenimiento" element={
+                <ProtectedRoute requiredModule={MODULES.MANTENIMIENTO}>
+                  <MantenimientoPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/mantenimiento/:id" element={
+                <ProtectedRoute requiredModule={MODULES.MANTENIMIENTO}>
+                  <MantenimientoDetailPage />
+                </ProtectedRoute>
+              } />
+
               {/* ── Bitácora ─────────────────────────────────────────────── */}
               <Route path="/bitacora" element={
                 <ProtectedRoute requiredModule={MODULES.BITACORA}>
@@ -321,6 +339,9 @@ function AppRoutes() {
       } />
     </Routes>
     </Suspense>
+    {/* Widget Azul AI — visible en todas las páginas autenticadas */}
+    <AzulWidget />
+    </>
   );
 }
 

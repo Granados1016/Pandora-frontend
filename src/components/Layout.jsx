@@ -51,6 +51,7 @@ import LightModeIcon            from '@mui/icons-material/LightMode';
 import SchoolIcon               from '@mui/icons-material/School';
 import AccountBalanceIcon       from '@mui/icons-material/AccountBalance';
 import MenuBookIcon             from '@mui/icons-material/MenuBook';
+import EngineeringIcon          from '@mui/icons-material/Engineering';
 
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 import PandoraAI            from './PandoraAI';
@@ -254,6 +255,13 @@ export default function Layout({ children }) {
       show: hasModule(MODULES.ACTIVOS_FIJOS) || isAdmin,
       items: [
         { label: 'Activos Fijos', icon: <AccountBalanceIcon />, path: '/activos-fijos', show: hasModule(MODULES.ACTIVOS_FIJOS) || isAdmin },
+      ],
+    },
+    {
+      label: 'Mantenimiento',
+      show: hasModule(MODULES.MANTENIMIENTO) || isAdmin,
+      items: [
+        { label: 'Mantenimiento', icon: <EngineeringIcon />, path: '/mantenimiento', show: hasModule(MODULES.MANTENIMIENTO) || isAdmin },
       ],
     },
     {
