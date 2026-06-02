@@ -58,22 +58,48 @@ export default function CheckadorPage() {
 
   useEffect(() => { loadHoy(); }, [loadHoy]);
 
+  // Obtiene la mejor lectura GPS disponible en hasta 10 segundos.
+  // Usa watchPosition para acumular lecturas y quedarse con la más precisa.
   const obtenerGps = () => new Promise((resolve, reject) => {
     if (!navigator.geolocation) { reject('GPS no disponible en este dispositivo.'); return; }
     setGpsLoading(true); setGpsError('');
-    navigator.geolocation.getCurrentPosition(
+
+    let best = null;
+    let watchId = null;
+    const PRECISION_OBJETIVO = 50; // metros — acepta si logra ≤50m
+    const TIMEOUT_MS = 12000;      // espera máx 12 segundos
+
+    const finish = (result) => {
+      navigator.geolocation.clearWatch(watchId);
+      setGpsLoading(false);
+      if (result) { setGps(result); resolve(result); }
+      else { const msg = 'No se pudo obtener ubicación precisa.'; setGpsError(msg); reject(msg); }
+    };
+
+    const timer = setTimeout(() => finish(best), TIMEOUT_MS);
+
+    watchId = navigator.geolocation.watchPosition(
       pos => {
         const g = { lat: pos.coords.latitude, lng: pos.coords.longitude, precision: pos.coords.accuracy };
-        setGps(g); setGpsLoading(false); resolve(g);
+        if (!best || g.precision < best.precision) {
+          best = g;
+          setGps(g); // actualiza el indicador en tiempo real
+          if (g.precision <= PRECISION_OBJETIVO) {
+            clearTimeout(timer);
+            finish(g); // ya es suficientemente preciso
+          }
+        }
       },
       err => {
-        setGpsLoading(false);
+        clearTimeout(timer);
         const msg = err.code === 1 ? 'Permiso de ubicación denegado.'
                   : err.code === 2 ? 'Ubicación no disponible.'
-                  : 'Tiempo de espera agotado para obtener ubicación.';
-        setGpsError(msg); reject(msg);
+                  : 'Tiempo de espera agotado.';
+        setGpsLoading(false); setGpsError(msg);
+        if (best) resolve(best); // usa lo que tengamos aunque no sea ideal
+        else reject(msg);
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: TIMEOUT_MS, maximumAge: 0 }
     );
   });
 
@@ -139,7 +165,10 @@ export default function CheckadorPage() {
         <Paper elevation={0} sx={{ px: 2, py: 1, mb: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
           <Stack direction="row" alignItems="center" spacing={1}>
             {gpsLoading
-              ? <><CircularProgress size={16} /><Typography variant="caption" color="text.secondary">Obteniendo ubicación…</Typography></>
+              ? <><CircularProgress size={16} />
+                  <Typography variant="caption" color="text.secondary">
+                    {gps ? `Mejorando precisión… ±${Math.round(gps.precision)}m` : 'Obteniendo ubicación…'}
+                  </Typography></>
               : gps
               ? <><LocationOnIcon fontSize="small" color="success" />
                   <Typography variant="caption" color="success.main">
