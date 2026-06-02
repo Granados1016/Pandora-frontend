@@ -4,7 +4,7 @@ import {
   Box, Drawer, List, ListItem, ListItemButton, ListItemIcon, ListItemText,
   AppBar, Toolbar, Typography, IconButton, Divider, Avatar, Tooltip, Collapse,
   Badge, InputBase, Paper, Chip, Stack, ClickAwayListener, Popper, Dialog,
-  DialogTitle, DialogContent, DialogContentText, DialogActions, Button,
+  DialogTitle, DialogContent, DialogContentText, DialogActions, Button, CircularProgress,
 } from '@mui/material';
 
 // ── Íconos de navegación ──────────────────────────────────────────────────────
@@ -64,6 +64,8 @@ import { azulApi }  from '../api/azulApi';
 import { useThemeMode } from '../hooks/useThemeMode';
 import SessionWarning from './SessionWarning';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const EXPANDED_W  = 260;
@@ -309,6 +311,7 @@ export default function Layout({ children }) {
 
   // ── Notificaciones ──────────────────────────────────────────────────────────
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const { supported: pushSupported, subscribed: pushSubscribed, loading: pushLoading, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushNotifications();
   const [notifAnchor, setNotifAnchor] = useState(null);
   const notifOpen = Boolean(notifAnchor);
 
@@ -678,6 +681,15 @@ export default function Layout({ children }) {
           <IconButton color="inherit" onClick={() => setSearchOpen(s => !s)}>
             <SearchIcon />
           </IconButton>
+          {pushSupported && (
+            <Tooltip title={pushSubscribed ? 'Desactivar notificaciones push' : 'Activar notificaciones push'}>
+              <IconButton color="inherit" onClick={pushSubscribed ? pushUnsubscribe : pushSubscribe} disabled={pushLoading}>
+                {pushLoading
+                  ? <CircularProgress size={20} color="inherit" />
+                  : <NotificationsActiveIcon sx={{ opacity: pushSubscribed ? 1 : 0.4 }} />}
+              </IconButton>
+            </Tooltip>
+          )}
           <IconButton color="inherit" onClick={e => setNotifAnchor(notifAnchor ? null : e.currentTarget)}>
             <Badge badgeContent={unreadCount} color="error" max={99}>
               {unreadCount > 0 ? <NotificationsIcon /> : <NotificationsNoneIcon />}
