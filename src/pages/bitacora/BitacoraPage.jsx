@@ -136,10 +136,10 @@ export default function BitacoraPage() {
   const { isAdmin, hasModuleWrite } = useAuth();
   const navigate  = useNavigate();
   const canWrite  = isAdmin || hasModuleWrite(MODULES.BITACORA);
-  const { page, setPage, pageSize, setPageSize, pagedRows, totalPages } = useTablePager(rows);
 
   const [rows, setRows]         = useState([]);
   const [loading, setLoading]   = useState(false);
+  const { page, setPage, pageSize, setPageSize, pagedRows, totalPages } = useTablePager(rows);
   const [search, setSearch]     = useState('');
   const [fCategoria, setFCat]   = useState('');
   const [fEstado, setFEst]      = useState('');

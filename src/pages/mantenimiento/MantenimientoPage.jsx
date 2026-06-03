@@ -56,10 +56,10 @@ export default function MantenimientoPage() {
   const { isAdmin, hasModuleWrite } = useAuth();
   const navigate  = useNavigate();
   const canWrite  = isAdmin || hasModuleWrite(MODULES.MANTENIMIENTO);
-  const { page, setPage, pageSize, setPageSize, pagedRows } = useTablePager(rows);
 
   const [rows,     setRows]     = useState([]);
   const [stats,    setStats]    = useState(null);
+  const { page, setPage, pageSize, setPageSize, pagedRows } = useTablePager(rows);
   const [loading,  setLoading]  = useState(false);
   const [view,     setView]     = useState(0); // 0=tabla, 1=calendario
   const [creating, setCreating] = useState(false);
