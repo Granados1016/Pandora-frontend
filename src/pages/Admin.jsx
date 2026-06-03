@@ -26,7 +26,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import LockIcon from '@mui/icons-material/Lock';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import SecurityIcon from '@mui/icons-material/Security';
-import { userApi, adminApi, ticketApi, authApi } from '../api/pandoraApi';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import { userApi, adminApi, ticketApi, authApi, calendarApi } from '../api/pandoraApi';
 import { MODULE_LABELS, MODULES, SUB_MODULES, useAuth } from '../hooks/useAuth.jsx';
 
 const ALL_MODULES = Object.entries(MODULE_LABELS).map(([value, label]) => ({
@@ -306,6 +307,61 @@ export default function Admin() {
         : (e.response?.data || 'Error al eliminar el puesto.');
       setAreaConfigsMsg(`❌ ${msg}`);
     }
+  };
+
+  // ── Correos de notificación — Reservas de sala ───────────────────────────
+  const [calNotifEmails,    setCalNotifEmails]    = useState([]);
+  const [calNotifLoading,   setCalNotifLoading]   = useState(false);
+  const [calNotifMsg,       setCalNotifMsg]        = useState('');
+  const [calNotifMsgSev,    setCalNotifMsgSev]     = useState('success');
+  const [newCalEmail,       setNewCalEmail]        = useState('');
+  const [newCalDesc,        setNewCalDesc]         = useState('');
+  const [calEmailSaving,    setCalEmailSaving]     = useState(false);
+
+  const loadCalNotifEmails = () => {
+    setCalNotifLoading(true);
+    calendarApi.getNotifEmails()
+      .then(r => setCalNotifEmails(r.data))
+      .catch(() => { setCalNotifMsg('❌ Error al cargar correos.'); setCalNotifMsgSev('error'); })
+      .finally(() => setCalNotifLoading(false));
+  };
+
+  React.useEffect(() => { loadCalNotifEmails(); }, []);
+
+  const handleAddCalEmail = async () => {
+    if (!newCalEmail.trim()) return;
+    setCalEmailSaving(true);
+    setCalNotifMsg('');
+    try {
+      const { data } = await calendarApi.addNotifEmail({ email: newCalEmail.trim(), descripcion: newCalDesc.trim() || null });
+      setCalNotifEmails(prev => [...prev, { id: data.id, email: newCalEmail.trim(), descripcion: newCalDesc.trim() || null, activo: true }]);
+      setNewCalEmail('');
+      setNewCalDesc('');
+      setCalNotifMsg('✅ Correo agregado correctamente.');
+      setCalNotifMsgSev('success');
+    } catch (e) {
+      setCalNotifMsg(`❌ ${e.response?.data || 'Error al agregar el correo.'}`);
+      setCalNotifMsgSev('error');
+    } finally {
+      setCalEmailSaving(false);
+    }
+  };
+
+  const handleToggleCalEmail = async (id) => {
+    try {
+      await calendarApi.toggleNotifEmail(id);
+      setCalNotifEmails(prev => prev.map(e => e.id === id ? { ...e, activo: !e.activo } : e));
+    } catch { setCalNotifMsg('❌ Error al cambiar estado.'); setCalNotifMsgSev('error'); }
+  };
+
+  const handleDeleteCalEmail = async (id, email) => {
+    if (!confirm(`¿Eliminar el correo "${email}" de las notificaciones?`)) return;
+    try {
+      await calendarApi.deleteNotifEmail(id);
+      setCalNotifEmails(prev => prev.filter(e => e.id !== id));
+      setCalNotifMsg('✅ Correo eliminado.');
+      setCalNotifMsgSev('success');
+    } catch { setCalNotifMsg('❌ Error al eliminar.'); setCalNotifMsgSev('error'); }
   };
 
   const load = () =>
@@ -744,6 +800,95 @@ export default function Admin() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ── Correos de notificación — Reservas de sala ───────────────────── */}
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Stack direction="row" alignItems="center" spacing={1.5} mb={2}>
+            <CalendarMonthIcon color="primary" sx={{ fontSize: 26 }} />
+            <Box>
+              <Typography variant="h6" fontWeight={700}>Notificaciones de reservas de sala</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Estos correos recibirán una copia de cada reserva o actualización de sala, además del organizador.
+              </Typography>
+            </Box>
+          </Stack>
+
+          {calNotifMsg && (
+            <Alert severity={calNotifMsgSev} sx={{ mb: 2 }} onClose={() => setCalNotifMsg('')}>{calNotifMsg}</Alert>
+          )}
+
+          {calNotifLoading ? (
+            <Box textAlign="center" py={3}><CircularProgress /></Box>
+          ) : (
+            <>
+              {/* Tabla de correos actuales */}
+              {calNotifEmails.length > 0 && (
+                <TableContainer component={Paper} variant="outlined" sx={{ mb: 2 }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: 'primary.main' }}>
+                        <TableCell sx={{ color: 'white', fontWeight: 700 }}>Correo electrónico</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 700 }}>Descripción / Para qué es</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 700 }} align="center">Activo</TableCell>
+                        <TableCell sx={{ color: 'white', fontWeight: 700 }} align="center">Eliminar</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {calNotifEmails.map((item, i) => (
+                        <TableRow key={item.id} sx={{ bgcolor: i % 2 === 0 ? 'white' : 'grey.50' }}>
+                          <TableCell sx={{ fontFamily: 'monospace', fontSize: 13 }}>{item.email}</TableCell>
+                          <TableCell sx={{ color: 'text.secondary', fontSize: 13 }}>{item.descripcion || '—'}</TableCell>
+                          <TableCell align="center">
+                            <Switch
+                              checked={item.activo}
+                              onChange={() => handleToggleCalEmail(item.id)}
+                              color="success" size="small"
+                            />
+                          </TableCell>
+                          <TableCell align="center">
+                            <IconButton size="small" color="error" onClick={() => handleDeleteCalEmail(item.id, item.email)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+
+              {/* Formulario agregar nuevo correo */}
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems="flex-start">
+                <TextField
+                  label="Correo electrónico" type="email" size="small"
+                  value={newCalEmail}
+                  onChange={e => setNewCalEmail(e.target.value)}
+                  placeholder="correo@empresa.com"
+                  sx={{ minWidth: 240 }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddCalEmail(); }}
+                />
+                <TextField
+                  label="Descripción (para qué es)" size="small"
+                  value={newCalDesc}
+                  onChange={e => setNewCalDesc(e.target.value)}
+                  placeholder="Ej: Asistente de Administración"
+                  sx={{ minWidth: 240, flexGrow: 1 }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddCalEmail(); }}
+                />
+                <Button
+                  variant="contained" startIcon={calEmailSaving ? <CircularProgress size={16} color="inherit" /> : <AddIcon />}
+                  onClick={handleAddCalEmail}
+                  disabled={calEmailSaving || !newCalEmail.trim()}
+                  sx={{ height: 40, borderRadius: 2, whiteSpace: 'nowrap' }}
+                >
+                  {calEmailSaving ? 'Agregando...' : 'Agregar correo'}
+                </Button>
+              </Stack>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ── Usuarios ──────────────────────────────────────────────────────── */}
       <Stack direction="row" alignItems="center" spacing={1.5} mb={2}>

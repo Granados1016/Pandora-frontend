@@ -292,6 +292,12 @@ export const calendarApi = {
     a.href = href; a.download = 'pandora-calendar.ics'; a.click();
     URL.revokeObjectURL(href);
   },
+
+  // Correos de notificación de reservas de sala (Admin)
+  getNotifEmails:    ()     => api.get('/calendar/notification-emails'),
+  addNotifEmail:     (data) => api.post('/calendar/notification-emails', data),
+  toggleNotifEmail:  (id)   => api.patch(`/calendar/notification-emails/${id}/toggle`),
+  deleteNotifEmail:  (id)   => api.delete(`/calendar/notification-emails/${id}`),
 };
 
 export const roomRequestApi = {
