@@ -14,6 +14,7 @@ import LogoutIcon      from '@mui/icons-material/Logout';
 import WarningIcon     from '@mui/icons-material/Warning';
 import MapIcon         from '@mui/icons-material/Map';
 import { checadorApi } from '../../api/pandoraApi';
+import TablePager, { useTablePager } from '../../components/TablePager';
 
 function utc(d) {
   if (!d) return null;
@@ -29,7 +30,8 @@ export default function CheckadorAdminPage() {
   const [registros, setRegistros] = useState([]);
   const [stats,     setStats]     = useState(null);
   const [loading,   setLoading]   = useState(false);
-  const [mapReg,    setMapReg]    = useState(null); // registro a mostrar en mapa
+  const [mapReg,    setMapReg]    = useState(null);
+  const { page, setPage, pageSize, setPageSize, pagedRows } = useTablePager(registros); // registro a mostrar en mapa
 
   const [fUsuario, setFUsuario] = useState('');
   const [fTipo,    setFTipo]    = useState('');
@@ -146,7 +148,7 @@ export default function CheckadorAdminPage() {
                   </TableCell>
                 </TableRow>
               )}
-              {registros.map(r => (
+              {pagedRows.map(r => (
                 <TableRow key={r.id} hover>
                   <TableCell>
                     <Typography variant="body2" fontWeight={600}>{r.userName}</Typography>
@@ -188,6 +190,7 @@ export default function CheckadorAdminPage() {
             </TableBody>
           </Table>
         </TableContainer>
+        <TablePager total={registros.length} page={page} setPage={setPage} pageSize={pageSize} setPageSize={setPageSize} />
       </Paper>
 
       {/* Modal mapa */}

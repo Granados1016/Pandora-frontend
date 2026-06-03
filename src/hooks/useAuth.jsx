@@ -224,6 +224,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       token, username, fullName, role, modules, modulesViewOnly, isAdmin,
       hasModule, hasSubModule, hasModuleWrite, hasRole, login, loginWithToken, logout, isAuthenticated: !!token,
+      tokenExp: claims.exp ?? null,
     }}>
       {children}
     </AuthContext.Provider>

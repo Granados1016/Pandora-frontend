@@ -1,6 +1,42 @@
-// ── Pandora Service Worker — Push Notifications ───────────────────────────────
-self.addEventListener('install',  () => self.skipWaiting());
-self.addEventListener('activate', e  => e.waitUntil(self.clients.claim()));
+// ── Pandora Service Worker — Push Notifications + PWA Cache ──────────────────
+const CACHE_NAME = 'pandora-v1';
+const OFFLINE_ASSETS = ['/', '/index.html'];
+
+self.addEventListener('install', e => {
+  self.skipWaiting();
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(c => c.addAll(OFFLINE_ASSETS).catch(() => {}))
+  );
+});
+
+self.addEventListener('activate', e => e.waitUntil(
+  Promise.all([
+    self.clients.claim(),
+    // Eliminar cachés viejos
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+    )),
+  ])
+));
+
+// Network-first para API, cache-first para assets estáticos
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'GET') return;
+  if (url.pathname.startsWith('/api/')) return; // no cachear API
+
+  e.respondWith(
+    fetch(e.request)
+      .then(res => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+        }
+        return res;
+      })
+      .catch(() => caches.match(e.request))
+  );
+});
 
 self.addEventListener('push', event => {
   if (!event.data) return;

@@ -23,6 +23,7 @@ import AccessTimeIcon   from '@mui/icons-material/AccessTime';
 import { mantenimientoApi } from '../../api/pandoraApi';
 import { useAuth, MODULES } from '../../hooks/useAuth.jsx';
 import MantenimientoForm from './MantenimientoForm';
+import TablePager, { useTablePager } from '../../components/TablePager';
 
 const TIPOS      = ['Preventivo', 'Correctivo', 'Predictivo', 'Limpieza'];
 const ESTADOS    = ['Programado', 'En Proceso', 'Completado', 'Cancelado'];
@@ -55,6 +56,7 @@ export default function MantenimientoPage() {
   const { isAdmin, hasModuleWrite } = useAuth();
   const navigate  = useNavigate();
   const canWrite  = isAdmin || hasModuleWrite(MODULES.MANTENIMIENTO);
+  const { page, setPage, pageSize, setPageSize, pagedRows } = useTablePager(rows);
 
   const [rows,     setRows]     = useState([]);
   const [stats,    setStats]    = useState(null);
@@ -223,7 +225,7 @@ export default function MantenimientoPage() {
                     </TableCell>
                   </TableRow>
                 )}
-                {rows.map(row => {
+                {pagedRows.map(row => {
                   const vencido = new Date(row.fechaProgramada) < new Date() && !['Completado','Cancelado'].includes(row.estado);
                   return (
                     <TableRow key={row.id} hover sx={{ cursor: 'pointer' }}
@@ -265,6 +267,7 @@ export default function MantenimientoPage() {
               </TableBody>
             </Table>
           </TableContainer>
+          <TablePager total={rows.length} page={page} setPage={setPage} pageSize={pageSize} setPageSize={setPageSize} />
         </Paper>
       )}
 

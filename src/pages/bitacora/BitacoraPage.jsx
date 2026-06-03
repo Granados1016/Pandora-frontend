@@ -15,6 +15,7 @@ import CheckCircleIcon    from '@mui/icons-material/CheckCircle';
 import AccessTimeIcon     from '@mui/icons-material/AccessTime';
 import WarningAmberIcon   from '@mui/icons-material/WarningAmber';
 import { bitacoraApi }    from '../../api/pandoraApi';
+import TablePager, { useTablePager } from '../../components/TablePager';
 import { useAuth, MODULES } from '../../hooks/useAuth.jsx';
 
 // ── Catálogos ─────────────────────────────────────────────────────────────────
@@ -135,6 +136,7 @@ export default function BitacoraPage() {
   const { isAdmin, hasModuleWrite } = useAuth();
   const navigate  = useNavigate();
   const canWrite  = isAdmin || hasModuleWrite(MODULES.BITACORA);
+  const { page, setPage, pageSize, setPageSize, pagedRows, totalPages } = useTablePager(rows);
 
   const [rows, setRows]         = useState([]);
   const [loading, setLoading]   = useState(false);
@@ -290,7 +292,7 @@ export default function BitacoraPage() {
                   </TableCell>
                 </TableRow>
               )}
-              {rows.map(row => (
+              {pagedRows.map(row => (
                 <TableRow key={row.id} hover sx={{ cursor: 'pointer' }}
                   onClick={() => navigate(`/bitacora/${row.id}`)}>
                   <TableCell sx={{ fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}>
@@ -331,6 +333,7 @@ export default function BitacoraPage() {
             </TableBody>
           </Table>
         </TableContainer>
+        <TablePager total={rows.length} page={page} setPage={setPage} pageSize={pageSize} setPageSize={setPageSize} />
       </Paper>
 
       {/* Modal crear */}
