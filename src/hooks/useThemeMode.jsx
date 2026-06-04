@@ -3,7 +3,6 @@ import { createTheme } from '@mui/material/styles';
 
 const ThemeModeContext = createContext();
 
-// ── Paleta base compartida ────────────────────────────────────────────────────
 const baseTypography = {
   fontFamily: 'Inter, sans-serif',
   h4: { fontWeight: 700 },
@@ -16,14 +15,15 @@ const baseComponents = {
   MuiChip:    { styleOverrides: { root: { fontWeight: 600 } } },
 };
 
-function buildTheme(mode) {
+// ── buildTheme acepta colores de tenant para white-label ─────────────────────
+function buildTheme(mode, primaryColor = '#1a237e', secondaryColor = '#e65100') {
   return createTheme({
     palette: {
       mode,
-      primary:    { main: '#1a237e', light: '#534bae', dark: '#000051', contrastText: '#fff' },
-      secondary:  { main: '#e65100', light: '#ff833a', dark: '#ac1900', contrastText: '#fff' },
-      success:    { main: '#2e7d32' },
-      error:      { main: '#c62828' },
+      primary:   { main: primaryColor,   contrastText: '#fff' },
+      secondary: { main: secondaryColor, contrastText: '#fff' },
+      success:   { main: '#2e7d32' },
+      error:     { main: '#c62828' },
       ...(mode === 'dark'
         ? { background: { default: '#0d1117', paper: '#161b27' } }
         : { background: { default: '#f0f2f5', paper: '#ffffff' } }),
@@ -56,6 +56,14 @@ export function ThemeModeProvider({ children }) {
     () => localStorage.getItem('pandora_theme') || 'light'
   );
 
+  // Colores del tenant — se actualizan después del login desde App.jsx
+  const [tenantColors, setTenantColors] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('pandora_tenant') || 'null');
+      return saved ? { primary: saved.primaryColor, secondary: saved.secondaryColor } : null;
+    } catch { return null; }
+  });
+
   const toggleMode = () => {
     setMode(prev => {
       const next = prev === 'light' ? 'dark' : 'light';
@@ -64,10 +72,13 @@ export function ThemeModeProvider({ children }) {
     });
   };
 
-  const theme = useMemo(() => buildTheme(mode), [mode]);
+  const theme = useMemo(
+    () => buildTheme(mode, tenantColors?.primary, tenantColors?.secondary),
+    [mode, tenantColors]
+  );
 
   return (
-    <ThemeModeContext.Provider value={{ mode, toggleMode, theme }}>
+    <ThemeModeContext.Provider value={{ mode, toggleMode, theme, setTenantColors }}>
       {children}
     </ThemeModeContext.Provider>
   );

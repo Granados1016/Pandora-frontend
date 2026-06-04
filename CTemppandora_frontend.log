@@ -1,0 +1,39 @@
+
+> pandora-frontend@1.0.0 dev
+> vite
+
+Re-optimizing dependencies because lockfile has changed
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m4067[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m3000[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.84.1:[1m3000[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.80.1:[1m3000[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.0.54:[1m3000[22m/[39m
+[2m8:33:57 p.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PandoraAI.jsx[22m
+[2m10:25:19 a.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/Login.jsx, /src/hooks/useAuth.jsx, /src/pages/ForgotPassword.jsx, /src/components/Layout.jsx, /src/pages/ResetPassword.jsx, /src/components/SessionWarning.jsx, /src/components/dashboard/Widgets.jsx, /src/pages/tickets/TicketsListPage.jsx, /src/pages/tickets/TicketDetailPage.jsx, /src/pages/tickets/TicketFormPage.jsx, /src/pages/comunicados/ComunicadosPage.jsx[22m
+[2m10:25:21 a.m.[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/hooks/useAuth.jsx[22m Could not Fast Refresh ("MODULES" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m10:25:21 a.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/pages/Unauthorized.jsx, /src/pages/Login.jsx, /src/components/Layout.jsx, /src/components/PandoraAI.jsx, /src/pages/Dashboard.jsx, /src/components/dashboard/Widgets.jsx, /src/pages/tickets/TicketsListPage.jsx, /src/pages/tickets/TicketDetailPage.jsx, /src/pages/tickets/TicketFormPage.jsx, /src/pages/comunicados/ComunicadosPage.jsx[22m
+[2m10:25:36 a.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/hooks/useAuth.jsx[22m
+[2m10:25:37 a.m.[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/hooks/useAuth.jsx[22m Could not Fast Refresh ("MODULES" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m10:25:37 a.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/pages/Unauthorized.jsx, /src/pages/Login.jsx, /src/components/Layout.jsx, /src/components/PandoraAI.jsx, /src/pages/Dashboard.jsx, /src/components/dashboard/Widgets.jsx, /src/pages/tickets/TicketsListPage.jsx, /src/pages/tickets/TicketDetailPage.jsx, /src/pages/tickets/TicketFormPage.jsx, /src/pages/comunicados/ComunicadosPage.jsx[22m
+[2m10:25:40 a.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/hooks/useAuth.jsx[22m
+[2m10:25:41 a.m.[22m [36m[1m[vite][22m[39m [33mhmr invalidate [39m[2m/src/hooks/useAuth.jsx[22m Could not Fast Refresh ("MODULES" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+[2m10:25:41 a.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/pages/Unauthorized.jsx, /src/pages/Login.jsx, /src/components/Layout.jsx, /src/components/PandoraAI.jsx, /src/pages/Dashboard.jsx, /src/components/dashboard/Widgets.jsx, /src/pages/tickets/TicketsListPage.jsx, /src/pages/tickets/TicketDetailPage.jsx, /src/pages/tickets/TicketFormPage.jsx, /src/pages/comunicados/ComunicadosPage.jsx[22m
+[2m10:25:45 a.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m10:25:59 a.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m10:26:06 a.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Layout.jsx[22m
+[2m10:26:11 a.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Layout.jsx[22m
+[2m10:27:24 a.m.[22m [36m[1m[vite][22m[39m [32m✨ new dependencies optimized: [33m@mui/icons-material/MenuBook[32m[39m
+[2m10:27:24 a.m.[22m [36m[1m[vite][22m[39m [32m✨ optimized dependencies changed. reloading[39m
+[2m11:05:00 a.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m11:05:05 a.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx[22m
+[2m1:21:26 p.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PandoraAI.jsx[22m
+[2m1:21:33 p.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Layout.jsx[22m
+[2m1:21:44 p.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/Layout.jsx[22m
+[2m2:30:44 p.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/tickets/TicketsListPage.jsx[22m
+[2m2:30:48 p.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/tickets/TicketsListPage.jsx[22m
+[2m3:30:55 p.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PandoraAI.jsx, /src/components/Layout.jsx[22m
+[2m3:31:16 p.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PandoraAI.jsx[22m
+[2m3:31:22 p.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PandoraAI.jsx[22m
+[2m3:31:37 p.m.[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/PandoraAI.jsx[22m

@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider, CssBaseline, LinearProgress } from '@mui/material';
 import { ThemeModeProvider, useThemeMode } from './hooks/useThemeMode';
@@ -76,6 +76,9 @@ const MantenimientoDetailPage = lazy(() => import('./pages/mantenimiento/Manteni
 // Checador
 const CheckadorPage      = lazy(() => import('./pages/checador/CheckadorPage'));
 const CheckadorAdminPage = lazy(() => import('./pages/checador/CheckadorAdminPage'));
+
+// Super Admin — Panel de tenants
+const TenantsPage = lazy(() => import('./pages/superadmin/TenantsPage'));
 
 // ── Fallback global para Suspense ─────────────────────────────────────────────
 function PageLoader() {
@@ -359,6 +362,13 @@ function AppRoutes() {
                 </ProtectedRoute>
               } />
 
+              {/* ── Panel de Tenants — Solo Super Admin ─────────────────── */}
+              <Route path="/super-admin/tenants" element={
+                <ProtectedRoute adminOnly>
+                  <TenantsPage />
+                </ProtectedRoute>
+              } />
+
             </Routes>
           </Layout>
         </ProtectedRoute>
@@ -371,12 +381,30 @@ function AppRoutes() {
   );
 }
 
+// Sincroniza el branding del tenant con el tema MUI al iniciar y al cambiar
+function TenantThemeSync() {
+  const { tenantBranding } = useAuth();
+  const { setTenantColors } = useThemeMode();
+  useEffect(() => {
+    if (tenantBranding?.primaryColor) {
+      setTenantColors({
+        primary:   tenantBranding.primaryColor,
+        secondary: tenantBranding.secondaryColor ?? '#e65100',
+      });
+    } else {
+      setTenantColors(null);
+    }
+  }, [tenantBranding, setTenantColors]);
+  return null;
+}
+
 function ThemedApp() {
   const { theme } = useThemeMode();
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
+        <TenantThemeSync />
         <AppRoutes />
       </AuthProvider>
     </ThemeProvider>

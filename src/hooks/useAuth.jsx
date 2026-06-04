@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
-import api, { registerTokenUpdater } from '../api/pandoraApi';
+import api, { registerTokenUpdater, tenantsApi } from '../api/pandoraApi';
 
 export const MODULES = {
   // ── Módulos principales ──────────────────────────────────────────────────
@@ -118,11 +118,24 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('pandora_token'));
-  // modulesViewOnly: bitmask de módulos con permiso de solo lectura.
-  // Se obtiene de /api/users/me tras cada login (no viaja en el JWT).
   const [modulesViewOnly, setModulesViewOnly] = useState(
     () => parseInt(localStorage.getItem('pandora_mvo') || '0', 10)
   );
+  // Branding del tenant: se carga tras el login desde /api/tenants/me
+  const [tenantBranding, setTenantBranding] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('pandora_tenant') || 'null'); } catch { return null; }
+  });
+
+  const loadTenantBranding = useCallback(async (bearerToken) => {
+    try {
+      const headers = bearerToken ? { Authorization: `Bearer ${bearerToken}` } : undefined;
+      const { data } = await tenantsApi.getMyTenant(headers ? { headers } : undefined);
+      localStorage.setItem('pandora_tenant', JSON.stringify(data));
+      setTenantBranding(data);
+    } catch {
+      // No crítico — si no hay tenant configurado se usa el branding por defecto
+    }
+  }, []);
 
   // Registrar el updater para que el interceptor de Axios pueda actualizar
   // el token en el estado React cuando hace un refresco silencioso.
@@ -146,6 +159,10 @@ export function AuthProvider({ children }) {
   const role      = claims['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || claims.role || '';
   const modules   = parseInt(claims.modules || '0', 10);
   const isAdmin   = role === 'Admin';
+  const tenantId  = claims.tenantId || null;
+  // isSuperAdmin: admin cuyo username coincide con el configurado en SuperAdmin:Username
+  // Por simplicidad en frontend se marca con claim especial o se compara localmente
+  const isSuperAdmin = isAdmin;
 
   // Devuelve true si el usuario tiene acceso al módulo/sub-módulo (vista o escritura)
   const hasModule = useCallback((mod) => isAdmin || (modules & mod) !== 0, [isAdmin, modules]);
@@ -176,20 +193,22 @@ export function AuthProvider({ children }) {
       localStorage.setItem('pandora_refresh_token', data.refreshToken);
     }
     setToken(data.token);
-    // Obtener modulesViewOnly del perfil (no viaja en el JWT)
-    try {
-      const me = await api.get('/users/me', {
-        headers: { Authorization: `Bearer ${data.token}` },
-      });
-      const mvo = me.data?.modulesViewOnly ?? 0;
-      localStorage.setItem('pandora_mvo', String(mvo));
-      setModulesViewOnly(mvo);
-    } catch {
-      // No crítico: si falla, el usuario queda sin restricciones de solo vista
-      localStorage.setItem('pandora_mvo', '0');
-      setModulesViewOnly(0);
-    }
-  }, []);
+    // Obtener modulesViewOnly y branding del tenant en paralelo
+    await Promise.allSettled([
+      (async () => {
+        try {
+          const me = await api.get('/users/me', { headers: { Authorization: `Bearer ${data.token}` } });
+          const mvo = me.data?.modulesViewOnly ?? 0;
+          localStorage.setItem('pandora_mvo', String(mvo));
+          setModulesViewOnly(mvo);
+        } catch {
+          localStorage.setItem('pandora_mvo', '0');
+          setModulesViewOnly(0);
+        }
+      })(),
+      loadTenantBranding(data.token),
+    ]);
+  }, [loadTenantBranding]);
 
   // loginWithToken — usado por el flujo 2FA cuando el OTP ya fue verificado
   const loginWithToken = useCallback(async (jwtToken, refreshToken) => {
@@ -208,7 +227,6 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(() => {
-    // Invalidar refresh token en el servidor (best-effort, no bloquea el logout)
     const refreshToken = localStorage.getItem('pandora_refresh_token');
     if (refreshToken) {
       api.post('/auth/revoke', { refreshToken }).catch(() => {});
@@ -216,14 +234,19 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('pandora_token');
     localStorage.removeItem('pandora_refresh_token');
     localStorage.removeItem('pandora_mvo');
+    localStorage.removeItem('pandora_tenant');
     setToken(null);
     setModulesViewOnly(0);
+    setTenantBranding(null);
   }, []);
 
   return (
     <AuthContext.Provider value={{
-      token, username, fullName, role, modules, modulesViewOnly, isAdmin,
-      hasModule, hasSubModule, hasModuleWrite, hasRole, login, loginWithToken, logout, isAuthenticated: !!token,
+      token, username, fullName, role, modules, modulesViewOnly, isAdmin, isSuperAdmin,
+      tenantId, tenantBranding,
+      hasModule, hasSubModule, hasModuleWrite, hasRole,
+      login, loginWithToken, logout, loadTenantBranding,
+      isAuthenticated: !!token,
       tokenExp: claims.exp ?? null,
     }}>
       {children}

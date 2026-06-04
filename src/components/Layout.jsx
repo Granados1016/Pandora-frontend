@@ -57,6 +57,7 @@ import AccessTimeIcon           from '@mui/icons-material/AccessTime';
 import TrendingUpIcon           from '@mui/icons-material/TrendingUp';
 
 import { useAuth, MODULES } from '../hooks/useAuth.jsx';
+import LicenseBanner from './LicenseBanner';
 import PandoraAI            from './PandoraAI';
 import { useNotifications } from '../hooks/useNotifications';
 import { searchApi } from '../api/pandoraApi';
@@ -78,8 +79,31 @@ const TRANSITION = 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
 export default function Layout({ children }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { username, fullName, isAdmin, hasModule, hasSubModule, hasModuleWrite, logout } = useAuth();
+  const { username, fullName, isAdmin, hasModule, hasSubModule, hasModuleWrite, logout, tenantBranding } = useAuth();
   const { mode, toggleMode } = useThemeMode();
+
+  // ── White-label: título del tab y favicon dinámicos ──────────────────────
+  React.useEffect(() => {
+    const name = tenantBranding?.displayName || 'Pandora';
+    document.title = `${name} — Sistema de Gestión`;
+    // Favicon dinámico con color del tenant
+    const color = tenantBranding?.primaryColor || '#1A237E';
+    const canvas = document.createElement('canvas');
+    canvas.width = 32; canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = color;
+    ctx.roundRect(0, 0, 32, 32, 6);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 18px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText((name[0] || 'P').toUpperCase(), 16, 17);
+    const link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+    link.type = 'image/x-icon'; link.rel = 'shortcut icon';
+    link.href = canvas.toDataURL();
+    document.head.appendChild(link);
+  }, [tenantBranding]);
 
   // Estado del sidebar (desktop)
   const [open, setOpen] = useState(
@@ -303,8 +327,9 @@ export default function Layout({ children }) {
       label: 'Sistema',
       show: isAdmin,
       items: [
-        { label: 'Administración', icon: <AdminPanelSettingsIcon />, path: '/admin',       show: isAdmin },
-        { label: 'Log de Auditoría', icon: <HistoryIcon />,          path: '/admin/audit', show: isAdmin },
+        { label: 'Administración',   icon: <AdminPanelSettingsIcon />, path: '/admin',                  show: isAdmin },
+        { label: 'Log de Auditoría', icon: <HistoryIcon />,            path: '/admin/audit',            show: isAdmin },
+        { label: 'Panel de Clientes',icon: <ApartmentIcon />,          path: '/super-admin/tenants',    show: isAdmin },
       ],
     },
   ];
@@ -455,22 +480,42 @@ export default function Layout({ children }) {
         }}
       >
         {open || isDrawer ? (
-          <Box>
-            <Typography variant="h5" fontWeight={800} color="white" letterSpacing={2}>
-              PANDORA
-            </Typography>
-            <Typography variant="caption" color="rgba(255,255,255,0.5)" display="block" mt={0.25}>
-              Sistema de Gestión
-            </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            {/* Logo del tenant si existe */}
+            {tenantBranding?.logo && (
+              <Box
+                component="img"
+                src={tenantBranding.logo}
+                alt="logo"
+                sx={{ height: 36, width: 36, borderRadius: 1, objectFit: 'contain', bgcolor: 'white', p: '2px' }}
+              />
+            )}
+            <Box>
+              <Typography variant="h5" fontWeight={800} color="white" letterSpacing={2}>
+                {tenantBranding?.displayName || 'PANDORA'}
+              </Typography>
+              <Typography variant="caption" color="rgba(255,255,255,0.5)" display="block" mt={0.25}>
+                Sistema de Gestión
+              </Typography>
+            </Box>
           </Box>
         ) : (
-          <Tooltip title="PANDORA" placement="right" arrow>
-            <Typography
-              fontWeight={900} fontSize={20} color="white"
-              sx={{ cursor: 'default', letterSpacing: 1 }}
-            >
-              P
-            </Typography>
+          <Tooltip title={tenantBranding?.displayName || 'PANDORA'} placement="right" arrow>
+            {tenantBranding?.logo ? (
+              <Box
+                component="img"
+                src={tenantBranding.logo}
+                alt="logo"
+                sx={{ height: 32, width: 32, borderRadius: 1, objectFit: 'contain', bgcolor: 'white', p: '2px' }}
+              />
+            ) : (
+              <Typography
+                fontWeight={900} fontSize={20} color="white"
+                sx={{ cursor: 'default', letterSpacing: 1 }}
+              >
+                {(tenantBranding?.displayName || 'P')[0].toUpperCase()}
+              </Typography>
+            )}
           </Tooltip>
         )}
       </Box>
@@ -677,7 +722,9 @@ export default function Layout({ children }) {
           <IconButton color="inherit" onClick={() => setMobileOpen(!mobileOpen)}>
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" fontWeight={800} ml={1} flex={1}>PANDORA</Typography>
+          <Typography variant="h6" fontWeight={800} ml={1} flex={1}>
+            {tenantBranding?.displayName || 'PANDORA'}
+          </Typography>
           <IconButton color="inherit" onClick={() => setSearchOpen(s => !s)}>
             <SearchIcon />
           </IconButton>
@@ -816,6 +863,7 @@ export default function Layout({ children }) {
           </Tooltip>
         </Box>
 
+        <LicenseBanner />
         {children}
       </Box>
 

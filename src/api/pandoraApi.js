@@ -576,4 +576,20 @@ export const checadorApi = {
   deleteSitio:  (id)           => api.delete(`/checador/sitios/${id}`),
 };
 
+// ── Tenants (multi-tenant — panel maestro) ────────────────────────────────────
+export const tenantsApi = {
+  getAll:       ()           => api.get('/tenants'),
+  getById:      (id)         => api.get(`/tenants/${id}`),
+  create:       (data)       => api.post('/tenants', data),
+  update:       (id, data)   => api.put(`/tenants/${id}`, data),
+  toggle:       (id)         => api.patch(`/tenants/${id}/toggle`),
+  uploadLogo:   (id, file)   => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post(`/tenants/${id}/logo`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  getMyTenant:  ()           => api.get('/tenants/me'),
+  getStats:     (id)         => api.get(`/tenants/${id}/stats`),
+};
+
 export default api;

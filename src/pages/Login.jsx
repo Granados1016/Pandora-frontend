@@ -41,13 +41,16 @@ export default function Login() {
       await login(form.username, form.password);
       navigate(from, { replace: true });
     } catch (err) {
-      // Check if 2FA is required (backend returns 202 + requires2FA flag)
       const res = err?.response;
       if (res?.status === 202 && res?.data?.requires2FA) {
         await authApi.sendOtp(form.username);
         setOtpSent(true);
         setStep('otp');
         setError('');
+      } else if (res?.status === 403 && res?.data?.error === 'license_suspended') {
+        setError('🔒 ' + (res.data.message || 'Acceso suspendido. Contacte al proveedor.'));
+      } else if (res?.status === 403 && res?.data?.error === 'license_expired') {
+        setError('📅 ' + (res.data.message || 'La licencia ha expirado. Contacte al proveedor.'));
       } else {
         setError('Usuario o contraseña incorrectos.');
       }
