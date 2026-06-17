@@ -128,8 +128,8 @@ export function AuthProvider({ children }) {
 
   const loadTenantBranding = useCallback(async (bearerToken) => {
     try {
-      const headers = bearerToken ? { Authorization: `Bearer ${bearerToken}` } : undefined;
-      const { data } = await tenantsApi.getMyTenant(headers ? { headers } : undefined);
+      // Pasar el token directamente para evitar race condition con localStorage
+      const { data } = await tenantsApi.getMyTenant(bearerToken);
       localStorage.setItem('pandora_tenant', JSON.stringify(data));
       setTenantBranding(data);
     } catch {

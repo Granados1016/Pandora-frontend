@@ -17,6 +17,8 @@ import CloseIcon              from '@mui/icons-material/Close';
 import AttachFileIcon         from '@mui/icons-material/AttachFile';
 import FileDownloadIcon       from '@mui/icons-material/FileDownload';
 import GroupIcon              from '@mui/icons-material/Group';
+import CalendarMonthIcon      from '@mui/icons-material/CalendarMonth';
+import SupervisorAccountIcon  from '@mui/icons-material/SupervisorAccount';
 import { DatePicker }         from '@mui/x-date-pickers/DatePicker';
 import { AdapterDayjs }       from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -38,8 +40,20 @@ function TabPanel({ value, index, children }) {
   return value === index ? <Box sx={{ pt: 2 }}>{children}</Box> : null;
 }
 
+// ── Badge de etapa de aprobación ──────────────────────────────────────────────
+function StageBadge({ stage }) {
+  const map = {
+    PendienteJefe:  { label: 'Pendiente Jefe',  color: 'warning' },
+    PendienteRRHH:  { label: 'Pendiente RRHH',  color: 'info' },
+    Aprobado:       { label: 'Aprobado',         color: 'success' },
+    Rechazado:      { label: 'Rechazado',        color: 'error' },
+  };
+  const { label, color } = map[stage] ?? { label: stage, color: 'default' };
+  return <Chip label={label} color={color} size="small" variant="outlined" />;
+}
+
 // ════════════════════════════════════════════════════════════════════════════════
-// Pestaña 1: Solicitudes pendientes
+// Pestaña 1: Solicitudes — flujo multi-nivel
 // ════════════════════════════════════════════════════════════════════════════════
 function TabSolicitudes({ filterStatus, setFilterStatus }) {
   const [solicitudes, setSolicitudes] = useState([]);
@@ -91,10 +105,10 @@ function TabSolicitudes({ filterStatus, setFilterStatus }) {
   const handleReview = async () => {
     setSaving(true);
     try {
-      await api.put(`/vacaciones/admin/${reviewDlg.id}/revisar`, {
-        status: reviewDlg.action,
-        notes:  reviewNote || null,
-      });
+      const endpoint = reviewDlg.level === 'jefe'
+        ? `/vacaciones/jefe/${reviewDlg.id}/revisar`
+        : `/vacaciones/admin/${reviewDlg.id}/revisar`;
+      await api.put(endpoint, { status: reviewDlg.action, notes: reviewNote || null });
       setReviewDlg(null);
       setReviewNote('');
       load();
@@ -133,9 +147,9 @@ function TabSolicitudes({ filterStatus, setFilterStatus }) {
                 <TableCell><strong>Tipo</strong></TableCell>
                 <TableCell><strong>Fechas</strong></TableCell>
                 <TableCell align="center"><strong>Días</strong></TableCell>
-                <TableCell><strong>Estado</strong></TableCell>
+                <TableCell><strong>Etapa</strong></TableCell>
                 <TableCell><strong>Nota</strong></TableCell>
-                <TableCell align="center"><strong>Documento</strong></TableCell>
+                <TableCell align="center"><strong>Doc</strong></TableCell>
                 <TableCell align="center"><strong>Acciones</strong></TableCell>
               </TableRow>
             </TableHead>
@@ -153,12 +167,18 @@ function TabSolicitudes({ filterStatus, setFilterStatus }) {
                   </TableCell>
                   <TableCell align="center">{s.totalDays}</TableCell>
                   <TableCell>
-                    <Chip label={s.status} color={STATUS_COLOR[s.status] || 'default'} size="small" />
+                    <StageBadge stage={s.approvalStage || 'PendienteJefe'} />
+                    {s.jefeReviewedBy && (
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        Jefe: {s.jefeReviewedBy}
+                      </Typography>
+                    )}
                   </TableCell>
-                  <TableCell sx={{ maxWidth: 180 }}>
-                    <Typography variant="caption" sx={{ wordBreak: 'break-word' }}>{s.notes || '—'}</Typography>
+                  <TableCell sx={{ maxWidth: 160 }}>
+                    <Typography variant="caption" sx={{ wordBreak: 'break-word' }}>
+                      {s.jefeNotes || s.notes || '—'}
+                    </Typography>
                   </TableCell>
-                  {/* Columna Documento */}
                   <TableCell align="center">
                     {s.hasDocument ? (
                       <Tooltip title="Ver documento adjunto">
@@ -167,27 +187,37 @@ function TabSolicitudes({ filterStatus, setFilterStatus }) {
                         </IconButton>
                       </Tooltip>
                     ) : (
-                      <Tooltip title="Sin documento adjunto">
-                        <AttachFileIcon fontSize="small" sx={{ color: 'text.disabled', verticalAlign: 'middle' }} />
-                      </Tooltip>
+                      <AttachFileIcon fontSize="small" sx={{ color: 'text.disabled', verticalAlign: 'middle' }} />
                     )}
                   </TableCell>
                   <TableCell align="center">
-                    {s.status === 'Pendiente' && (
+                    {(s.approvalStage === 'PendienteJefe' || (!s.approvalStage && s.status === 'Pendiente')) && (
                       <Stack direction="row" spacing={0.5} justifyContent="center">
-                        <Tooltip title="Aprobar">
-                          <IconButton
-                            size="small" color="success"
-                            onClick={() => { setReviewDlg({ id: s.id, username: s.fullName, action: 'Aprobado' }); setReviewNote(''); }}
-                          >
+                        <Tooltip title="Aprobar (Jefe directo)">
+                          <IconButton size="small" color="success"
+                            onClick={() => { setReviewDlg({ id: s.id, username: s.fullName, action: 'AprobadoJefe', level: 'jefe' }); setReviewNote(''); }}>
+                            <SupervisorAccountIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Rechazar">
+                          <IconButton size="small" color="error"
+                            onClick={() => { setReviewDlg({ id: s.id, username: s.fullName, action: 'Rechazado', level: 'jefe' }); setReviewNote(''); }}>
+                            <CancelOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    )}
+                    {s.approvalStage === 'PendienteRRHH' && (
+                      <Stack direction="row" spacing={0.5} justifyContent="center">
+                        <Tooltip title="Aprobar final (RRHH)">
+                          <IconButton size="small" color="success"
+                            onClick={() => { setReviewDlg({ id: s.id, username: s.fullName, action: 'Aprobado', level: 'admin' }); setReviewNote(''); }}>
                             <CheckCircleOutlineIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Rechazar">
-                          <IconButton
-                            size="small" color="error"
-                            onClick={() => { setReviewDlg({ id: s.id, username: s.fullName, action: 'Rechazado' }); setReviewNote(''); }}
-                          >
+                          <IconButton size="small" color="error"
+                            onClick={() => { setReviewDlg({ id: s.id, username: s.fullName, action: 'Rechazado', level: 'admin' }); setReviewNote(''); }}>
                             <CancelOutlinedIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
@@ -666,6 +696,153 @@ function TabEquipo() {
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
+// Pestaña 5: Calendario visual de ausencias por área
+// ════════════════════════════════════════════════════════════════════════════════
+const AREA_COLORS = ['#1a6ca8','#2e7d32','#c62828','#6a1b9a','#e65100','#00695c','#4527a0','#558b2f'];
+
+function TabCalendarioArea() {
+  const now = new Date();
+  const [year,  setYear]  = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1);
+  const [data,  setData]  = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await vacacionesApi.getCalendarioArea(year, month);
+      setData(res.data);
+    } catch { }
+    finally { setLoading(false); }
+  }, [year, month]);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (loading) return <Box display="flex" justifyContent="center" py={6}><CircularProgress /></Box>;
+
+  const daysInMonth = data?.daysInMonth ?? 0;
+  const holidays    = new Set(data?.holidays ?? []);
+  const items       = data?.items ?? [];
+
+  // Agrupar por departamento
+  const byArea = items.reduce((acc, item) => {
+    const area = item.department || 'Sin área';
+    if (!acc[area]) acc[area] = [];
+    acc[area].push(item);
+    return acc;
+  }, {});
+
+  const areas = Object.keys(byArea);
+
+  // Días de la semana para cada día del mes
+  const dayHeaders = Array.from({ length: daysInMonth }, (_, i) => {
+    const d = new Date(year, month - 1, i + 1);
+    return { day: i + 1, dow: d.getDay() }; // 0=Dom, 6=Sáb
+  });
+
+  return (
+    <>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }} mb={2} flexWrap="wrap">
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography variant="body1" fontWeight={600}>Año:</Typography>
+          <TextField select size="small" value={year} onChange={e => setYear(+e.target.value)} sx={{ width: 100 }}>
+            {[-1,0,1].map(d => { const y = now.getFullYear()+d; return <MenuItem key={y} value={y}>{y}</MenuItem>; })}
+          </TextField>
+        </Stack>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Typography variant="body1" fontWeight={600}>Mes:</Typography>
+          <TextField select size="small" value={month} onChange={e => setMonth(+e.target.value)} sx={{ width: 140 }}>
+            {MESES.map((m, i) => <MenuItem key={i+1} value={i+1}>{m}</MenuItem>)}
+          </TextField>
+        </Stack>
+        <Typography variant="caption" color="text.secondary">
+          {items.length} ausencia{items.length !== 1 ? 's' : ''} aprobada{items.length !== 1 ? 's' : ''} · {areas.length} área{areas.length !== 1 ? 's' : ''}
+        </Typography>
+      </Stack>
+
+      {items.length === 0 ? (
+        <Box textAlign="center" py={6}>
+          <CalendarMonthIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
+          <Typography color="text.secondary">No hay ausencias aprobadas en {MESES[month-1]} {year}.</Typography>
+        </Box>
+      ) : (
+        <Box sx={{ overflowX: 'auto' }}>
+          {areas.map((area, areaIdx) => {
+            const color = AREA_COLORS[areaIdx % AREA_COLORS.length];
+            return (
+              <Box key={area} mb={3}>
+                <Typography variant="subtitle2" fontWeight={700} sx={{ color, mb: 0.5, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: color, display: 'inline-block' }} />
+                  {area}
+                </Typography>
+                <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
+                  <Table size="small" sx={{ tableLayout: 'fixed', minWidth: daysInMonth * 28 + 160 }}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ width: 160, fontWeight: 700, bgcolor: 'action.hover' }}>Colaborador</TableCell>
+                        {dayHeaders.map(({ day, dow }) => (
+                          <TableCell key={day} align="center" sx={{
+                            width: 28, p: '2px', fontSize: 10, fontWeight: 700,
+                            bgcolor: holidays.has(day) ? '#fff3e0' : dow === 0 || dow === 6 ? '#f5f5f5' : 'action.hover',
+                            color: holidays.has(day) ? '#e65100' : dow === 0 || dow === 6 ? 'text.disabled' : 'text.primary',
+                          }}>
+                            {day}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {byArea[area].map(item => (
+                        <TableRow key={item.id} hover>
+                          <TableCell sx={{ fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {item.fullName}
+                          </TableCell>
+                          {dayHeaders.map(({ day, dow }) => {
+                            const isAbsent  = item.daysInMonth.includes(day);
+                            const isWeekend = dow === 0 || dow === 6;
+                            const isHoliday = holidays.has(day);
+                            return (
+                              <TableCell key={day} align="center" sx={{ p: '2px',
+                                bgcolor: isAbsent ? color : isHoliday ? '#fff3e0' : isWeekend ? '#f5f5f5' : 'transparent',
+                              }}>
+                                {isAbsent && (
+                                  <Box sx={{ width: 18, height: 18, borderRadius: 1, bgcolor: color, mx: 'auto', opacity: 0.85 }} />
+                                )}
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Paper>
+              </Box>
+            );
+          })}
+          {/* Leyenda */}
+          <Stack direction="row" spacing={2} mt={1} flexWrap="wrap">
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <Box sx={{ width: 14, height: 14, borderRadius: 1, bgcolor: '#e65100' }} />
+              <Typography variant="caption">Festivo</Typography>
+            </Stack>
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <Box sx={{ width: 14, height: 14, bgcolor: '#f5f5f5', border: '1px solid #ddd', borderRadius: 1 }} />
+              <Typography variant="caption">Fin de semana</Typography>
+            </Stack>
+            {areas.map((area, i) => (
+              <Stack key={area} direction="row" spacing={0.5} alignItems="center">
+                <Box sx={{ width: 14, height: 14, borderRadius: 1, bgcolor: AREA_COLORS[i % AREA_COLORS.length] }} />
+                <Typography variant="caption">{area}</Typography>
+              </Stack>
+            ))}
+          </Stack>
+        </Box>
+      )}
+    </>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
 // Página principal Admin
 // ════════════════════════════════════════════════════════════════════════════════
 export default function VacacionesAdminPage() {
@@ -712,6 +889,7 @@ export default function VacacionesAdminPage() {
             <Tab label="Festivos" />
             <Tab label="Días por Usuario" />
             <Tab label="Vista Equipo" icon={<GroupIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
+            <Tab label="Calendario Área" icon={<CalendarMonthIcon sx={{ fontSize: 16 }} />} iconPosition="start" />
           </Tabs>
 
           <Box sx={{ p: 2 }}>
@@ -726,6 +904,9 @@ export default function VacacionesAdminPage() {
             </TabPanel>
             <TabPanel value={tab} index={3}>
               <TabEquipo />
+            </TabPanel>
+            <TabPanel value={tab} index={4}>
+              <TabCalendarioArea />
             </TabPanel>
           </Box>
         </Paper>
