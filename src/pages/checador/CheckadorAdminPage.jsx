@@ -58,11 +58,11 @@ export default function CheckadorAdminPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const exportCsv = async () => {
+  const exportExcel = async () => {
     try {
       const res = await checadorApi.exportCsv({ desde: fDesde || undefined, hasta: fHasta || undefined });
       const url = URL.createObjectURL(res.data);
-      const a = document.createElement('a'); a.href = url; a.download = 'asistencia.csv'; a.click();
+      const a = document.createElement('a'); a.href = url; a.download = `asistencia_${new Date().toISOString().slice(0,10)}.xlsx`; a.click();
       URL.revokeObjectURL(url);
     } catch {}
   };
@@ -89,8 +89,8 @@ export default function CheckadorAdminPage() {
             <Typography variant="h6" fontWeight={700}>Asistencia — Administración</Typography>
             {loading && <CircularProgress size={18} />}
           </Stack>
-          <Tooltip title="Exportar CSV">
-            <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={exportCsv} sx={{ borderRadius: 2 }}>CSV</Button>
+          <Tooltip title="Exportar Excel">
+            <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={exportExcel} sx={{ borderRadius: 2 }}>Excel</Button>
           </Tooltip>
         </Stack>
 

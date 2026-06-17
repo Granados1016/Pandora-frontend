@@ -15,6 +15,7 @@ import TrendingDownIcon   from '@mui/icons-material/TrendingDown';
 import SwapHorizIcon      from '@mui/icons-material/SwapHoriz';
 import BuildIcon          from '@mui/icons-material/Build';
 import InfoIcon           from '@mui/icons-material/Info';
+import DownloadIcon       from '@mui/icons-material/Download';
 import { activosFijosApi } from '../../api/pandoraApi';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -124,12 +125,26 @@ export default function ActivosFijosPage() {
           <AccountBalanceIcon color="primary" sx={{ fontSize: 32 }} />
           <Typography variant="h5" fontWeight={700}>Activos Fijos</Typography>
         </Stack>
-        {isAdmin && (
-          <Button variant="contained" startIcon={<AddIcon />}
-            onClick={() => { setForm(emptyActivo()); setEditing(null); setOpenForm(true); }}>
-            Nuevo Activo
-          </Button>
-        )}
+        <Stack direction="row" gap={1}>
+          {isAdmin && (
+            <Tooltip title="Exportar Excel">
+              <Button variant="outlined" startIcon={<DownloadIcon />} onClick={async () => {
+                try {
+                  const res = await activosFijosApi.exportExcel({ status: filterStatus || undefined });
+                  const url = URL.createObjectURL(res.data);
+                  const a = document.createElement('a'); a.href = url; a.download = `activos_fijos_${new Date().toISOString().slice(0,10)}.xlsx`; a.click();
+                  URL.revokeObjectURL(url);
+                } catch {}
+              }}>Excel</Button>
+            </Tooltip>
+          )}
+          {isAdmin && (
+            <Button variant="contained" startIcon={<AddIcon />}
+              onClick={() => { setForm(emptyActivo()); setEditing(null); setOpenForm(true); }}>
+              Nuevo Activo
+            </Button>
+          )}
+        </Stack>
       </Stack>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}

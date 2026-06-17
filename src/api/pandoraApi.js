@@ -510,6 +510,7 @@ export const activosFijosApi = {
   remove:       (id)         => api.delete(`/activos-fijos/${id}`),
   getStats:     ()           => api.get('/activos-fijos/stats'),
   addMovimiento:(id, data)   => api.post(`/activos-fijos/${id}/movimientos`, data),
+  exportExcel:  (params = {}) => api.get('/activos-fijos/export-excel', { params, responseType: 'blob' }),
 };
 
 export const adminApi = {
@@ -588,7 +589,8 @@ export const tenantsApi = {
     form.append('file', file);
     return api.post(`/tenants/${id}/logo`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
   },
-  getMyTenant:  ()           => api.get('/tenants/me'),
+  getMyTenant:  (token)      => api.get('/tenants/me',
+    token ? { headers: { Authorization: `Bearer ${token}` } } : undefined),
   getStats:     (id)         => api.get(`/tenants/${id}/stats`),
 };
 
