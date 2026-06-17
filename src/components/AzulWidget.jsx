@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 
-const AZUL_URL = import.meta.env.VITE_AZUL_FRONTEND_URL || 'http://localhost:5174';
+const AZUL_URL = import.meta.env.VITE_AZUL_FRONTEND_URL || 'https://azul-frontend-jgranados-projects.vercel.app';
 const BACKEND  = import.meta.env.VITE_BACKEND_URL       || 'http://localhost:5000';
 
 export default function AzulWidget() {
