@@ -11,7 +11,7 @@ import AttachFileIcon         from '@mui/icons-material/AttachFile';
 import CloseIcon              from '@mui/icons-material/Close';
 import ImageIcon              from '@mui/icons-material/Image';
 import SendIcon               from '@mui/icons-material/Send';
-import { ticketApi }          from '../../api/pandoraApi';
+import { ticketApi, userApi } from '../../api/pandoraApi';
 import { apiError }           from '../../api/apiError';
 import { useAuth }            from '../../hooks/useAuth.jsx';
 
@@ -242,7 +242,7 @@ function UploadZone({ files, onAdd, onRemove }) {
 
 export default function TicketFormPage() {
   const navigate       = useNavigate();
-  const { username }   = useAuth();
+  const { username, isAdmin } = useAuth();
 
   const [template,     setTemplate]     = useState(null);
   const [fields,       setFields]       = useState([]);
@@ -258,28 +258,43 @@ export default function TicketFormPage() {
   const [department,   setDepartment]   = useState('');
   const [email,        setEmail]        = useState('');
 
+  // Perfil propio (puesto/correo autoasignados para usuarios no-admin)
+  const [myProfile,    setMyProfile]    = useState({ position: '', email: '' });
+
   // Dynamic field values: { [fieldId]: string }
   const [fieldValues,  setFieldValues]  = useState({});
 
   // Attachments
   const [files,        setFiles]        = useState([]);
 
-  // Load template + puestos
+  // Load template + puestos (+ perfil propio para usuarios no-admin)
   const load = useCallback(async () => {
     try {
-      const [{ data }, { data: positions }] = await Promise.all([
+      const [{ data }, { data: positions }, meResult] = await Promise.all([
         ticketApi.getTemplate(),
         ticketApi.getPositions(),
+        isAdmin ? Promise.resolve(null) : userApi.me().catch(() => null),
       ]);
       setTemplate(data.template);
       setFields(data.fields ?? []);
       setAreas(positions ?? []);
+
+      // Usuarios no-admin: puesto y correo se autoasignan desde su perfil y
+      // quedan bloqueados (no editables) en el formulario.
+      const me = meResult?.data;
+      if (me) {
+        const position = me.position || '';
+        const mail     = me.email || '';
+        setMyProfile({ position, email: mail });
+        if (position) setDepartment(position);
+        if (mail) setEmail(mail);
+      }
     } catch (e) {
       setError(apiError(e, 'No se pudo cargar el formulario. Intenta de nuevo.'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -326,7 +341,8 @@ export default function TicketFormPage() {
   };
 
   const resetForm = () => {
-    setTitle(''); setPriority('Media'); setDepartment(''); setEmail('');
+    setTitle(''); setPriority('Media');
+    setDepartment(myProfile.position); setEmail(myProfile.email);
     setFieldValues({}); setFiles([]); setSuccess(null); setError('');
   };
 
@@ -426,9 +442,20 @@ export default function TicketFormPage() {
                   select fullWidth size="small" label="Puesto *"
                   value={department}
                   onChange={e => setDepartment(e.target.value)}
+                  disabled={!isAdmin && !!department}
+                  helperText={
+                    !isAdmin
+                      ? (department
+                          ? 'Asignado automáticamente según tu usuario'
+                          : 'Tu usuario no tiene puesto configurado — contacta al administrador')
+                      : undefined
+                  }
                 >
                   <MenuItem value=""><em>— Selecciona tu puesto —</em></MenuItem>
                   {areas.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
+                  {!isAdmin && department && !areas.includes(department) && (
+                    <MenuItem value={department}>{department}</MenuItem>
+                  )}
                 </TextField>
               </Grid>
               <Grid item xs={12} sm={4}>
@@ -438,7 +465,14 @@ export default function TicketFormPage() {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="correo@imet.edu.mx"
-                  helperText="Recibirás actualizaciones aquí"
+                  helperText={
+                    !isAdmin
+                      ? (email
+                          ? 'Asignado automáticamente según tu usuario'
+                          : 'Tu usuario no tiene correo configurado — contacta al administrador')
+                      : 'Recibirás actualizaciones aquí'
+                  }
+                  disabled={!isAdmin && !!email}
                 />
               </Grid>
             </Grid>
