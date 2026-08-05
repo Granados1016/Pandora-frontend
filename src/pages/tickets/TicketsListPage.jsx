@@ -135,6 +135,8 @@ export default function TicketsListPage() {
   const [statusF,   setStatusF]   = useState('');
   const [priorityF, setPriorityF] = useState('');
   const [areaF,     setAreaF]     = useState('');
+  const [desdeF,    setDesdeF]    = useState('');
+  const [hastaF,    setHastaF]    = useState('');
   const [exporting, setExporting] = useState(false);
 
   // Cargar puestos del catálogo una sola vez al montar
@@ -153,6 +155,8 @@ export default function TicketsListPage() {
       if (priorityF) params.priority = priorityF;
       if (areaF)     params.area     = areaF;
       if (search)    params.search   = search;
+      if (desdeF)    params.desde    = desdeF;
+      if (hastaF)    params.hasta    = hastaF;
       const { data } = await ticketApi.getAll(params);
       setTickets(data);
     } catch (e) {
@@ -160,12 +164,16 @@ export default function TicketsListPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusF, priorityF, areaF, search]);
+  }, [statusF, priorityF, areaF, search, desdeF, hastaF]);
 
   useEffect(() => { load(); }, [load]);
 
   // Exportar histórico completo a Excel, respetando los filtros activos
   const handleExport = async () => {
+    if (desdeF && hastaF && desdeF > hastaF) {
+      setError('El rango de fechas es inválido: "Desde" no puede ser posterior a "Hasta".');
+      return;
+    }
     setExporting(true);
     setError('');
     try {
@@ -174,11 +182,14 @@ export default function TicketsListPage() {
       if (priorityF) params.priority = priorityF;
       if (areaF)     params.area     = areaF;
       if (search)    params.search   = search;
+      if (desdeF)    params.desde    = desdeF;
+      if (hastaF)    params.hasta    = hastaF;
       const res = await ticketApi.exportExcel(params);
       const url = URL.createObjectURL(res.data);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `tickets_historico_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const rango = desdeF || hastaF ? `_${desdeF || 'inicio'}_a_${hastaF || 'hoy'}` : '';
+      a.download = `tickets_historico${rango}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -259,7 +270,7 @@ export default function TicketsListPage() {
 
       {/* Filters */}
       <Paper elevation={0} sx={{ p: 2, mb: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
           <TextField
             size="small" placeholder="Buscar por título, número, departamento..."
             value={search} onChange={e => setSearch(e.target.value)}
@@ -287,6 +298,25 @@ export default function TicketsListPage() {
             <MenuItem value="">Todos</MenuItem>
             {areas.map(a => <MenuItem key={a} value={a}>{a}</MenuItem>)}
           </TextField>
+          <TextField
+            size="small" label="Desde" type="date" value={desdeF}
+            onChange={e => setDesdeF(e.target.value)}
+            InputLabelProps={{ shrink: true }} sx={{ minWidth: 160 }}
+            inputProps={{ max: hastaF || undefined }}
+          />
+          <TextField
+            size="small" label="Hasta" type="date" value={hastaF}
+            onChange={e => setHastaF(e.target.value)}
+            InputLabelProps={{ shrink: true }} sx={{ minWidth: 160 }}
+            inputProps={{ min: desdeF || undefined }}
+          />
+          {(desdeF || hastaF) && (
+            <Tooltip title="Quitar rango de fechas">
+              <Button size="small" onClick={() => { setDesdeF(''); setHastaF(''); }}>
+                Limpiar fechas
+              </Button>
+            </Tooltip>
+          )}
           <Tooltip title="Recargar">
             <IconButton onClick={load} disabled={loading}>
               <RefreshIcon />
