@@ -710,7 +710,7 @@ export default function Layout({ children }) {
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', width: '100%', maxWidth: '100vw', overflowX: 'hidden' }}>
       <SessionWarning />
 
       {/* ── AppBar solo móvil ──────────────────────────────────────────────── */}
@@ -807,11 +807,15 @@ export default function Layout({ children }) {
         component="main"
         sx={{
           flexGrow: 1,
+          minWidth: 0, // clave: evita que un hijo ancho (tabla, campo, etc.) fuerce overflow horizontal de toda la página
+          width: { xs: '100%', md: `calc(100% - ${open ? EXPANDED_W : COLLAPSED_W}px)` },
+          maxWidth: '100%',
           ml: { xs: 0, md: `${open ? EXPANDED_W : COLLAPSED_W}px` },
-          transition: { md: `margin-left ${TRANSITION}` },
+          transition: { md: `margin-left ${TRANSITION}, width ${TRANSITION}` },
           pt: { xs: 8, md: 0 },
           bgcolor: 'background.default',
           minHeight: '100vh',
+          overflowX: 'hidden',
         }}
       >
         {/* ── Barra superior desktop ──────────────────────────────────────── */}
