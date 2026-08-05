@@ -376,6 +376,8 @@ export const ticketApi = {
   delete:           (id)         => api.delete(`/tickets/${id}`),
   // Estadísticas
   getStats:         (year)       => api.get('/tickets/stats', { params: year ? { year } : undefined }),
+  // Reportes
+  exportExcel:      (params = {}) => api.get('/tickets/export-excel', { params, responseType: 'blob' }),
 };
 
 export const vacacionesApi = {

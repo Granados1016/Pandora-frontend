@@ -9,6 +9,7 @@ import AddIcon           from '@mui/icons-material/Add';
 import SettingsIcon      from '@mui/icons-material/Settings';
 import SearchIcon        from '@mui/icons-material/Search';
 import RefreshIcon       from '@mui/icons-material/Refresh';
+import DownloadIcon      from '@mui/icons-material/Download';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import { ticketApi }     from '../../api/pandoraApi';
 import { apiError }      from '../../api/apiError';
@@ -134,6 +135,7 @@ export default function TicketsListPage() {
   const [statusF,   setStatusF]   = useState('');
   const [priorityF, setPriorityF] = useState('');
   const [areaF,     setAreaF]     = useState('');
+  const [exporting, setExporting] = useState(false);
 
   // Cargar puestos del catálogo una sola vez al montar
   useEffect(() => {
@@ -162,6 +164,30 @@ export default function TicketsListPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Exportar histórico completo a Excel, respetando los filtros activos
+  const handleExport = async () => {
+    setExporting(true);
+    setError('');
+    try {
+      const params = {};
+      if (statusF)   params.status   = statusF;
+      if (priorityF) params.priority = priorityF;
+      if (areaF)     params.area     = areaF;
+      if (search)    params.search   = search;
+      const res = await ticketApi.exportExcel(params);
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `tickets_historico_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(apiError(e, 'No se pudo generar el Excel. Intenta de nuevo.'));
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Stats
   const stats = {
     total:    tickets.length,
@@ -189,6 +215,18 @@ export default function TicketsListPage() {
             </Box>
           </Stack>
           <Stack direction="row" spacing={1}>
+            {isAdmin && (
+              <Tooltip title="Exportar histórico completo de tickets a Excel">
+                <span>
+                  <Button
+                    variant="outlined" size="small" startIcon={<DownloadIcon />}
+                    onClick={handleExport} disabled={exporting}
+                  >
+                    {exporting ? 'Generando...' : 'Exportar Excel'}
+                  </Button>
+                </span>
+              </Tooltip>
+            )}
             {isAdmin && (
               <Button variant="outlined" size="small" startIcon={<SettingsIcon />} onClick={() => navigate('/tickets/template')}>
                 Configurar formulario
