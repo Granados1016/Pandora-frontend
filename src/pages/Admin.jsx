@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Typography, Card, CardContent, Stack, Button, Chip, IconButton,
+  Box, Typography, Stack, Button, Chip, IconButton,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert,
   ToggleButton, ToggleButtonGroup, CircularProgress, Tooltip, Switch,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   FormGroup, FormControlLabel, Checkbox, Divider, Radio, RadioGroup,
   ToggleButtonGroup as MuiTBG, InputAdornment,
+  Accordion, AccordionSummary, AccordionDetails,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -79,8 +81,33 @@ function applyModuleAccess(mod, access, modules, modulesViewOnly) {
   return { modules: newModules, modulesViewOnly: newViewOnly };
 }
 
+// Secciones colapsables del panel — su estado (abierta/cerrada) se recuerda por navegador
+const ACCORDION_SECTIONS = ['backup', 'smtp', 'puestos', 'calNotif', 'usuarios'];
+const ACCORDION_STORAGE_KEY = 'pandora_admin_accordion_state';
+
+function loadAccordionState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ACCORDION_STORAGE_KEY) || '{}');
+    return ACCORDION_SECTIONS.reduce((acc, key) => {
+      acc[key] = saved[key] ?? true;
+      return acc;
+    }, {});
+  } catch {
+    return ACCORDION_SECTIONS.reduce((acc, key) => { acc[key] = true; return acc; }, {});
+  }
+}
+
 export default function Admin() {
   const { username: currentUser } = useAuth();
+  const [expandedSections, setExpandedSections] = useState(loadAccordionState);
+
+  const toggleSection = (key) => {
+    setExpandedSections(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      localStorage.setItem(ACCORDION_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -479,13 +506,17 @@ export default function Admin() {
     });
 
   return (
-    <Box sx={{ p: 4 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
+    <Box sx={{ p: { xs: 1.5, sm: 3, md: 4 }, maxWidth: '100%', overflowX: 'hidden' }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between"
+        alignItems={{ xs: 'stretch', sm: 'center' }} spacing={2} mb={4}>
         <Stack direction="row" alignItems="center" spacing={1.5}>
-          <AdminPanelSettingsIcon color="primary" sx={{ fontSize: 32 }} />
-          <Typography variant="h4" fontWeight={800} color="primary.main">Administración</Typography>
+          <AdminPanelSettingsIcon color="primary" sx={{ fontSize: { xs: 26, sm: 32 } }} />
+          <Typography variant="h4" fontWeight={800} color="primary.main"
+            sx={{ fontSize: { xs: '1.5rem', sm: '2.125rem' } }}>
+            Administración
+          </Typography>
         </Stack>
-        <Stack direction="row" gap={1}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}>
           <Button variant="outlined" startIcon={<UploadFileIcon />} onClick={() => { setCsvRows([]); setCsvResult(null); setCsvError(''); setCsvOpen(true); }}>
             Importar CSV
           </Button>
@@ -496,12 +527,18 @@ export default function Admin() {
       {error && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>{error}</Alert>}
 
       {/* ── Backup de base de datos ──────────────────────────────────────── */}
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Stack direction="row" alignItems="center" spacing={1.5} mb={2}>
+      <Accordion
+        expanded={expandedSections.backup}
+        onChange={() => toggleSection('backup')}
+        sx={{ mb: 2, borderRadius: 2, overflow: 'hidden', '&:before': { display: 'none' } }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: { xs: 2, sm: 3 } }}>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
             <BackupIcon color="primary" sx={{ fontSize: 26 }} />
             <Typography variant="h6" fontWeight={700}>Backup de Base de Datos</Typography>
           </Stack>
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: { xs: 2, sm: 3 } }}>
           <Typography variant="body2" color="text.secondary" mb={2}>
             Descarga una copia de seguridad completa de la base de datos en formato <strong>.bak</strong> (SQL Server) o <strong>.sql</strong> (LocalDB).
           </Typography>
@@ -517,13 +554,17 @@ export default function Admin() {
           >
             {backupLoading ? 'Generando backup...' : 'Descargar Backup'}
           </Button>
-        </CardContent>
-      </Card>
+        </AccordionDetails>
+      </Accordion>
 
       {/* ── Configuración SMTP ──────────────────────────────────────────── */}
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Stack direction="row" alignItems="center" spacing={1.5} mb={0.5}>
+      <Accordion
+        expanded={expandedSections.smtp}
+        onChange={() => toggleSection('smtp')}
+        sx={{ mb: 2, borderRadius: 2, overflow: 'hidden', '&:before': { display: 'none' } }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: { xs: 2, sm: 3 } }}>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
             <EmailIcon color="primary" sx={{ fontSize: 26 }} />
             <Box>
               <Typography variant="h6" fontWeight={700}>Configuración de Correo (SMTP)</Typography>
@@ -532,7 +573,8 @@ export default function Admin() {
               </Typography>
             </Box>
           </Stack>
-
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: { xs: 2, sm: 3 } }}>
           {smtpMsg && (
             <Alert severity={smtpMsgSev} sx={{ mb: 2, mt: 1.5 }} onClose={() => setSmtpMsg('')}>
               {smtpMsg}
@@ -634,8 +676,8 @@ export default function Admin() {
               </Stack>
             </Stack>
           )}
-        </CardContent>
-      </Card>
+        </AccordionDetails>
+      </Accordion>
 
       {/* Diálogo probar SMTP */}
       <Dialog open={testDialog} onClose={() => setTestDialog(false)} maxWidth="xs" fullWidth>
@@ -673,20 +715,24 @@ export default function Admin() {
       </Dialog>
 
       {/* ── Catálogo de Puestos — HelpDesk ──────────────────────────────── */}
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          {/* Header */}
-          <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }}
-            justifyContent="space-between" spacing={1.5} mb={1}>
-            <Stack direction="row" alignItems="center" spacing={1.5}>
-              <BadgeIcon color="primary" sx={{ fontSize: 26 }} />
-              <Box>
-                <Typography variant="h6" fontWeight={700}>Catálogo de Puestos — HelpDesk</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Define los puestos disponibles en el formulario de tickets y configura el correo de notificación de cada uno.
-                </Typography>
-              </Box>
-            </Stack>
+      <Accordion
+        expanded={expandedSections.puestos}
+        onChange={() => toggleSection('puestos')}
+        sx={{ mb: 2, borderRadius: 2, overflow: 'hidden', '&:before': { display: 'none' } }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: { xs: 2, sm: 3 } }}>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <BadgeIcon color="primary" sx={{ fontSize: 26 }} />
+            <Box>
+              <Typography variant="h6" fontWeight={700}>Catálogo de Puestos — HelpDesk</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Define los puestos disponibles en el formulario de tickets y configura el correo de notificación de cada uno.
+              </Typography>
+            </Box>
+          </Stack>
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: { xs: 2, sm: 3 } }}>
+          <Stack direction="row" justifyContent="flex-end" mb={1.5}>
             <Button
               variant="contained" startIcon={<AddIcon />}
               onClick={() => { setPosDialog(true); setPosName(''); setPosError(''); }}
@@ -755,7 +801,7 @@ export default function Admin() {
                 </Table>
               </TableContainer>
 
-              <Stack direction="row" alignItems="center" spacing={2}>
+              <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap" rowGap={1}>
                 <Button
                   variant="contained"
                   startIcon={areaConfigsSaving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />}
@@ -771,8 +817,8 @@ export default function Admin() {
               </Stack>
             </>
           )}
-        </CardContent>
-      </Card>
+        </AccordionDetails>
+      </Accordion>
 
       {/* Diálogo nuevo puesto */}
       <Dialog open={posDialog} onClose={() => setPosDialog(false)} maxWidth="xs" fullWidth>
@@ -802,9 +848,13 @@ export default function Admin() {
       </Dialog>
 
       {/* ── Correos de notificación — Reservas de sala ───────────────────── */}
-      <Card sx={{ mb: 4 }}>
-        <CardContent>
-          <Stack direction="row" alignItems="center" spacing={1.5} mb={2}>
+      <Accordion
+        expanded={expandedSections.calNotif}
+        onChange={() => toggleSection('calNotif')}
+        sx={{ mb: 2, borderRadius: 2, overflow: 'hidden', '&:before': { display: 'none' } }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: { xs: 2, sm: 3 } }}>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
             <CalendarMonthIcon color="primary" sx={{ fontSize: 26 }} />
             <Box>
               <Typography variant="h6" fontWeight={700}>Notificaciones de reservas de sala</Typography>
@@ -813,7 +863,8 @@ export default function Admin() {
               </Typography>
             </Box>
           </Stack>
-
+        </AccordionSummary>
+        <AccordionDetails sx={{ px: { xs: 2, sm: 3 } }}>
           {calNotifMsg && (
             <Alert severity={calNotifMsgSev} sx={{ mb: 2 }} onClose={() => setCalNotifMsg('')}>{calNotifMsg}</Alert>
           )}
@@ -865,7 +916,7 @@ export default function Admin() {
                   value={newCalEmail}
                   onChange={e => setNewCalEmail(e.target.value)}
                   placeholder="correo@empresa.com"
-                  sx={{ minWidth: 240 }}
+                  sx={{ minWidth: { xs: '100%', sm: 240 } }}
                   onKeyDown={e => { if (e.key === 'Enter') handleAddCalEmail(); }}
                 />
                 <TextField
@@ -873,31 +924,36 @@ export default function Admin() {
                   value={newCalDesc}
                   onChange={e => setNewCalDesc(e.target.value)}
                   placeholder="Ej: Asistente de Administración"
-                  sx={{ minWidth: 240, flexGrow: 1 }}
+                  sx={{ minWidth: { xs: '100%', sm: 240 }, flexGrow: 1 }}
                   onKeyDown={e => { if (e.key === 'Enter') handleAddCalEmail(); }}
                 />
                 <Button
                   variant="contained" startIcon={calEmailSaving ? <CircularProgress size={16} color="inherit" /> : <AddIcon />}
                   onClick={handleAddCalEmail}
                   disabled={calEmailSaving || !newCalEmail.trim()}
-                  sx={{ height: 40, borderRadius: 2, whiteSpace: 'nowrap' }}
+                  sx={{ height: 40, borderRadius: 2, whiteSpace: 'nowrap', width: { xs: '100%', sm: 'auto' } }}
                 >
                   {calEmailSaving ? 'Agregando...' : 'Agregar correo'}
                 </Button>
               </Stack>
             </>
           )}
-        </CardContent>
-      </Card>
+        </AccordionDetails>
+      </Accordion>
 
       {/* ── Usuarios ──────────────────────────────────────────────────────── */}
-      <Stack direction="row" alignItems="center" spacing={1.5} mb={2}>
-        <PersonIcon color="primary" sx={{ fontSize: 26 }} />
-        <Typography variant="h6" fontWeight={700}>Gestión de Usuarios</Typography>
-      </Stack>
-
-      <Card>
-        <CardContent sx={{ p: 0 }}>
+      <Accordion
+        expanded={expandedSections.usuarios}
+        onChange={() => toggleSection('usuarios')}
+        sx={{ mb: 2, borderRadius: 2, overflow: 'hidden', '&:before': { display: 'none' } }}
+      >
+        <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: { xs: 2, sm: 3 } }}>
+          <Stack direction="row" alignItems="center" spacing={1.5}>
+            <PersonIcon color="primary" sx={{ fontSize: 26 }} />
+            <Typography variant="h6" fontWeight={700}>Gestión de Usuarios</Typography>
+          </Stack>
+        </AccordionSummary>
+        <AccordionDetails sx={{ p: 0 }}>
           {loading ? (
             <Box textAlign="center" py={6}><CircularProgress /></Box>
           ) : (
@@ -975,8 +1031,8 @@ export default function Admin() {
               </Table>
             </TableContainer>
           )}
-        </CardContent>
-      </Card>
+        </AccordionDetails>
+      </Accordion>
 
       {/* Diálogo crear/editar */}
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
