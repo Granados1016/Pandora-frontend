@@ -31,6 +31,7 @@ import SecurityIcon from '@mui/icons-material/Security';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { userApi, adminApi, ticketApi, authApi, calendarApi } from '../api/pandoraApi';
 import { MODULE_LABELS, MODULES, SUB_MODULES, useAuth } from '../hooks/useAuth.jsx';
+import GoogleWorkspaceProvisioningCard from './admin/GoogleWorkspaceProvisioningCard.jsx';
 
 const ALL_MODULES = Object.entries(MODULE_LABELS).map(([value, label]) => ({
   value: parseInt(value),
@@ -82,7 +83,7 @@ function applyModuleAccess(mod, access, modules, modulesViewOnly) {
 }
 
 // Secciones colapsables del panel — su estado (abierta/cerrada) se recuerda por navegador
-const ACCORDION_SECTIONS = ['backup', 'smtp', 'puestos', 'calNotif', 'usuarios'];
+const ACCORDION_SECTIONS = ['backup', 'smtp', 'puestos', 'calNotif', 'gwpProvisioning', 'usuarios'];
 const ACCORDION_STORAGE_KEY = 'pandora_admin_accordion_state';
 
 function loadAccordionState() {
@@ -940,6 +941,12 @@ export default function Admin() {
           )}
         </AccordionDetails>
       </Accordion>
+
+      {/* ── Alta masiva de cuentas (Google Workspace) ────────────────────────── */}
+      <GoogleWorkspaceProvisioningCard
+        expanded={expandedSections.gwpProvisioning}
+        onToggle={() => toggleSection('gwpProvisioning')}
+      />
 
       {/* ── Usuarios ──────────────────────────────────────────────────────── */}
       <Accordion

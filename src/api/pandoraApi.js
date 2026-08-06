@@ -598,4 +598,17 @@ export const tenantsApi = {
   getStats:     (id)         => api.get(`/tenants/${id}/stats`),
 };
 
+// ── Alta masiva de cuentas en Google Workspace (Panel Admin) ──────────────────
+export const googleWorkspaceProvisioningApi = {
+  upload: (file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post('/google-workspace-provisioning/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  getJob:      (jobId) => api.get(`/google-workspace-provisioning/jobs/${jobId}`),
+  getJobAudit: (jobId) => api.get(`/google-workspace-provisioning/jobs/${jobId}/audit`),
+};
+
 export default api;
