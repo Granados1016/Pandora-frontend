@@ -29,6 +29,9 @@ import LockIcon from '@mui/icons-material/Lock';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import SecurityIcon from '@mui/icons-material/Security';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
 import { userApi, adminApi, ticketApi, authApi, calendarApi } from '../api/pandoraApi';
 import { MODULE_LABELS, MODULES, SUB_MODULES, useAuth } from '../hooks/useAuth.jsx';
 import GoogleWorkspaceProvisioningCard from './admin/GoogleWorkspaceProvisioningCard.jsx';
@@ -122,6 +125,126 @@ export default function Admin() {
   // ── Backup ────────────────────────────────────────────────────────────────
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupMsg,     setBackupMsg]     = useState('');
+
+  // ── Backup automático (correo + Google Drive) ───────────────────────────────
+  const EMPTY_BACKUP_CFG = { enabled: false, recipientEmails: '', driveImpersonateEmail: '', driveConfigured: false };
+  const [backupCfg,        setBackupCfg]        = useState(EMPTY_BACKUP_CFG);
+  const [backupCfgLoading, setBackupCfgLoading] = useState(false);
+  const [backupCfgSaving,  setBackupCfgSaving]  = useState(false);
+  const [backupCfgMsg,     setBackupCfgMsg]     = useState('');
+  const [backupCfgMsgSev,  setBackupCfgMsgSev]  = useState('success');
+  const [backupHistory,    setBackupHistory]    = useState([]);
+  const [runNowLoading,    setRunNowLoading]    = useState(false);
+
+  // ── Restaurar ────────────────────────────────────────────────────────────
+  const [restoreMissingFile,    setRestoreMissingFile]    = useState(null);
+  const [restoreMissingLoading, setRestoreMissingLoading] = useState(false);
+  const [restoreMissingConfirm, setRestoreMissingConfirm] = useState(false);
+  const [restoreFullFile,       setRestoreFullFile]       = useState(null);
+  const [restoreFullLoading,    setRestoreFullLoading]    = useState(false);
+  const [restoreFullConfirm,    setRestoreFullConfirm]    = useState(false);
+  const [restoreMsg,            setRestoreMsg]            = useState('');
+  const [restoreMsgSev,         setRestoreMsgSev]         = useState('success');
+
+  const loadBackupCfg = async () => {
+    setBackupCfgLoading(true);
+    try {
+      const [{ data: cfg }, { data: hist }] = await Promise.all([
+        adminApi.getBackupSettings(),
+        adminApi.getBackupHistory(),
+      ]);
+      setBackupCfg({
+        enabled:               !!cfg.enabled,
+        recipientEmails:       cfg.recipientEmails       ?? '',
+        driveImpersonateEmail: cfg.driveImpersonateEmail ?? '',
+        driveConfigured:       !!cfg.driveConfigured,
+      });
+      setBackupHistory(hist ?? []);
+    } catch {
+      setBackupCfgMsg('❌ Error al cargar la configuración de backup automático.');
+      setBackupCfgMsgSev('error');
+    } finally {
+      setBackupCfgLoading(false);
+    }
+  };
+
+  React.useEffect(() => { loadBackupCfg(); }, []);
+
+  const handleSaveBackupCfg = async () => {
+    setBackupCfgSaving(true);
+    setBackupCfgMsg('');
+    try {
+      await adminApi.saveBackupSettings({
+        enabled:               backupCfg.enabled,
+        recipientEmails:       backupCfg.recipientEmails,
+        driveImpersonateEmail: backupCfg.driveImpersonateEmail,
+      });
+      setBackupCfgMsg('✅ Configuración guardada.');
+      setBackupCfgMsgSev('success');
+    } catch (e) {
+      setBackupCfgMsg(`❌ Error: ${e.response?.data?.error || e.message}`);
+      setBackupCfgMsgSev('error');
+    } finally {
+      setBackupCfgSaving(false);
+    }
+  };
+
+  const handleRunBackupNow = async () => {
+    setRunNowLoading(true);
+    setBackupCfgMsg('');
+    try {
+      const { data } = await adminApi.runBackupNow();
+      const parts = [`Backup generado (${data.method === 'bak' ? '.bak' : '.sql'}, ${Math.round(data.sizeBytes / 1024)} KB).`];
+      parts.push(data.emailedTo?.length ? `Correo enviado a: ${data.emailedTo.join(', ')}.` : 'Sin destinatarios de correo configurados.');
+      if (data.emailError) parts.push(`⚠️ Error de correo: ${data.emailError}`);
+      parts.push(data.driveUploaded ? 'Subido a Google Drive ✅' : (data.driveError ? `⚠️ Error de Drive: ${data.driveError}` : 'Drive no configurado.'));
+      setBackupCfgMsg(`✅ ${parts.join(' ')}`);
+      setBackupCfgMsgSev(data.emailError || data.driveError ? 'warning' : 'success');
+      const { data: hist } = await adminApi.getBackupHistory();
+      setBackupHistory(hist ?? []);
+    } catch (e) {
+      setBackupCfgMsg(`❌ Error: ${e.response?.data?.error || e.message}`);
+      setBackupCfgMsgSev('error');
+    } finally {
+      setRunNowLoading(false);
+    }
+  };
+
+  const handleRestoreMissing = async () => {
+    if (!restoreMissingFile) return;
+    setRestoreMissingConfirm(false);
+    setRestoreMissingLoading(true);
+    setRestoreMsg('');
+    try {
+      const { data } = await adminApi.restoreMissing(restoreMissingFile);
+      setRestoreMsg(`✅ ${data.message}`);
+      setRestoreMsgSev('success');
+      setRestoreMissingFile(null);
+    } catch (e) {
+      setRestoreMsg(`❌ Error: ${e.response?.data?.error || e.message}`);
+      setRestoreMsgSev('error');
+    } finally {
+      setRestoreMissingLoading(false);
+    }
+  };
+
+  const handleRestoreFull = async () => {
+    if (!restoreFullFile) return;
+    setRestoreFullConfirm(false);
+    setRestoreFullLoading(true);
+    setRestoreMsg('');
+    try {
+      const { data } = await adminApi.restoreFull(restoreFullFile);
+      setRestoreMsg(`✅ ${data.message}`);
+      setRestoreMsgSev('success');
+      setRestoreFullFile(null);
+    } catch (e) {
+      setRestoreMsg(`❌ Error: ${e.response?.data?.error || e.message}`);
+      setRestoreMsgSev('error');
+    } finally {
+      setRestoreFullLoading(false);
+    }
+  };
 
   // ── SMTP Config ───────────────────────────────────────────────────────────
   const EMPTY_SMTP = { host: '', port: 587, fromEmail: '', password: '', fromName: 'Pandora', useSsl: true };
@@ -258,12 +381,12 @@ export default function Admin() {
     }
   };
 
-  const handleBackup = async () => {
+  const handleBackup = async (format) => {
     setBackupLoading(true);
     setBackupMsg('');
     try {
-      await adminApi.downloadBackup();
-      setBackupMsg('✅ Backup descargado correctamente.');
+      await adminApi.downloadBackup(format);
+      setBackupMsg(`✅ Backup ${format ? `.${format} ` : ''}descargado correctamente.`);
     } catch (e) {
       setBackupMsg(`❌ Error: ${e.message}`);
     } finally {
@@ -550,11 +673,210 @@ export default function Admin() {
           )}
           <Button
             variant="contained" startIcon={backupLoading ? <CircularProgress size={18} color="inherit" /> : <BackupIcon />}
-            onClick={handleBackup} disabled={backupLoading}
+            onClick={() => handleBackup()} disabled={backupLoading}
             sx={{ borderRadius: 2 }}
           >
             {backupLoading ? 'Generando backup...' : 'Descargar Backup'}
           </Button>
+
+          <Divider sx={{ my: 3 }} />
+
+          <Typography variant="subtitle1" fontWeight={700} mb={0.5}>Backup automático</Typography>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Corre todos los días de madrugada. Genera el backup y lo envía por correo y/o lo sube a Google Drive según lo configurado aquí.
+          </Typography>
+
+          {backupCfgMsg && (
+            <Alert severity={backupCfgMsgSev} sx={{ mb: 2 }} onClose={() => setBackupCfgMsg('')}>
+              {backupCfgMsg}
+            </Alert>
+          )}
+
+          {backupCfgLoading ? (
+            <CircularProgress size={24} />
+          ) : (
+            <Stack spacing={2}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={backupCfg.enabled}
+                    onChange={(e) => setBackupCfg({ ...backupCfg, enabled: e.target.checked })}
+                  />
+                }
+                label={backupCfg.enabled ? 'Activado — corre diario' : 'Desactivado'}
+              />
+
+              <TextField
+                label="Correos destino (separados por coma)"
+                fullWidth size="small"
+                placeholder="sistemas@tudominio.com, otro@correo.com"
+                value={backupCfg.recipientEmails}
+                onChange={(e) => setBackupCfg({ ...backupCfg, recipientEmails: e.target.value })}
+              />
+
+              <TextField
+                label="Cuenta de Google Drive a usar (delegación de dominio)"
+                fullWidth size="small"
+                placeholder="sistemas@tudominio.com"
+                value={backupCfg.driveImpersonateEmail}
+                onChange={(e) => setBackupCfg({ ...backupCfg, driveImpersonateEmail: e.target.value })}
+                helperText={
+                  backupCfg.driveConfigured
+                    ? 'Credenciales de servicio detectadas en el backend.'
+                    : 'No hay credenciales de Google Drive configuradas en el backend (GoogleDrive:ServiceAccountJson) — la subida a Drive se omitirá aunque llenes este campo.'
+                }
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      {backupCfg.driveConfigured
+                        ? <CloudDoneIcon color="success" fontSize="small" />
+                        : <CloudOffIcon color="disabled" fontSize="small" />}
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <Stack direction="row" spacing={2}>
+                <Button
+                  variant="contained" startIcon={backupCfgSaving ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
+                  onClick={handleSaveBackupCfg} disabled={backupCfgSaving}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Guardar configuración
+                </Button>
+                <Button
+                  variant="outlined" startIcon={runNowLoading ? <CircularProgress size={18} /> : <PlayArrowIcon />}
+                  onClick={handleRunBackupNow} disabled={runNowLoading}
+                  sx={{ borderRadius: 2 }}
+                >
+                  {runNowLoading ? 'Ejecutando...' : 'Ejecutar ahora'}
+                </Button>
+                <Button
+                  variant="outlined" startIcon={<BackupIcon />}
+                  onClick={() => handleBackup('sql')} disabled={backupLoading}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Descargar .sql
+                </Button>
+                <Button
+                  variant="outlined" startIcon={<BackupIcon />}
+                  onClick={() => handleBackup('bak')} disabled={backupLoading}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Descargar .bak
+                </Button>
+              </Stack>
+
+              {backupHistory.length > 0 && (
+                <>
+                  <Typography variant="subtitle2" fontWeight={700} mt={2}>Últimas ejecuciones</Typography>
+                  <TableContainer component={Paper} variant="outlined">
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Fecha</TableCell>
+                          <TableCell>Archivo</TableCell>
+                          <TableCell>Tamaño</TableCell>
+                          <TableCell>Correo</TableCell>
+                          <TableCell>Drive</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {backupHistory.map((h) => (
+                          <TableRow key={h.id}>
+                            <TableCell>{new Date(h.ranAt).toLocaleString('es-MX')}</TableCell>
+                            <TableCell>{h.fileName}</TableCell>
+                            <TableCell>{Math.round(h.sizeBytes / 1024)} KB</TableCell>
+                            <TableCell>
+                              {h.emailedTo
+                                ? <Chip size="small" color="success" label={h.emailedTo} />
+                                : <Chip size="small" color={h.emailError ? 'error' : 'default'} label={h.emailError ? 'Error' : '—'} />}
+                            </TableCell>
+                            <TableCell>
+                              {h.driveUploaded
+                                ? <Chip size="small" color="success" label="Subido" icon={<CloudDoneIcon />} />
+                                : <Chip size="small" color={h.driveError ? 'error' : 'default'} label={h.driveError ? 'Error' : '—'} />}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </>
+              )}
+
+              <Divider sx={{ my: 1 }} />
+
+              <Typography variant="subtitle1" fontWeight={700} mb={0.5}>Restaurar</Typography>
+              <Typography variant="body2" color="text.secondary" mb={1}>
+                Solo úsalo si se perdió información. El modo seguro no toca nada existente; el reemplazo total sí.
+              </Typography>
+
+              {restoreMsg && (
+                <Alert severity={restoreMsgSev} sx={{ mb: 1 }} onClose={() => setRestoreMsg('')}>
+                  {restoreMsg}
+                </Alert>
+              )}
+
+              <Stack spacing={2}>
+                {/* ── Modo seguro: recuperar registros faltantes ────────────── */}
+                <Box sx={{ p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="body2" fontWeight={600} mb={0.5}>
+                    Recuperar registros faltantes
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block" mb={1.5}>
+                    Sube un archivo <strong>.sql</strong> (el que genera "Descargar Backup" o "Ejecutar ahora").
+                    Solo repone las filas que ya no existan — no borra ni pisa nada de lo que ya está en la base.
+                  </Typography>
+                  <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                    <Button component="label" variant="outlined" size="small" startIcon={<UploadFileIcon />} sx={{ borderRadius: 2 }}>
+                      {restoreMissingFile ? restoreMissingFile.name : 'Elegir archivo .sql'}
+                      <input type="file" accept=".sql" hidden
+                        onChange={(e) => setRestoreMissingFile(e.target.files?.[0] || null)} />
+                    </Button>
+                    <Button
+                      variant="contained" size="small" color="warning"
+                      startIcon={restoreMissingLoading ? <CircularProgress size={16} color="inherit" /> : null}
+                      disabled={!restoreMissingFile || restoreMissingLoading}
+                      onClick={() => setRestoreMissingConfirm(true)}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      {restoreMissingLoading ? 'Restaurando...' : 'Recuperar'}
+                    </Button>
+                  </Stack>
+                </Box>
+
+                {/* ── Modo destructivo: reemplazo total ─────────────────────── */}
+                <Box sx={{ p: 2, borderRadius: 2, border: '1px solid', borderColor: 'error.main', bgcolor: 'error.main', opacity: 0.97 }}>
+                  <Typography variant="body2" fontWeight={700} color="error.contrastText" mb={0.5}>
+                    ⚠️ Sobrescribir base de datos completa
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: 'error.contrastText', opacity: 0.9 }} display="block" mb={1.5}>
+                    Sube un archivo <strong>.bak</strong>. Reemplaza TODA la base de datos actual por la del archivo —
+                    se pierde cualquier dato creado después de ese backup. Irreversible. Úsalo solo en una emergencia real.
+                  </Typography>
+                  <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                    <Button component="label" variant="outlined" size="small" startIcon={<UploadFileIcon />}
+                      sx={{ borderRadius: 2, color: 'error.contrastText', borderColor: 'error.contrastText' }}>
+                      {restoreFullFile ? restoreFullFile.name : 'Elegir archivo .bak'}
+                      <input type="file" accept=".bak" hidden
+                        onChange={(e) => setRestoreFullFile(e.target.files?.[0] || null)} />
+                    </Button>
+                    <Button
+                      variant="contained" size="small"
+                      color="inherit"
+                      startIcon={restoreFullLoading ? <CircularProgress size={16} /> : null}
+                      disabled={!restoreFullFile || restoreFullLoading}
+                      onClick={() => setRestoreFullConfirm(true)}
+                      sx={{ borderRadius: 2, bgcolor: 'white', color: 'error.main', '&:hover': { bgcolor: 'grey.100' } }}
+                    >
+                      {restoreFullLoading ? 'Sobrescribiendo...' : 'Sobrescribir todo'}
+                    </Button>
+                  </Stack>
+                </Box>
+              </Stack>
+            </Stack>
+          )}
         </AccordionDetails>
       </Accordion>
 
@@ -712,6 +1034,48 @@ export default function Admin() {
           >
             {smtpTesting ? 'Enviando...' : 'Enviar prueba'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={restoreMissingConfirm} onClose={() => setRestoreMissingConfirm(false)} maxWidth="xs" fullWidth>
+        <DialogTitle fontWeight={700}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <UploadFileIcon color="warning" />
+            <span>¿Recuperar registros faltantes?</span>
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            Se ejecutará <strong>{restoreMissingFile?.name}</strong> contra la base de datos actual.
+            Solo se insertarán las filas que ya no existan — nada de lo que ya está se va a borrar ni modificar.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setRestoreMissingConfirm(false)}>Cancelar</Button>
+          <Button variant="contained" color="warning" onClick={handleRestoreMissing}>Recuperar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={restoreFullConfirm} onClose={() => setRestoreFullConfirm(false)} maxWidth="xs" fullWidth>
+        <DialogTitle fontWeight={700}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <BlockIcon color="error" />
+            <span>⚠️ ¿Sobrescribir TODA la base de datos?</span>
+          </Stack>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          <Typography variant="body2" color="error.main" fontWeight={600} mb={1}>
+            Esto es irreversible.
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Se reemplazará por completo la base de datos actual con <strong>{restoreFullFile?.name}</strong>.
+            Se perderá cualquier dato creado después de ese backup — licencias, tickets, usuarios, todo.
+            Úsalo solo si de verdad se perdió información y no hay otra forma de recuperarla.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setRestoreFullConfirm(false)}>Cancelar</Button>
+          <Button variant="contained" color="error" onClick={handleRestoreFull}>Sí, sobrescribir todo</Button>
         </DialogActions>
       </Dialog>
 

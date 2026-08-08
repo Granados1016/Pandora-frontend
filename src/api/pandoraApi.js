@@ -518,11 +518,13 @@ export const activosFijosApi = {
 };
 
 export const adminApi = {
-  downloadBackup: async () => {
+  // format: undefined (auto), 'sql' o 'bak' — fuerza ese formato específico.
+  downloadBackup: async (format) => {
     const token = localStorage.getItem('pandora_token');
-    const url   = `${BASE_URL}/admin/backup/download`;
+    const qs    = format ? `?format=${format}` : '';
+    const url   = `${BASE_URL}/admin/backup/download${qs}`;
     const res   = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || await res.text());
     const blob     = await res.blob();
     const filename = res.headers.get('Content-Disposition')?.match(/filename="?([^"]+)"?/)?.[1]
                      || `PandoraDB_${new Date().toISOString().slice(0,10)}.sql`;
@@ -534,6 +536,22 @@ export const adminApi = {
   getSmtpSettings:  ()      => api.get('/admin/settings/smtp'),
   saveSmtpSettings: (data)  => api.post('/admin/settings/smtp', data),
   testSmtp:         (data)  => api.post('/admin/settings/smtp/test', data),
+
+  // Backup automático (correo + Google Drive)
+  getBackupSettings: ()     => api.get('/admin/backup/settings'),
+  saveBackupSettings: (data)=> api.post('/admin/backup/settings', data),
+  runBackupNow:       ()    => api.post('/admin/backup/run-now'),
+  getBackupHistory:   ()    => api.get('/admin/backup/history'),
+
+  // Restaurar
+  restoreMissing: (file) => {
+    const form = new FormData(); form.append('file', file);
+    return api.post('/admin/backup/restore-missing', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
+  restoreFull: (file) => {
+    const form = new FormData(); form.append('file', file);
+    return api.post('/admin/backup/restore-full', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  },
 };
 
 export const ejecutivoApi = {
