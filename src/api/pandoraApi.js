@@ -30,14 +30,25 @@ api.interceptors.request.use(config => {
   return config;
 });
 
+// Endpoints donde un 401 es una respuesta normal de negocio (credenciales u
+// OTP incorrectos), NO una sesión expirada. Aquí el error debe propagarse tal
+// cual al componente para que muestre su mensaje, sin recargar la página ni
+// intentar refrescar el token (eso borraba lo que el usuario había escrito).
+const AUTH_ENDPOINTS_SKIP_REDIRECT = ['/auth/login', '/auth/verify-otp'];
+
 // ── Interceptor de respuesta: maneja 401 con refresco silencioso ──────────────
 api.interceptors.response.use(
   res => res,
   async err => {
     const original = err.config;
+    const isAuthEndpoint = AUTH_ENDPOINTS_SKIP_REDIRECT.some(
+      p => original?.url?.includes(p)
+    );
 
-    // Solo intentar refresco en 401 y si no es ya un retry
-    if (err.response?.status !== 401 || original._retry) {
+    // Solo intentar refresco en 401, si no es ya un retry, y si no es un
+    // endpoint de auth donde el 401 es una respuesta esperada (credenciales
+    // u OTP incorrectos) que el propio formulario debe manejar.
+    if (err.response?.status !== 401 || original._retry || isAuthEndpoint) {
       return Promise.reject(err);
     }
 
@@ -344,7 +355,7 @@ export const licenciasApi = {
     if (!res.ok) throw new Error(await res.text());
     const blob     = await res.blob();
     const filename = res.headers.get('Content-Disposition')?.match(/filename="?([^"]+)"?/)?.[1]
-                     || `iMET_Control_Licencias_${new Date().toISOString().slice(0,10)}.xlsx`;
+                     || `Pandora_Control_Licencias_${new Date().toISOString().slice(0,10)}.xlsx`;
     const href = URL.createObjectURL(blob);
     const a    = document.createElement('a');
     a.href = href; a.download = filename; a.click();

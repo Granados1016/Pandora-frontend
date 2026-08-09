@@ -127,7 +127,6 @@ function ProtectedRoute({
 function AppRoutes() {
   return (
     <>
-    <Suspense fallback={<PageLoader />}>
     <Routes>
       {/* Pública */}
       <Route path="/login"             element={<Login />} />
@@ -139,6 +138,10 @@ function AppRoutes() {
       <Route path="/*" element={
         <ProtectedRoute>
           <Layout>
+            {/* Suspense va DENTRO de Layout: al navegar entre módulos solo
+                el contenido muestra el loader — el sidebar y el header
+                quedan fijos en vez de parpadear en blanco en cada cambio. */}
+            <Suspense fallback={<PageLoader />}>
             <Routes>
 
               {/* ── Sin módulo requerido ─────────────────────────────────── */}
@@ -370,11 +373,11 @@ function AppRoutes() {
               } />
 
             </Routes>
+            </Suspense>
           </Layout>
         </ProtectedRoute>
       } />
     </Routes>
-    </Suspense>
     {/* Widget Azul AI — visible en todas las páginas autenticadas */}
     <AzulWidget />
     </>
