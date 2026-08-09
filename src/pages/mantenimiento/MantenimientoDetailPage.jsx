@@ -13,6 +13,9 @@ import SendIcon        from '@mui/icons-material/Send';
 import AttachFileIcon  from '@mui/icons-material/AttachFile';
 import BuildIcon       from '@mui/icons-material/Build';
 import DownloadIcon    from '@mui/icons-material/Download';
+import PlayArrowIcon   from '@mui/icons-material/PlayArrow';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon      from '@mui/icons-material/Cancel';
 import { mantenimientoApi } from '../../api/pandoraApi';
 import { useAuth, MODULES } from '../../hooks/useAuth.jsx';
 import MantenimientoForm from './MantenimientoForm';
@@ -86,6 +89,31 @@ export default function MantenimientoDetailPage() {
     try {
       await mantenimientoApi.update(id, form);
       setEditing(false); await load();
+    } catch {} finally { setSaving(false); }
+  };
+
+  const handleQuickStatus = async (nuevoEstado) => {
+    const entry = data.entry;
+    setSaving(true);
+    try {
+      await mantenimientoApi.update(id, {
+        titulo:            entry.titulo,
+        descripcion:       entry.descripcion,
+        tipoMantenimiento: entry.tipoMantenimiento,
+        estado:            nuevoEstado,
+        prioridad:         entry.prioridad,
+        nombreEquipo:      entry.nombreEquipo,
+        ubicacion:         entry.ubicacion,
+        tecnicoAsignado:   entry.tecnicoAsignado,
+        emailTecnico:      entry.emailTecnico,
+        fechaProgramada:   entry.fechaProgramada,
+        fechaRealizada:    nuevoEstado === 'Completado' ? (entry.fechaRealizada || new Date().toISOString()) : entry.fechaRealizada,
+        duracionMinutos:   entry.duracionMinutos,
+        notas:             entry.notas,
+        costoEstimado:     entry.costoEstimado,
+        costoReal:         entry.costoReal,
+      });
+      await load();
     } catch {} finally { setSaving(false); }
   };
 
@@ -305,6 +333,29 @@ export default function MantenimientoDetailPage() {
 
         {/* Sidebar */}
         <Box sx={{ width:{ xs:'100%', md:280 }, flexShrink:0 }}>
+          {canWrite && e.estado !== 'Completado' && e.estado !== 'Cancelado' && (
+            <Paper elevation={0} sx={{ p:2, mb:2, borderRadius:3, border:'1px solid', borderColor:'divider' }}>
+              <Typography variant="overline" color="text.secondary" fontWeight={700} display="block" mb={1.5}>
+                Cambiar estado
+              </Typography>
+              <Stack spacing={1}>
+                {e.estado === 'Programado' && (
+                  <Button fullWidth variant="outlined" color="warning" startIcon={<PlayArrowIcon />}
+                    disabled={saving} onClick={() => handleQuickStatus('En Proceso')} sx={{ borderRadius:2 }}>
+                    Marcar en proceso
+                  </Button>
+                )}
+                <Button fullWidth variant="contained" color="success" startIcon={<CheckCircleIcon />}
+                  disabled={saving} onClick={() => handleQuickStatus('Completado')} sx={{ borderRadius:2 }}>
+                  Marcar como completado
+                </Button>
+                <Button fullWidth variant="text" color="inherit" startIcon={<CancelIcon />}
+                  disabled={saving} onClick={() => handleQuickStatus('Cancelado')} sx={{ borderRadius:2 }}>
+                  Cancelar mantenimiento
+                </Button>
+              </Stack>
+            </Paper>
+          )}
           <Paper elevation={0} sx={{ p:2, borderRadius:3, border:'1px solid', borderColor:'divider' }}>
             <Typography variant="overline" color="text.secondary" fontWeight={700} display="block" mb={1.5}>
               Información
@@ -362,7 +413,7 @@ export default function MantenimientoDetailPage() {
         <Dialog open fullWidth maxWidth="md" onClose={() => setEditing(false)}>
           <DialogTitle>Editar — {e.folio}</DialogTitle>
           <DialogContent>
-            <MantenimientoForm entry={e} onSave={handleSave} onClose={() => setEditing(false)} saving={saving} />
+            <MantenimientoForm initial={e} onSave={handleSave} onClose={() => setEditing(false)} saving={saving} />
           </DialogContent>
         </Dialog>
       )}

@@ -64,7 +64,13 @@ export default function MantenimientoForm({ initial, onSave, onClose, saving }) 
           </FormControl>
           <FormControl fullWidth>
             <InputLabel>Estado</InputLabel>
-            <Select value={form.estado} label="Estado" onChange={e => set('estado', e.target.value)}>
+            <Select value={form.estado} label="Estado" onChange={e => {
+              const v = e.target.value;
+              set('estado', v);
+              if (v === 'Completado' && !form.fechaRealizada) {
+                set('fechaRealizada', new Date().toISOString().slice(0, 16));
+              }
+            }}>
               {ESTADOS.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
             </Select>
           </FormControl>
