@@ -388,7 +388,7 @@ export default function Profile() {
                 value={smtpEmail}
                 onChange={e => setSmtpEmail(e.target.value)}
                 fullWidth size="small"
-                placeholder="tucorreo@imet.edu.mx"
+                placeholder="tucorreo@tuempresa.com"
                 type="email"
               />
               <TextField

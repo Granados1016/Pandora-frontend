@@ -29,24 +29,24 @@ const DEFAULT_BODY_LIC = `<p>Estimado/a <strong>{{nombre}}</strong>,</p>
 <p>Te informamos que tus credenciales de acceso al sistema institucional han sido generadas.</p>
 ${CREDENTIALS_TABLE}
 <p>Por favor cambia tu contraseña en tu primer inicio de sesión.</p>
-<p>Saludos,<br/><strong>Coordinación de TI — iMET</strong></p>`;
+<p>Saludos,<br/><strong>Coordinación de TI</strong></p>`;
 
 const DEFAULT_BODY_POS = `<p>Estimado/a <strong>{{nombre}}</strong>,</p>
 <p>Bienvenido al programa de Posgrado. A continuación tus credenciales de acceso:</p>
 ${CREDENTIALS_TABLE}
 <p>Cualquier duda, contacta a la Coordinación de TI.</p>
-<p>Saludos,<br/><strong>Coordinación de TI — iMET</strong></p>`;
+<p>Saludos,<br/><strong>Coordinación de TI</strong></p>`;
 
 const DEFAULT_BODY_PREP = `<p>Estimado/a <strong>{{nombre}}</strong>,</p>
 <p>Te informamos que tus credenciales de acceso al sistema institucional de Preparatoria han sido generadas.</p>
 ${CREDENTIALS_TABLE}
 <p>Por favor cambia tu contraseña en tu primer inicio de sesión.</p>
-<p>Saludos,<br/><strong>Coordinación de TI — iMET</strong></p>`;
+<p>Saludos,<br/><strong>Coordinación de TI</strong></p>`;
 
 const DEFAULT_BODY_NOTIF = `<p>Estimado/a <strong>{{nombre}}</strong>,</p>
 <p>Te enviamos el presente mensaje para informarte lo siguiente:</p>
 <p>[Escribe aquí el contenido de la notificación]</p>
-<p>Saludos,<br/><strong>Coordinación de TI — iMET</strong></p>`;
+<p>Saludos,<br/><strong>Coordinación de TI</strong></p>`;
 
 export default function NewCampaign() {
   const navigate     = useNavigate();
@@ -67,7 +67,7 @@ export default function NewCampaign() {
   const [form, setForm] = useState({
     name: '',
     programType: 1,
-    subject: 'Acceso al Sistema Institucional — iMET',
+    subject: 'Acceso al Sistema Institucional',
     body: DEFAULT_BODY_LIC,
     recipients: [],
   });
@@ -102,10 +102,10 @@ export default function NewCampaign() {
       [PROGRAM_TYPE.NOTIFICACIONES]: DEFAULT_BODY_NOTIF,
     };
     const subjectMap = {
-      [PROGRAM_TYPE.LICENCIATURA]:   'Acceso al Sistema Institucional — Licenciatura iMET',
-      [PROGRAM_TYPE.POSGRADO]:       'Credenciales de Acceso — Posgrado iMET',
-      [PROGRAM_TYPE.PREPARATORIA]:   'Acceso al Sistema Institucional — Preparatoria iMET',
-      [PROGRAM_TYPE.NOTIFICACIONES]: 'Notificación Institucional — iMET',
+      [PROGRAM_TYPE.LICENCIATURA]:   'Acceso al Sistema Institucional — Licenciatura',
+      [PROGRAM_TYPE.POSGRADO]:       'Credenciales de Acceso — Posgrado',
+      [PROGRAM_TYPE.PREPARATORIA]:   'Acceso al Sistema Institucional — Preparatoria',
+      [PROGRAM_TYPE.NOTIFICACIONES]: 'Notificación Institucional',
     };
     setForm(f => ({ ...f, programType: val, body: bodyMap[val], subject: subjectMap[val] }));
   };

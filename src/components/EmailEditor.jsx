@@ -37,7 +37,7 @@ const FIXED_VARIABLES = [
 const FIXED_PREVIEW = {
   '{{nombre}}':     'María García López',
   '{{usuario}}':    'mgarcia2024',
-  '{{contrasena}}': 'Acc3ss#iMET',
+  '{{contrasena}}': 'Acc3ss#2026',
   '{{programa}}':   'Licenciatura en Tecnologías de la Información',
 };
 
@@ -282,7 +282,7 @@ export default function EmailEditor({
         value={subject}
         onChange={(e) => onSubjectChange(e.target.value)}
         sx={{ mb: 2 }}
-        placeholder="Ej: Acceso al Sistema Institucional — iMET"
+        placeholder="Ej: Acceso al Sistema Institucional"
       />
 
       <Box sx={{ mb: 1.5 }}>

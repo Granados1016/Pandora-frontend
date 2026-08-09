@@ -464,7 +464,7 @@ export default function TicketFormPage() {
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="correo@imet.edu.mx"
+                  placeholder="correo@tuempresa.com"
                   helperText={
                     !isAdmin
                       ? (email

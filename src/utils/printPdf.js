@@ -9,7 +9,7 @@
  * @param {string} [opts.footer]     — Texto en el pie de página
  */
 export function printPdf(title, html, opts = {}) {
-  const { subtitle = '', footer = 'Pandora — Sistema de Gestión iMET' } = opts;
+  const { subtitle = '', footer = 'Pandora — Sistema de Gestión' } = opts;
 
   const styles = `
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');

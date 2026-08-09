@@ -388,7 +388,7 @@ export default function TenantsPage() {
                 label="Slug (identificador único)" fullWidth required
                 value={form.slug}
                 onChange={e => setForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
-                placeholder="ej: imet, acme, empresa-sa"
+                placeholder="ej: acme, contoso, empresa-sa"
                 helperText="Solo minúsculas, números y guiones. No se puede cambiar después."
               />
             )}
@@ -396,13 +396,13 @@ export default function TenantsPage() {
               label="Nombre completo del cliente" fullWidth required
               value={form.name}
               onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="ej: Instituto Metropolitano de Enseñanza y Tecnología"
+              placeholder="ej: Acme Corporación S.A. de C.V."
             />
             <TextField
               label="Nombre corto (mostrado en la UI)" fullWidth required
               value={form.displayName}
               onChange={e => setForm(f => ({ ...f, displayName: e.target.value }))}
-              placeholder="ej: iMET"
+              placeholder="ej: Acme"
             />
             <Stack direction="row" spacing={2}>
               <Box flex={1}>

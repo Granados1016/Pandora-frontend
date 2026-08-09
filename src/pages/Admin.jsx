@@ -1138,7 +1138,7 @@ export default function Admin() {
                         <TableCell>
                           <TextField
                             size="small" fullWidth type="email"
-                            placeholder={`notificaciones@imet.edu.mx`}
+                            placeholder={`notificaciones@tuempresa.com`}
                             value={cfg.notificationEmail ?? ''}
                             onChange={e => setAreaConfigs(prev =>
                               prev.map((c, i) => i === idx ? { ...c, notificationEmail: e.target.value } : c)

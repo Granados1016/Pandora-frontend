@@ -108,7 +108,7 @@ export default function Login() {
               PANDORA
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Coordinación de TI — iMET
+              Sistema de Gestión
             </Typography>
           </Stack>
 

@@ -173,7 +173,7 @@ export default function RoomRequestsManager() {
           <Box>
             <Typography variant="h6" fontWeight={700}>Solicitudes de espacio</Typography>
             <Typography variant="body2" color="text.secondary">
-              Gestiona las solicitudes de separación de sala — IMET
+              Gestiona las solicitudes de separación de sala
             </Typography>
           </Box>
           {loading && <CircularProgress size={18} />}

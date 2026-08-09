@@ -306,7 +306,7 @@ export default function RoomRequestForm() {
           <EventAvailableIcon color="primary" sx={{ fontSize: 36 }} />
           <Box>
             <Typography variant="h5" fontWeight={800}>
-              Solicitud de espacio — IMET
+              Solicitud de espacio
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Completa todos los campos marcados con <strong>*</strong> para registrar tu solicitud.
@@ -344,7 +344,6 @@ export default function RoomRequestForm() {
             label="Nombre completo"
             value={form.responsibleName}
             onChange={f('responsibleName')}
-            helperText="Del equipo IMET"
             inputProps={{ maxLength: 200 }}
           />
         </Section>

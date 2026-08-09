@@ -656,7 +656,7 @@ export default function Licencias() {
         alignItems={{ sm: 'center' }} mb={3} spacing={2}>
         <Box>
           <Typography variant="h5" fontWeight={800}>Control de Licencias</Typography>
-          <Typography variant="body2" color="text.secondary">iMET — Plataformas y servicios activos</Typography>
+          <Typography variant="body2" color="text.secondary">Plataformas y servicios activos</Typography>
         </Box>
         <Stack direction="row" spacing={1} flexWrap="wrap">
           {isAdmin && (
