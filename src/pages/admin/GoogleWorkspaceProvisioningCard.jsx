@@ -19,6 +19,7 @@ const RESULT_CHIP = {
   creado: { label: 'Creado', color: 'success' },
   ya_existia: { label: 'Ya existía', color: 'default' },
   error: { label: 'Error', color: 'error' },
+  suspendida: { label: 'Suspendida', color: 'warning' },
 };
 
 /** Tabla de resultados reutilizada entre el job actual y el buscador global. */
@@ -97,7 +98,7 @@ export default function GoogleWorkspaceProvisioningCard({ expanded, onToggle }) 
     setSearching(true);
     setSearchError('');
     try {
-      const { data } = await googleWorkspaceProvisioningApi.buscarAudit(searchQuery.trim());
+      const { data } = await googleWorkspaceProvisioningApi.buscarDirectorio(searchQuery.trim());
       setSearchResults(data);
     } catch (err) {
       setSearchError(err.response?.data?.error || apiError(err, 'Error al buscar.'));
@@ -190,15 +191,18 @@ export default function GoogleWorkspaceProvisioningCard({ expanded, onToggle }) 
           <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>
         )}
 
-        {/* ── Buscador global: ¿ya se creó esta cuenta? ────────────────────── */}
+        {/* ── Buscador: consulta directo el directorio de Google Workspace ─── */}
         <Box component="form" onSubmit={handleSearch} sx={{ mb: 3 }}>
           <Typography variant="subtitle2" fontWeight={700} gutterBottom>
-            Buscar alumno ya creado
+            Buscar cuenta en Google Workspace
+          </Typography>
+          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+            Busca en el directorio real de Google — incluye cuentas creadas antes de este módulo, no solo las de Pandora.
           </Typography>
           <Stack direction="row" spacing={1}>
             <TextField
               size="small" fullWidth
-              placeholder="Matrícula, nombre o correo..."
+              placeholder="Inicio de matrícula, nombre o apellido..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               InputProps={{
