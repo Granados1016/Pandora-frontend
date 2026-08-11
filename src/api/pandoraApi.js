@@ -638,6 +638,7 @@ export const googleWorkspaceProvisioningApi = {
   },
   getJob:      (jobId) => api.get(`/google-workspace-provisioning/jobs/${jobId}`),
   getJobAudit: (jobId) => api.get(`/google-workspace-provisioning/jobs/${jobId}/audit`),
+  buscarAudit: (q)     => api.get('/google-workspace-provisioning/audit/buscar', { params: { q } }),
   exportarResultados: async (jobId) => {
     const token = localStorage.getItem('pandora_token');
     const url   = `${BASE_URL}/google-workspace-provisioning/jobs/${jobId}/audit/exportar`;
