@@ -185,6 +185,7 @@ export default function GoogleWorkspaceProvisioningCard({ expanded, onToggle }) 
                   <TableHead>
                     <TableRow sx={{ bgcolor: 'primary.main' }}>
                       <TableCell sx={{ color: 'white', fontWeight: 700 }}>Matrícula</TableCell>
+                      <TableCell sx={{ color: 'white', fontWeight: 700 }}>Nombre</TableCell>
                       <TableCell sx={{ color: 'white', fontWeight: 700 }}>Correo</TableCell>
                       <TableCell sx={{ color: 'white', fontWeight: 700 }} align="center">Resultado</TableCell>
                       <TableCell sx={{ color: 'white', fontWeight: 700 }}>Detalle</TableCell>
@@ -193,9 +194,11 @@ export default function GoogleWorkspaceProvisioningCard({ expanded, onToggle }) 
                   <TableBody>
                     {results.map((r, i) => {
                       const chip = RESULT_CHIP[r.resultado] || { label: r.resultado, color: 'default' };
+                      const nombreCompleto = [r.nombre, r.apellidos].filter(Boolean).join(' ') || '—';
                       return (
                         <TableRow key={`${r.matricula}-${i}`} sx={{ bgcolor: i % 2 === 0 ? 'white' : 'grey.50' }}>
                           <TableCell sx={{ fontFamily: 'monospace', fontSize: 13 }}>{r.matricula}</TableCell>
+                          <TableCell sx={{ fontSize: 13 }}>{nombreCompleto}</TableCell>
                           <TableCell sx={{ fontFamily: 'monospace', fontSize: 13 }}>{r.primaryEmail}</TableCell>
                           <TableCell align="center">
                             <Chip size="small" label={chip.label} color={chip.color} />
