@@ -638,6 +638,19 @@ export const googleWorkspaceProvisioningApi = {
   },
   getJob:      (jobId) => api.get(`/google-workspace-provisioning/jobs/${jobId}`),
   getJobAudit: (jobId) => api.get(`/google-workspace-provisioning/jobs/${jobId}/audit`),
+  exportarResultados: async (jobId) => {
+    const token = localStorage.getItem('pandora_token');
+    const url   = `${BASE_URL}/google-workspace-provisioning/jobs/${jobId}/audit/exportar`;
+    const res   = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error(await res.text());
+    const blob     = await res.blob();
+    const filename = res.headers.get('Content-Disposition')?.match(/filename="?([^"]+)"?/)?.[1]
+                     || `Pandora_Alta_Masiva_GoogleWorkspace_${new Date().toISOString().slice(0,10)}.xlsx`;
+    const href = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = href; a.download = filename; a.click();
+    URL.revokeObjectURL(href);
+  },
 };
 
 export default api;

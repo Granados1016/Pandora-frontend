@@ -7,6 +7,7 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import CloudSyncIcon from '@mui/icons-material/CloudSync';
+import DownloadIcon from '@mui/icons-material/Download';
 import { googleWorkspaceProvisioningApi } from '../../api/pandoraApi';
 import { apiError } from '../../api/apiError';
 
@@ -35,6 +36,7 @@ export default function GoogleWorkspaceProvisioningCard({ expanded, onToggle }) 
   const [job, setJob] = useState(null);
   const [polling, setPolling] = useState(false);
   const [results, setResults] = useState([]);
+  const [exporting, setExporting] = useState(false);
 
   const handleFileChange = (e) => {
     setFile(e.target.files?.[0] ?? null);
@@ -48,6 +50,17 @@ export default function GoogleWorkspaceProvisioningCard({ expanded, onToggle }) 
     setResults([]);
     setError('');
     if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const handleExportar = async () => {
+    setExporting(true);
+    try {
+      await googleWorkspaceProvisioningApi.exportarResultados(jobId);
+    } catch (err) {
+      setError(apiError(err, 'Error al exportar a Excel.'));
+    } finally {
+      setExporting(false);
+    }
   };
 
   const handleUpload = async () => {
@@ -180,8 +193,18 @@ export default function GoogleWorkspaceProvisioningCard({ expanded, onToggle }) 
             </Grid>
 
             {results.length > 0 && (
-              <TableContainer component={Paper} variant="outlined" sx={{ mb: 2, maxHeight: 360 }}>
-                <Table size="small" stickyHeader>
+              <>
+                <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1 }}>
+                  <Button
+                    size="small" variant="outlined"
+                    startIcon={exporting ? <CircularProgress size={16} /> : <DownloadIcon />}
+                    onClick={handleExportar} disabled={exporting}
+                  >
+                    Exportar Excel
+                  </Button>
+                </Stack>
+                <TableContainer component={Paper} variant="outlined" sx={{ mb: 2, maxHeight: 360 }}>
+                  <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow sx={{ bgcolor: 'primary.main' }}>
                       <TableCell sx={{ color: 'white', fontWeight: 700 }}>Matrícula</TableCell>
@@ -208,8 +231,9 @@ export default function GoogleWorkspaceProvisioningCard({ expanded, onToggle }) 
                       );
                     })}
                   </TableBody>
-                </Table>
-              </TableContainer>
+                  </Table>
+                </TableContainer>
+              </>
             )}
 
             {!polling && (
