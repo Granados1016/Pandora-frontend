@@ -57,14 +57,14 @@ function calcNuevoProximoPago(proximoPagoStr, frecuencia) {
   return d.toISOString().slice(0, 10);
 }
 
-/** Formatea una fecha (YYYY-MM-DD) como "DD/MesNombre/AA", ej. 17/Agosto/26 */
-function formatFechaLarga(dateStr) {
+/** Formatea una fecha (YYYY-MM-DD) como "DD/MM/AA", ej. 17/08/26 */
+function formatFechaCorta(dateStr) {
   if (!dateStr) return '';
   const iso = String(dateStr).slice(0, 10);
   const d = new Date(iso + 'T12:00:00');
   if (isNaN(d.getTime())) return dateStr;
   const dia  = String(d.getDate()).padStart(2, '0');
-  const mes  = MESES[d.getMonth()];
+  const mes  = String(d.getMonth() + 1).padStart(2, '0');
   const anio = String(d.getFullYear()).slice(-2);
   return `${dia}/${mes}/${anio}`;
 }
@@ -1124,7 +1124,7 @@ export default function Licencias() {
               <Paper elevation={0} sx={{ p: 1.5, bgcolor: '#f5f5f5', borderRadius: 2 }}>
                 <Typography variant="subtitle2" fontWeight={700}>{pagoDialog.licencia.plataforma}</Typography>
                 <Typography variant="caption" color="text.secondary">
-                  {pagoDialog.licencia.area} · {pagoDialog.licencia.frecuenciaPago} · Actual próximo pago: {formatFechaLarga(pagoDialog.licencia.proximoPago)}
+                  {pagoDialog.licencia.area} · {pagoDialog.licencia.frecuenciaPago} · Actual próximo pago: {formatFechaCorta(pagoDialog.licencia.proximoPago)}
                 </Typography>
               </Paper>
             )}
@@ -1135,7 +1135,7 @@ export default function Licencias() {
               InputLabelProps={{ shrink: true }}
               value={pagoDialog.fechaPago}
               onChange={e => setPagoDialog(d => ({ ...d, fechaPago: e.target.value }))}
-              helperText={pagoDialog.fechaPago ? formatFechaLarga(pagoDialog.fechaPago) : ' '}
+              helperText={pagoDialog.fechaPago ? formatFechaCorta(pagoDialog.fechaPago) : ' '}
             />
             <TextField
               label="Monto pagado (MXN)"
@@ -1150,7 +1150,7 @@ export default function Licencias() {
               <TextField
                 label="Nuevo Próximo Pago (calculado automáticamente)"
                 size="small" fullWidth
-                value={formatFechaLarga(calcNuevoProximoPago(pagoDialog.licencia.proximoPago, pagoDialog.licencia.frecuenciaPago))}
+                value={formatFechaCorta(calcNuevoProximoPago(pagoDialog.licencia.proximoPago, pagoDialog.licencia.frecuenciaPago))}
                 InputProps={{ readOnly: true }}
                 sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#e8f5e9' } }}
                 helperText={`Se avanzará 1 período de ${pagoDialog.licencia?.frecuenciaPago?.toLowerCase()}`}
@@ -1196,7 +1196,7 @@ export default function Licencias() {
               InputLabelProps={{ shrink: true }}
               value={pagoMasivoDialog.fechaPago}
               onChange={e => setPagoMasivoDialog(d => ({ ...d, fechaPago: e.target.value }))}
-              helperText={pagoMasivoDialog.fechaPago ? formatFechaLarga(pagoMasivoDialog.fechaPago) : ' '}
+              helperText={pagoMasivoDialog.fechaPago ? formatFechaCorta(pagoMasivoDialog.fechaPago) : ' '}
             />
 
             <Typography variant="caption" color="text.secondary" fontWeight={600}>
@@ -1215,7 +1215,7 @@ export default function Licencias() {
                   <Box>
                     <Typography variant="body2" fontWeight={600} fontSize={13}>{l.plataforma}</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {l.area} · {l.frecuenciaPago} · Vence: {formatFechaLarga(calcNuevoProximoPago(l.proximoPago, l.frecuenciaPago))}
+                      {l.area} · {l.frecuenciaPago} · Vence: {formatFechaCorta(calcNuevoProximoPago(l.proximoPago, l.frecuenciaPago))}
                     </Typography>
                   </Box>
                   <Typography variant="body2" fontWeight={700} color="success.main">
@@ -1279,13 +1279,13 @@ export default function Licencias() {
                   {historial.map((p, i) => (
                     <TableRow key={p.id} sx={{ bgcolor: i % 2 === 0 ? 'white' : '#fafafa' }}>
                       <TableCell sx={{ fontSize: 13, fontWeight: 600 }}>
-                        <Chip label={formatFechaLarga(p.fechaPago)} size="small" color="success" variant="outlined"
+                        <Chip label={formatFechaCorta(p.fechaPago)} size="small" color="success" variant="outlined"
                           sx={{ fontSize: 12, fontWeight: 700 }} />
                       </TableCell>
                       <TableCell sx={{ fontSize: 13, fontWeight: 700, color: 'success.main' }}>
                         {fmt$(p.monto)}
                       </TableCell>
-                      <TableCell sx={{ fontSize: 12 }}>{p.nuevoProximoPago ? formatFechaLarga(p.nuevoProximoPago) : '—'}</TableCell>
+                      <TableCell sx={{ fontSize: 12 }}>{p.nuevoProximoPago ? formatFechaCorta(p.nuevoProximoPago) : '—'}</TableCell>
                       <TableCell sx={{ fontSize: 12, color: 'text.secondary' }}>{p.registradoPor ?? '—'}</TableCell>
                       <TableCell sx={{ fontSize: 12, color: 'text.secondary', fontStyle: p.notas ? 'normal' : 'italic' }}>
                         {p.notas ?? 'Sin notas'}
