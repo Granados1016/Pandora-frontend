@@ -441,6 +441,8 @@ export default function Licencias() {
   const [filtroEstado,     setFiltroEstado]     = useState('');
   const [filtroFrecuencia, setFiltroFrecuencia] = useState('');
   const [filtroDias,       setFiltroDias]       = useState('');
+  const [filtroFechaDesde, setFiltroFechaDesde] = useState('');
+  const [filtroFechaHasta, setFiltroFechaHasta] = useState('');
 
   // ── CRUD dialog ───────────────────────────────────────────────────────────
   const [dialog,     setDialog]     = useState({ open: false, mode: 'create', data: EMPTY_FORM });
@@ -497,14 +499,17 @@ export default function Licencias() {
     if (filtroDias === 'vence7'   && !(l.diasRestantes >= 0 && l.diasRestantes <= 7))   return false;
     if (filtroDias === 'vence30'  && !(l.diasRestantes >= 0 && l.diasRestantes <= 30))  return false;
     if (filtroDias === 'vencidas' && l.diasRestantes >= 0)                               return false;
+    if (filtroFechaDesde && (!l.proximoPago || l.proximoPago < filtroFechaDesde)) return false;
+    if (filtroFechaHasta && (!l.proximoPago || l.proximoPago > filtroFechaHasta)) return false;
     return true;
   });
 
-  const filtrosActivos = [busqueda, filtroArea, filtroEstado, filtroFrecuencia, filtroDias].filter(Boolean).length;
+  const filtrosActivos = [busqueda, filtroArea, filtroEstado, filtroFrecuencia, filtroDias, filtroFechaDesde, filtroFechaHasta].filter(Boolean).length;
 
   const limpiarFiltros = () => {
     setBusqueda(''); setFiltroArea(''); setFiltroEstado('');
     setFiltroFrecuencia(''); setFiltroDias('');
+    setFiltroFechaDesde(''); setFiltroFechaHasta('');
   };
 
   // ── Selección ─────────────────────────────────────────────────────────────
@@ -845,6 +850,24 @@ export default function Licencias() {
                   <MenuItem value="vencidas">Ya vencidas</MenuItem>
                 </Select>
               </FormControl>
+              <TextField
+                label="Próximo pago desde"
+                size="small" type="date"
+                InputLabelProps={{ shrink: true }}
+                value={filtroFechaDesde}
+                onChange={e => setFiltroFechaDesde(e.target.value)}
+                helperText={filtroFechaDesde ? formatFechaCorta(filtroFechaDesde) : ' '}
+                sx={{ minWidth: 160 }}
+              />
+              <TextField
+                label="Próximo pago hasta"
+                size="small" type="date"
+                InputLabelProps={{ shrink: true }}
+                value={filtroFechaHasta}
+                onChange={e => setFiltroFechaHasta(e.target.value)}
+                helperText={filtroFechaHasta ? formatFechaCorta(filtroFechaHasta) : ' '}
+                sx={{ minWidth: 160 }}
+              />
             </Stack>
 
             {/* Indicador de resultados + acción masiva */}
