@@ -57,6 +57,7 @@ export default function NewCampaign() {
   const [sendResult, setSendResult] = useState(null);
   const [sendError, setSendError]   = useState('');
   const [csvErrors, setCsvErrors]   = useState([]);
+  const [skippedSent, setSkippedSent] = useState(0);
   const [templates, setTemplates]   = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [editorMode, setEditorMode]             = useState('plain');
@@ -115,11 +116,13 @@ export default function NewCampaign() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const { rows, errors } = await parseRecipientFile(file);
+      const { rows, errors, skippedSent } = await parseRecipientFile(file);
       set('recipients', rows);
       setCsvErrors(errors);
+      setSkippedSent(skippedSent || 0);
     } catch (err) {
       setCsvErrors([err.message || 'Error al leer el archivo.']);
+      setSkippedSent(0);
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -246,12 +249,22 @@ export default function NewCampaign() {
             <Alert severity="info" sx={{ mb: 2 }}>
               El archivo debe tener columnas: <strong>nombre, email, usuario, contraseña</strong>.
               Las columnas adicionales se capturan como variables dinámicas para el correo.
+              Si agregas una columna <strong>Estatus</strong> y marcas una fila como <em>Listo</em> o <em>Enviado</em>
+              (en cualquier combinación de mayúsculas/minúsculas), Pandora la omite automáticamente
+              para no reenviar credenciales.
             </Alert>
 
             {csvErrors.length > 0 && (
               <Alert severity="warning" sx={{ mb: 2 }}>
                 {csvErrors.slice(0, 3).join(' · ')}
                 {csvErrors.length > 3 && ` · y ${csvErrors.length - 3} más`}
+              </Alert>
+            )}
+
+            {skippedSent > 0 && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {skippedSent} destinatario{skippedSent !== 1 ? 's' : ''} omitido{skippedSent !== 1 ? 's' : ''} por
+                estatus ya marcado como "Listo/Enviado" — no se le{skippedSent !== 1 ? 's' : ''} reenviarán credenciales.
               </Alert>
             )}
 

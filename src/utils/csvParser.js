@@ -6,6 +6,7 @@ const COLUMN_ALIASES = {
   email:    ['email', 'correo', 'correo electronico', 'correo electrónico', 'e-mail', 'mail'],
   username: ['usuario', 'username', 'user', 'cuenta', 'no. control', 'numero de control', 'matricula', 'matrícula'],
   password: ['contrasena', 'contraseña', 'password', 'clave', 'pass', 'nip'],
+  status:   ['estatus', 'status', 'estado', 'estatus de envio', 'estatus de envío', 'credencial enviada'],
 };
 
 function normalize(key) {
@@ -14,6 +15,25 @@ function normalize(key) {
 }
 
 const STANDARD_KEYS = Object.values(COLUMN_ALIASES).flat().map(normalize);
+
+// Valores de la celda "Estatus" que indican que ya se enviaron las credenciales
+// (se compara normalizado: sin acentos, minúsculas y sin espacios extra, así que
+// "Listo", "LISTO", "listo " o "Enviado" caen todos en el mismo bucket).
+const ALREADY_SENT_VALUES = new Set(
+  [
+    'listo', 'lista', 'listos', 'listas',
+    'enviado', 'enviada', 'enviados', 'enviadas', 'ya enviado', 'ya enviada',
+    'completado', 'completada', 'completo', 'completa',
+    'terminado', 'terminada',
+    'hecho', 'hecha',
+    'si', 'sí', 'ok', 'done', 'sent', 'completed',
+  ].map(normalize)
+);
+
+function isAlreadySent(statusValue) {
+  if (!statusValue) return false;
+  return ALREADY_SENT_VALUES.has(normalize(statusValue));
+}
 
 function mapRow(raw, i) {
   const r = {};
@@ -41,15 +61,28 @@ function mapRow(raw, i) {
     email:    find(COLUMN_ALIASES.email),
     username: find(COLUMN_ALIASES.username),
     password: find(COLUMN_ALIASES.password),
+    _status:  find(COLUMN_ALIASES.status),
     ...(Object.keys(extraData).length > 0 ? { extraData } : {}),
   };
 }
 
 function buildResult(rows) {
-  const errors = rows
+  // Filas cuya columna de estatus ya dice "Listo/Enviado" (y variantes) → no se
+  // vuelven a enviar credenciales, se excluyen del envío desde el parseo.
+  const alreadySent = rows.filter(r => isAlreadySent(r._status));
+  const pending      = rows.filter(r => !isAlreadySent(r._status));
+
+  const errors = pending
     .filter(r => !r.fullName || !r.email || !r.username || !r.password)
     .map(r => `Fila ${r.id + 2}: datos incompletos`);
-  return { rows: rows.filter(r => r.fullName && r.email && r.username && r.password), errors };
+
+  return {
+    rows: pending
+      .filter(r => r.fullName && r.email && r.username && r.password)
+      .map(({ _status, ...r }) => r), // no mandamos el estatus crudo al backend
+    errors,
+    skippedSent: alreadySent.length,
+  };
 }
 
 function parseCsvFile(file) {
