@@ -17,6 +17,17 @@ const EMPTY = {
   notas: '', costoEstimado: '', costoReal: '',
 };
 
+// Convierte una fecha (ISO UTC del backend, o un Date actual) a "YYYY-MM-DDTHH:mm"
+// EN HORA LOCAL del navegador, para precargar un <input type="datetime-local">.
+// OJO: .toISOString() NO sirve aquí — devuelve la hora en UTC, no en local, y
+// eso hacía que el formulario mostrara/guardara la hora desfasada al editar.
+function toLocalInputValue(isoOrDate) {
+  const d = isoOrDate instanceof Date ? isoOrDate : new Date(isoOrDate);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 // Autocomplete de usuarios de Pandora: al elegir uno, autollena nombre + correo
 function UserAutocomplete({ users, label, nameValue, onPick, onNameType }) {
   return (
@@ -47,10 +58,8 @@ function UserAutocomplete({ users, label, nameValue, onPick, onNameType }) {
 export default function MantenimientoForm({ initial, onSave, onClose, saving }) {
   const [form, setForm] = useState(() => ({
     ...EMPTY, ...initial,
-    fechaProgramada: initial?.fechaProgramada
-      ? new Date(initial.fechaProgramada).toISOString().slice(0, 16) : '',
-    fechaRealizada: initial?.fechaRealizada
-      ? new Date(initial.fechaRealizada).toISOString().slice(0, 16) : '',
+    fechaProgramada: initial?.fechaProgramada ? toLocalInputValue(initial.fechaProgramada) : '',
+    fechaRealizada:  initial?.fechaRealizada  ? toLocalInputValue(initial.fechaRealizada)  : '',
   }));
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -104,7 +113,7 @@ export default function MantenimientoForm({ initial, onSave, onClose, saving }) 
               const v = e.target.value;
               set('estado', v);
               if (v === 'Completado' && !form.fechaRealizada) {
-                set('fechaRealizada', new Date().toISOString().slice(0, 16));
+                set('fechaRealizada', toLocalInputValue(new Date()));
               }
             }}>
               {ESTADOS.map(s => <MenuItem key={s} value={s}>{s}</MenuItem>)}
