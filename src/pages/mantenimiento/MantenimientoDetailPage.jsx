@@ -106,6 +106,8 @@ export default function MantenimientoDetailPage() {
         ubicacion:         entry.ubicacion,
         tecnicoAsignado:   entry.tecnicoAsignado,
         emailTecnico:      entry.emailTecnico,
+        responsableEquipo: entry.responsableEquipo,
+        emailResponsable:  entry.emailResponsable,
         fechaProgramada:   entry.fechaProgramada,
         fechaRealizada:    nuevoEstado === 'Completado' ? (entry.fechaRealizada || new Date().toISOString()) : entry.fechaRealizada,
         duracionMinutos:   entry.duracionMinutos,
@@ -369,6 +371,8 @@ export default function MantenimientoDetailPage() {
                 ['Ubicación',       e.ubicacion     || '—'],
                 ['Técnico',         e.tecnicoAsignado || '—'],
                 ['Email técnico',   e.emailTecnico  || '—'],
+                ['Responsable del equipo', e.responsableEquipo || '—'],
+                ['Email responsable', e.emailResponsable || '—'],
               ].map(([label, val]) => (
                 <Box key={label}>
                   <Typography variant="caption" color="text.secondary" display="block">{label}</Typography>

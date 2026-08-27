@@ -217,6 +217,7 @@ export const userApi = {
   uploadBanner: (file) => uploadForm('/users/me/banner', file),
   deleteBanner: () => api.delete('/users/me/banner'),
   importCsv:    (users) => api.post('/users/import-csv', users),
+  lookup: () => api.get('/users/lookup'),
 };
 
 export const authApi = {
