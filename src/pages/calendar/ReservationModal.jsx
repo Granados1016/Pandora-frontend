@@ -29,11 +29,19 @@ const toLocal = (dt) => {
   const pad = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
+const COBERTURA_OPTIONS = [
+  { value: 'Ninguna', label: 'Ninguna' },
+  { value: 'Foto',    label: '📷 Foto' },
+  { value: 'Video',   label: '🎥 Video' },
+  { value: 'Ambas',   label: '📷🎥 Foto y Video' },
+];
+
 const EMPTY_FORM = {
   title: '', description: '', roomId: '',
   start: '', end: '',
   organizerName: '', organizerEmail: '',
   meetLink: '',
+  coberturaSolicitada: 'Ninguna',
   isRecurring: false, freq: 'FREQ=WEEKLY', byDay: [],
   recurrenceUntil: '', recurrenceCount: 12,
   attendees: [],
@@ -59,6 +67,7 @@ export default function ReservationModal({ open, onClose, onSaved, rooms, employ
         organizerName:    initial.organizerName  || initial.extendedProps?.organizerName  || '',
         organizerEmail:   initial.organizerEmail || initial.extendedProps?.organizerEmail || '',
         meetLink:         initial.meetLink       || initial.extendedProps?.meetLink       || '',
+        coberturaSolicitada: initial.coberturaSolicitada || initial.extendedProps?.coberturaSolicitada || 'Ninguna',
         isRecurring:      initial.isRecurring    || initial.extendedProps?.isRecurring    || false,
         freq:             'FREQ=WEEKLY',
         byDay:            [],
@@ -119,6 +128,7 @@ export default function ReservationModal({ open, onClose, onSaved, rooms, employ
         organizerName:   form.organizerName,
         organizerEmail:  form.organizerEmail || null,
         meetLink:        form.meetLink || null,
+        coberturaSolicitada: form.coberturaSolicitada || 'Ninguna',
         isRecurring:     form.isRecurring,
         recurrenceRule:  form.isRecurring ? buildRRule() : null,
         recurrenceUntil: form.isRecurring && form.recurrenceUntil
@@ -247,6 +257,23 @@ export default function ReservationModal({ open, onClose, onSaved, rooms, employ
             <Grid item xs={12} sm={6}>
               <TextField label="Email organizador" value={form.organizerEmail} onChange={f('organizerEmail')} fullWidth size="small" type="email" />
             </Grid>
+
+            {/* Cobertura de foto/video */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                select label="Cobertura solicitada" value={form.coberturaSolicitada}
+                onChange={f('coberturaSolicitada')} fullWidth size="small"
+              >
+                {COBERTURA_OPTIONS.map(o => <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>)}
+              </TextField>
+            </Grid>
+            {form.coberturaSolicitada !== 'Ninguna' && (
+              <Grid item xs={12} sm={6}>
+                <Alert severity="info" sx={{ py: 0 }}>
+                  Se notificará por correo al líder de Marketing para su aprobación.
+                </Alert>
+              </Grid>
+            )}
 
             <Grid item xs={12}><Divider><Typography variant="caption" color="text.secondary">Recurrencia</Typography></Divider></Grid>
 
