@@ -224,6 +224,8 @@ export const authApi = {
   sendOtp:    (username)      => api.post('/auth/send-otp',    { username }),
   verifyOtp:  (data)          => api.post('/auth/verify-otp',  data),
   toggle2FA:  (username, enable) => api.post(`/auth/toggle-2fa/${username}`, { enable }),
+  // Login con cuenta institucional de Google: envía el id_token de Google Identity Services.
+  googleLogin: (idToken)      => api.post('/auth/google', { idToken }),
 };
 
 export const catalogApi = {

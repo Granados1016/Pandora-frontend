@@ -215,16 +215,22 @@ export function AuthProvider({ children }) {
     localStorage.setItem('pandora_token', jwtToken);
     if (refreshToken) localStorage.setItem('pandora_refresh_token', refreshToken);
     setToken(jwtToken);
-    try {
-      const me = await api.get('/users/me', { headers: { Authorization: `Bearer ${jwtToken}` } });
-      const mvo = me.data?.modulesViewOnly ?? 0;
-      localStorage.setItem('pandora_mvo', String(mvo));
-      setModulesViewOnly(mvo);
-    } catch {
-      localStorage.setItem('pandora_mvo', '0');
-      setModulesViewOnly(0);
-    }
-  }, []);
+    // Cargar modulesViewOnly y branding del tenant en paralelo (igual que login normal)
+    await Promise.allSettled([
+      (async () => {
+        try {
+          const me = await api.get('/users/me', { headers: { Authorization: `Bearer ${jwtToken}` } });
+          const mvo = me.data?.modulesViewOnly ?? 0;
+          localStorage.setItem('pandora_mvo', String(mvo));
+          setModulesViewOnly(mvo);
+        } catch {
+          localStorage.setItem('pandora_mvo', '0');
+          setModulesViewOnly(0);
+        }
+      })(),
+      loadTenantBranding(jwtToken),
+    ]);
+  }, [loadTenantBranding]);
 
   const logout = useCallback(() => {
     const refreshToken = localStorage.getItem('pandora_refresh_token');

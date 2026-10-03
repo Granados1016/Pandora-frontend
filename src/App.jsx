@@ -303,14 +303,14 @@ function AppRoutes() {
 
               {/* ── Capacitaciones ──────────────────────────────────────── */}
               <Route path="/capacitaciones" element={
-                <ProtectedRoute module={MODULES.CAPACITACIONES}>
+                <ProtectedRoute requiredModule={MODULES.CAPACITACIONES}>
                   <CapacitacionesPage />
                 </ProtectedRoute>
               } />
 
               {/* ── Activos Fijos ────────────────────────────────────────── */}
               <Route path="/activos-fijos" element={
-                <ProtectedRoute module={MODULES.ACTIVOS_FIJOS}>
+                <ProtectedRoute requiredModule={MODULES.ACTIVOS_FIJOS}>
                   <ActivosFijosPage />
                 </ProtectedRoute>
               } />

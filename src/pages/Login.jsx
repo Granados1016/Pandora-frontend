@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   Box, Card, CardContent, TextField, Button,
   Typography, Alert, CircularProgress, Stack,
-  InputAdornment, IconButton,
+  InputAdornment, IconButton, Divider,
 } from '@mui/material';
 import LockIcon        from '@mui/icons-material/Lock';
 import VisibilityIcon  from '@mui/icons-material/Visibility';
@@ -25,6 +25,10 @@ export default function Login() {
   const [step,     setStep]     = useState('credentials'); // 'credentials' | 'otp'
   const [otpCode,  setOtpCode]  = useState('');
   const [otpSent,  setOtpSent]  = useState(false);
+
+  // ── Login con Google ──────────────────────────────────────────────────────
+  const googleBtnRef = useRef(null);
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
   const from = location.state?.from?.pathname || '/';
   const sessionExpired = useMemo(
@@ -81,6 +85,67 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  // ── Callback de Google: recibe el id_token y lo canjea por sesión Pandora ──
+  const handleGoogleCredential = useCallback(async (response) => {
+    const idToken = response?.credential;
+    if (!idToken) return;
+    setLoading(true);
+    setError('');
+    try {
+      const res = await authApi.googleLogin(idToken);
+      await loginWithToken(res.data.token, res.data.refreshToken);
+      navigate(from, { replace: true });
+    } catch (err) {
+      const data = err?.response?.data;
+      if (data?.error === 'not_provisioned' || data?.error === 'user_disabled') {
+        setError(data.message);
+      } else if (data?.error === 'license_suspended' || data?.error === 'license_expired') {
+        setError(data.message);
+      } else if (data?.error === 'google_not_configured') {
+        setError('El inicio de sesión con Google no está configurado. Contacta al administrador.');
+      } else {
+        setError('No se pudo iniciar sesión con Google.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [loginWithToken, navigate, from]);
+
+  // Carga Google Identity Services y renderiza el botón oficial.
+  useEffect(() => {
+    if (!googleClientId || step !== 'credentials') return;
+    let cancelled = false;
+
+    const render = () => {
+      if (cancelled || !window.google?.accounts?.id || !googleBtnRef.current) return;
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: handleGoogleCredential,
+      });
+      googleBtnRef.current.innerHTML = '';
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        theme: 'outline', size: 'large', width: 340,
+        text: 'signin_with', shape: 'rectangular', logo_alignment: 'center',
+      });
+    };
+
+    if (window.google?.accounts?.id) {
+      render();
+    } else {
+      const existing = document.getElementById('google-gsi-script');
+      if (existing) {
+        existing.addEventListener('load', render, { once: true });
+      } else {
+        const s = document.createElement('script');
+        s.src = 'https://accounts.google.com/gsi/client';
+        s.async = true; s.defer = true; s.id = 'google-gsi-script';
+        s.onload = render;
+        document.head.appendChild(s);
+      }
+    }
+    return () => { cancelled = true; };
+  }, [googleClientId, step, handleGoogleCredential]);
 
   return (
     <Box
@@ -174,6 +239,18 @@ export default function Login() {
                   ¿Olvidaste tu contraseña?
                 </Link>
               </Box>
+            )}
+
+            {step === 'credentials' && googleClientId && (
+              <>
+                <Divider sx={{ my: 2.5, fontSize: '0.75rem', color: 'text.secondary' }}>o</Divider>
+                <Box display="flex" justifyContent="center">
+                  <Box ref={googleBtnRef} />
+                </Box>
+                <Typography variant="caption" color="text.secondary" display="block" textAlign="center" mt={1}>
+                  Usa tu cuenta institucional
+                </Typography>
+              </>
             )}
           </Box>
         </CardContent>
