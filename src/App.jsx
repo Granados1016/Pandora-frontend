@@ -93,16 +93,26 @@ function PageLoader() {
 function ProtectedRoute({
   children,
   adminOnly       = false,
+  superAdminOnly  = false,
   allowedRoles    = null,
   requiredModule  = null,
   requiredAnyModules = null,
 }) {
-  const { isAuthenticated, isAdmin, hasModule, hasRole } = useAuth();
+  const { isAuthenticated, isAdmin, isSuperAdmin, consoleOnly, hasModule, hasRole } = useAuth();
   const location = useLocation();
 
   // 1. Sin sesión → login
   if (!isAuthenticated)
     return <Navigate to="/login" state={{ from: location }} replace />;
+
+  // 2a. Solo Super Admin (consola de proveedor)
+  if (superAdminOnly && !isSuperAdmin)
+    return <Navigate to="/unauthorized" replace />;
+
+  // 2b. Un SuperAdmin en modo consola (sin impersonar) no entra a módulos
+  //     operativos; se le manda a su panel de clientes.
+  if (!superAdminOnly && consoleOnly)
+    return <Navigate to="/super-admin/tenants" replace />;
 
   // 2. Solo Admin
   if (adminOnly && !isAdmin)
@@ -365,9 +375,9 @@ function AppRoutes() {
                 </ProtectedRoute>
               } />
 
-              {/* ── Panel de Tenants — Solo Super Admin ─────────────────── */}
+              {/* ── Panel de Clientes — Solo Super Admin ────────────────── */}
               <Route path="/super-admin/tenants" element={
-                <ProtectedRoute adminOnly>
+                <ProtectedRoute superAdminOnly>
                   <TenantsPage />
                 </ProtectedRoute>
               } />

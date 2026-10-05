@@ -92,6 +92,7 @@ export const SUB_MODULES = [
 // Para agregar nuevos roles actualizar también:
 //   backend: AppUser.cs (Role enum), AuthController.cs (claim generation)
 export const ROLES = {
+  SUPERADMIN:    'SuperAdmin',       // Proveedor: gestiona todos los clientes
   ADMIN:         'Admin',
   INVENTARISTA:  'Inventarista',    // Gestión de inventario sin acceso total
   USER:          'User',
@@ -160,23 +161,36 @@ export function AuthProvider({ children }) {
   const modules   = parseInt(claims.modules || '0', 10);
   const isAdmin   = role === 'Admin';
   const tenantId  = claims.tenantId || null;
-  // isSuperAdmin: admin cuyo username coincide con el configurado en SuperAdmin:Username
-  // Por simplicidad en frontend se marca con claim especial o se compara localmente
-  const isSuperAdmin = isAdmin;
+  // SuperAdmin del proveedor: gestiona todos los clientes. Cuando "entra como"
+  // un cliente, el token de impersonación trae role='Admin' + impersonatedBy,
+  // así que isAdmin=true y actúa como admin de ese tenant.
+  const isSuperAdmin  = role === 'SuperAdmin';
+  const impersonatedBy = claims.impersonatedBy || null;
+  const isImpersonating = !!impersonatedBy;
+  // Un SuperAdmin que NO está impersonando usa solo la consola de proveedor:
+  // no debe ver módulos operativos (aunque su usuario tenga todos los bits).
+  const consoleOnly = isSuperAdmin && !isImpersonating;
 
   // Devuelve true si el usuario tiene acceso al módulo/sub-módulo (vista o escritura)
-  const hasModule = useCallback((mod) => isAdmin || (modules & mod) !== 0, [isAdmin, modules]);
+  const hasModule = useCallback((mod) => {
+    if (consoleOnly) return false;
+    return isAdmin || (modules & mod) !== 0;
+  }, [consoleOnly, isAdmin, modules]);
 
   // Alias semántico para sub-módulos (misma lógica, nombre más claro)
-  const hasSubModule = useCallback((bit) => isAdmin || (modules & bit) !== 0, [isAdmin, modules]);
+  const hasSubModule = useCallback((bit) => {
+    if (consoleOnly) return false;
+    return isAdmin || (modules & bit) !== 0;
+  }, [consoleOnly, isAdmin, modules]);
 
   // Devuelve true si el usuario tiene acceso de ESCRITURA al módulo.
   // Admin siempre tiene escritura. Si el bit está en modulesViewOnly → solo vista.
   const hasModuleWrite = useCallback((mod) => {
+    if (consoleOnly) return false;
     if (isAdmin) return true;
     if ((modules & mod) === 0) return false;          // sin acceso
     return (modulesViewOnly & mod) === 0;             // false = solo vista
-  }, [isAdmin, modules, modulesViewOnly]);
+  }, [consoleOnly, isAdmin, modules, modulesViewOnly]);
 
   // Devuelve true si el usuario tiene al menos uno de los roles permitidos.
   // Admin siempre tiene acceso a todo.
@@ -232,6 +246,37 @@ export function AuthProvider({ children }) {
     ]);
   }, [loadTenantBranding]);
 
+  // ── Impersonación (SuperAdmin "entra como" un cliente) ────────────────────
+  const impersonate = useCallback(async (tid) => {
+    const { data } = await api.post(`/auth/impersonate/${tid}`);
+    // Guardar el token real del SuperAdmin para poder volver sin re-login
+    const current = localStorage.getItem('pandora_token');
+    if (current) localStorage.setItem('pandora_superadmin_token', current);
+    localStorage.setItem('pandora_token', data.token);
+    setToken(data.token);
+    try {
+      const me = await api.get('/users/me', { headers: { Authorization: `Bearer ${data.token}` } });
+      const mvo = me.data?.modulesViewOnly ?? 0;
+      localStorage.setItem('pandora_mvo', String(mvo));
+      setModulesViewOnly(mvo);
+    } catch { localStorage.setItem('pandora_mvo', '0'); setModulesViewOnly(0); }
+    await loadTenantBranding(data.token);
+    return data; // { token, tenantId, tenantName }
+  }, [loadTenantBranding]);
+
+  const exitImpersonation = useCallback(() => {
+    const su = localStorage.getItem('pandora_superadmin_token');
+    if (!su) return false;
+    localStorage.setItem('pandora_token', su);
+    localStorage.removeItem('pandora_superadmin_token');
+    localStorage.removeItem('pandora_tenant');
+    localStorage.setItem('pandora_mvo', '0');
+    setModulesViewOnly(0);
+    setTenantBranding(null);
+    setToken(su);
+    return true;
+  }, []);
+
   const logout = useCallback(() => {
     const refreshToken = localStorage.getItem('pandora_refresh_token');
     if (refreshToken) {
@@ -249,9 +294,10 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       token, username, fullName, role, modules, modulesViewOnly, isAdmin, isSuperAdmin,
+      isImpersonating, impersonatedBy, consoleOnly,
       tenantId, tenantBranding,
       hasModule, hasSubModule, hasModuleWrite, hasRole,
-      login, loginWithToken, logout, loadTenantBranding,
+      login, loginWithToken, logout, loadTenantBranding, impersonate, exitImpersonation,
       isAuthenticated: !!token,
       tokenExp: claims.exp ?? null,
     }}>

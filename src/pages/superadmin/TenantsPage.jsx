@@ -17,7 +17,10 @@ import WarningIcon        from '@mui/icons-material/Warning';
 import UploadIcon         from '@mui/icons-material/Upload';
 import BarChartIcon       from '@mui/icons-material/BarChart';
 import CloseIcon          from '@mui/icons-material/Close';
+import LoginIcon          from '@mui/icons-material/Login';
+import { useNavigate } from 'react-router-dom';
 import { tenantsApi } from '../../api/pandoraApi';
+import { useAuth } from '../../hooks/useAuth.jsx';
 
 const EMPTY_FORM = {
   slug: '', name: '', displayName: '', primaryColor: '#1A237E', secondaryColor: '#283593',
@@ -25,6 +28,8 @@ const EMPTY_FORM = {
 };
 
 export default function TenantsPage() {
+  const navigate = useNavigate();
+  const { impersonate } = useAuth();
   const [tenants,   setTenants]   = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [msg,       setMsg]       = useState('');
@@ -52,6 +57,16 @@ export default function TenantsPage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // "Entrar como" — el SuperAdmin obtiene un token de Admin scoped a ese cliente
+  const handleImpersonate = async (t) => {
+    try {
+      await impersonate(t.id);
+      navigate('/');   // entra al dashboard ya como ese cliente
+    } catch {
+      setMsg('❌ No se pudo entrar como el cliente.'); setMsgSev('error');
+    }
+  };
 
   const openNew = () => {
     setEditing(null);
@@ -273,6 +288,9 @@ export default function TenantsPage() {
                       {/* Acciones */}
                       <TableCell>
                         <Stack direction="row" spacing={0.5}>
+                          <Tooltip title="Entrar como este cliente">
+                            <IconButton size="small" color="primary" onClick={() => handleImpersonate(t)}><LoginIcon fontSize="small" /></IconButton>
+                          </Tooltip>
                           <Tooltip title="Editar">
                             <IconButton size="small" onClick={() => openEdit(t)}><EditIcon fontSize="small" /></IconButton>
                           </Tooltip>

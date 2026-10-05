@@ -5,6 +5,7 @@ import {
   AppBar, Toolbar, Typography, IconButton, Divider, Avatar, Tooltip, Collapse,
   Badge, InputBase, Paper, Chip, Stack, ClickAwayListener, Popper, Dialog,
   DialogTitle, DialogContent, DialogContentText, DialogActions, Button, CircularProgress,
+  Alert,
 } from '@mui/material';
 
 // ── Íconos de navegación ──────────────────────────────────────────────────────
@@ -79,7 +80,8 @@ const TRANSITION = 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
 export default function Layout({ children }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { username, fullName, isAdmin, hasModule, hasSubModule, hasModuleWrite, logout, tenantBranding } = useAuth();
+  const { username, fullName, isAdmin, isSuperAdmin, isImpersonating, exitImpersonation,
+          hasModule, hasSubModule, hasModuleWrite, logout, tenantBranding } = useAuth();
   const { mode, toggleMode } = useThemeMode();
 
   // ── White-label: título del tab y favicon dinámicos ──────────────────────
@@ -325,11 +327,11 @@ export default function Layout({ children }) {
     },
     {
       label: 'Sistema',
-      show: isAdmin,
+      show: isAdmin || isSuperAdmin,
       items: [
         { label: 'Administración',   icon: <AdminPanelSettingsIcon />, path: '/admin',                  show: isAdmin },
         { label: 'Log de Auditoría', icon: <HistoryIcon />,            path: '/admin/audit',            show: isAdmin },
-        { label: 'Panel de Clientes',icon: <ApartmentIcon />,          path: '/super-admin/tenants',    show: isAdmin },
+        { label: 'Panel de Clientes',icon: <ApartmentIcon />,          path: '/super-admin/tenants',    show: isSuperAdmin },
       ],
     },
   ];
@@ -868,6 +870,21 @@ export default function Layout({ children }) {
         </Box>
 
         <LicenseBanner />
+        {isImpersonating && (
+          <Alert
+            severity="warning"
+            variant="filled"
+            sx={{ mb: 2, borderRadius: 2 }}
+            action={
+              <Button color="inherit" size="small" variant="outlined"
+                onClick={() => { exitImpersonation(); navigate('/super-admin/tenants'); }}>
+                Salir del cliente
+              </Button>
+            }
+          >
+            Estás viendo Pandora como <strong>{tenantBranding?.displayName || 'este cliente'}</strong> (modo Super Admin).
+          </Alert>
+        )}
         {children}
       </Box>
 
