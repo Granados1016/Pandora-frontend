@@ -614,6 +614,13 @@ export const checadorApi = {
 };
 
 // ── Tenants (multi-tenant — panel maestro) ────────────────────────────────────
+// ── Consola de proveedor: gestión global de usuarios y roles (solo SuperAdmin) ──
+export const superAdminApi = {
+  listUsers:    ()            => api.get('/superadmin/users'),
+  setRole:      (id, role)    => api.put(`/superadmin/users/${id}/role`, { role }),
+  toggleActive: (id)          => api.patch(`/superadmin/users/${id}/active`),
+};
+
 export const tenantsApi = {
   getAll:       ()           => api.get('/tenants'),
   getById:      (id)         => api.get(`/tenants/${id}`),

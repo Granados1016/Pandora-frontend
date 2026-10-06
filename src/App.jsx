@@ -77,8 +77,9 @@ const MantenimientoDetailPage = lazy(() => import('./pages/mantenimiento/Manteni
 const CheckadorPage      = lazy(() => import('./pages/checador/CheckadorPage'));
 const CheckadorAdminPage = lazy(() => import('./pages/checador/CheckadorAdminPage'));
 
-// Super Admin — Panel de tenants
+// Super Admin — Panel de tenants + gestión global de usuarios/roles
 const TenantsPage = lazy(() => import('./pages/superadmin/TenantsPage'));
+const UsersRolesPage = lazy(() => import('./pages/superadmin/UsersRolesPage'));
 
 // ── Fallback global para Suspense ─────────────────────────────────────────────
 function PageLoader() {
@@ -379,6 +380,13 @@ function AppRoutes() {
               <Route path="/super-admin/tenants" element={
                 <ProtectedRoute superAdminOnly>
                   <TenantsPage />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Usuarios y Roles (global) — Solo Super Admin ────────── */}
+              <Route path="/super-admin/users" element={
+                <ProtectedRoute superAdminOnly>
+                  <UsersRolesPage />
                 </ProtectedRoute>
               } />
 

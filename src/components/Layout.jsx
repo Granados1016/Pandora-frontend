@@ -21,6 +21,7 @@ import InventoryIcon            from '@mui/icons-material/Inventory2';
 import CategoryIcon             from '@mui/icons-material/Category';
 import BarChartIcon             from '@mui/icons-material/BarChart';
 import ApartmentIcon            from '@mui/icons-material/Apartment';
+import ManageAccountsIcon       from '@mui/icons-material/ManageAccounts';
 import PeopleIcon               from '@mui/icons-material/People';
 import CalendarMonthIcon        from '@mui/icons-material/CalendarMonth';
 import MeetingRoomIcon          from '@mui/icons-material/MeetingRoom';
@@ -332,6 +333,7 @@ export default function Layout({ children }) {
         { label: 'Administración',   icon: <AdminPanelSettingsIcon />, path: '/admin',                  show: isAdmin },
         { label: 'Log de Auditoría', icon: <HistoryIcon />,            path: '/admin/audit',            show: isAdmin },
         { label: 'Panel de Clientes',icon: <ApartmentIcon />,          path: '/super-admin/tenants',    show: isSuperAdmin },
+        { label: 'Usuarios y Roles', icon: <ManageAccountsIcon />,     path: '/super-admin/users',      show: isSuperAdmin },
       ],
     },
   ];
