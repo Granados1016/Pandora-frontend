@@ -111,8 +111,9 @@ function ProtectedRoute({
     return <Navigate to="/unauthorized" replace />;
 
   // 2b. Un SuperAdmin en modo consola (sin impersonar) no entra a módulos
-  //     operativos; se le manda a su panel de clientes.
-  if (!superAdminOnly && consoleOnly)
+  //     operativos; se le manda a su panel de clientes. Se excluyen las propias
+  //     rutas /super-admin/* para no crear un bucle de redirección.
+  if (!superAdminOnly && consoleOnly && !location.pathname.startsWith('/super-admin'))
     return <Navigate to="/super-admin/tenants" replace />;
 
   // 2. Solo Admin
