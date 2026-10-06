@@ -1346,16 +1346,18 @@ export default function Admin() {
                       <TableCell sx={{ color: 'text.secondary', fontSize: 13 }}>{u.email}</TableCell>
                       <TableCell>
                         <Chip
-                          icon={u.role === 'Admin' ? <AdminPanelSettingsIcon /> : <PersonIcon />}
-                          label={u.role === 'Admin' ? 'Administrador' : 'Usuario'}
-                          color={u.role === 'Admin' ? 'error' : 'default'}
+                          icon={u.role === 'SuperAdmin' || u.role === 'Admin' ? <AdminPanelSettingsIcon /> : <PersonIcon />}
+                          label={u.role === 'SuperAdmin' ? 'Super Admin' : u.role === 'Admin' ? 'Administrador' : 'Usuario'}
+                          color={u.role === 'SuperAdmin' ? 'secondary' : u.role === 'Admin' ? 'error' : 'default'}
                           size="small"
                         />
                       </TableCell>
                       <TableCell sx={{ maxWidth: 280 }}>
-                        {u.role === 'Admin'
-                          ? <Chip label="Acceso total" size="small" color="error" variant="outlined" />
-                          : <Box>{moduleChips(u)}</Box>
+                        {u.role === 'SuperAdmin'
+                          ? <Chip label="Proveedor (todos los clientes)" size="small" color="secondary" variant="outlined" />
+                          : u.role === 'Admin'
+                            ? <Chip label="Acceso total" size="small" color="error" variant="outlined" />
+                            : <Box>{moduleChips(u)}</Box>
                         }
                       </TableCell>
                       <TableCell>
