@@ -98,7 +98,9 @@ export default function Login() {
       navigate(from, { replace: true });
     } catch (err) {
       const data = err?.response?.data;
-      if (data?.error === 'not_provisioned' || data?.error === 'user_disabled') {
+      if (data?.error === 'domain_not_allowed') {
+        setError(data.message || 'Solo se permite el acceso con tu correo institucional.');
+      } else if (data?.error === 'not_provisioned' || data?.error === 'user_disabled') {
         setError(data.message);
       } else if (data?.error === 'license_suspended' || data?.error === 'license_expired') {
         setError(data.message);
