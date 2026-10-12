@@ -617,6 +617,7 @@ export const checadorApi = {
 // ── Consola de proveedor: gestión global de usuarios y roles (solo SuperAdmin) ──
 export const superAdminApi = {
   listUsers:    ()            => api.get('/superadmin/users'),
+  createUser:   (data)        => api.post('/superadmin/users', data),
   setRole:      (id, role)    => api.put(`/superadmin/users/${id}/role`, { role }),
   toggleActive: (id)          => api.patch(`/superadmin/users/${id}/active`),
 };
