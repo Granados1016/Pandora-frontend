@@ -170,6 +170,8 @@ export function AuthProvider({ children }) {
   // Un SuperAdmin que NO está impersonando usa solo la consola de proveedor:
   // no debe ver módulos operativos (aunque su usuario tenga todos los bits).
   const consoleOnly = isSuperAdmin && !isImpersonating;
+  // Cuenta precargada que aún debe completar su perfil (nombre/puesto) al entrar.
+  const needsOnboarding = claims.needsOnboarding === '1' || claims.needsOnboarding === 1;
 
   // Devuelve true si el usuario tiene acceso al módulo/sub-módulo (vista o escritura)
   const hasModule = useCallback((mod) => {
@@ -294,7 +296,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider value={{
       token, username, fullName, role, modules, modulesViewOnly, isAdmin, isSuperAdmin,
-      isImpersonating, impersonatedBy, consoleOnly,
+      isImpersonating, impersonatedBy, consoleOnly, needsOnboarding,
       tenantId, tenantBranding,
       hasModule, hasSubModule, hasModuleWrite, hasRole,
       login, loginWithToken, logout, loadTenantBranding, impersonate, exitImpersonation,

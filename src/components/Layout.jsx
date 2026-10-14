@@ -111,7 +111,7 @@ export default function Layout({ children }) {
   // Insignia de solicitudes de acceso pendientes (solo SuperAdmin)
   const [accessPending, setAccessPending] = useState(0);
   useEffect(() => {
-    if (!isSuperAdmin) { setAccessPending(0); return; }
+    if (!isAdmin && !isSuperAdmin) { setAccessPending(0); return; }
     let alive = true;
     const fetchCount = () => accessRequestsApi.count()
       .then(r => { if (alive) setAccessPending(r.data?.count || 0); })
@@ -119,7 +119,7 @@ export default function Layout({ children }) {
     fetchCount();
     const t = setInterval(fetchCount, 60000); // refresca cada minuto
     return () => { alive = false; clearInterval(t); };
-  }, [isSuperAdmin, pathname]);
+  }, [isAdmin, isSuperAdmin, pathname]);
 
   // Estado del sidebar (desktop)
   const [open, setOpen] = useState(
@@ -347,7 +347,9 @@ export default function Layout({ children }) {
         { label: 'Log de Auditoría', icon: <HistoryIcon />,            path: '/admin/audit',            show: isAdmin },
         { label: 'Panel de Clientes',icon: <ApartmentIcon />,          path: '/super-admin/tenants',    show: isSuperAdmin },
         { label: 'Usuarios y Roles', icon: <ManageAccountsIcon />,     path: '/super-admin/users',      show: isSuperAdmin },
-        { label: 'Solicitudes de acceso', icon: <HowToRegIcon />,      path: '/super-admin/access-requests', show: isSuperAdmin, badge: accessPending },
+        { label: 'Solicitudes de acceso', icon: <HowToRegIcon />,
+          path: isSuperAdmin ? '/super-admin/access-requests' : '/solicitudes-acceso',
+          show: isAdmin || isSuperAdmin, badge: accessPending },
       ],
     },
   ];

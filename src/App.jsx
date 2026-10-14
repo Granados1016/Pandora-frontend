@@ -81,6 +81,7 @@ const CheckadorAdminPage = lazy(() => import('./pages/checador/CheckadorAdminPag
 const TenantsPage = lazy(() => import('./pages/superadmin/TenantsPage'));
 const UsersRolesPage = lazy(() => import('./pages/superadmin/UsersRolesPage'));
 const AccessRequestsPage = lazy(() => import('./pages/superadmin/AccessRequestsPage'));
+const CompletarPerfil = lazy(() => import('./pages/CompletarPerfil'));
 
 // ── Fallback global para Suspense ─────────────────────────────────────────────
 function PageLoader() {
@@ -100,12 +101,16 @@ function ProtectedRoute({
   requiredModule  = null,
   requiredAnyModules = null,
 }) {
-  const { isAuthenticated, isAdmin, isSuperAdmin, consoleOnly, hasModule, hasRole } = useAuth();
+  const { isAuthenticated, isAdmin, isSuperAdmin, consoleOnly, needsOnboarding, hasModule, hasRole } = useAuth();
   const location = useLocation();
 
   // 1. Sin sesión → login
   if (!isAuthenticated)
     return <Navigate to="/login" state={{ from: location }} replace />;
+
+  // 1b. Cuenta precargada que aún no completa su perfil → forzar ese paso.
+  if (needsOnboarding && !location.pathname.startsWith('/completar-perfil'))
+    return <Navigate to="/completar-perfil" replace />;
 
   // 2a. Solo Super Admin (consola de proveedor)
   if (superAdminOnly && !isSuperAdmin)
@@ -146,6 +151,13 @@ function AppRoutes() {
       <Route path="/forgot-password"   element={<ForgotPassword />} />
       <Route path="/reset-password"    element={<ResetPassword />} />
       <Route path="/unauthorized"      element={<Unauthorized />} />
+
+      {/* Completar perfil (primer ingreso de cuenta precargada) — sin Layout */}
+      <Route path="/completar-perfil" element={
+        <ProtectedRoute>
+          <Suspense fallback={<PageLoader />}><CompletarPerfil /></Suspense>
+        </ProtectedRoute>
+      } />
 
       {/* Protegidas */}
       <Route path="/*" element={
@@ -395,6 +407,12 @@ function AppRoutes() {
               {/* ── Solicitudes de acceso (onboarding Google) ───────────── */}
               <Route path="/super-admin/access-requests" element={
                 <ProtectedRoute superAdminOnly>
+                  <AccessRequestsPage />
+                </ProtectedRoute>
+              } />
+              {/* Mismo panel para el Admin de cada cliente (ve solo su tenant) */}
+              <Route path="/solicitudes-acceso" element={
+                <ProtectedRoute adminOnly>
                   <AccessRequestsPage />
                 </ProtectedRoute>
               } />

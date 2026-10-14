@@ -13,6 +13,7 @@ import { superAdminApi, tenantsApi } from '../../api/pandoraApi';
 const EMPTY_FORM = {
   username: '', fullName: '', email: '', password: '',
   role: 'User', tenantId: '', position: '', isActive: true,
+  googleOnly: false,
 };
 
 const ROLE_OPTIONS = [
@@ -54,19 +55,24 @@ export default function UsersRolesPage() {
 
   const createUser = async () => {
     if (!form.username.trim()) { setFormErr('El usuario es obligatorio.'); return; }
-    if (!form.password || form.password.length < 6) { setFormErr('La contraseña debe tener al menos 6 caracteres.'); return; }
+    if (form.googleOnly) {
+      if (!form.email.trim()) { setFormErr('Para una cuenta institucional (Google) el correo es obligatorio.'); return; }
+    } else if (!form.password || form.password.length < 6) {
+      setFormErr('La contraseña debe tener al menos 6 caracteres.'); return;
+    }
     if (!form.tenantId) { setFormErr('Selecciona un cliente.'); return; }
     setSaving(true); setFormErr('');
     try {
       await superAdminApi.createUser({
-        username: form.username.trim(),
-        fullName: form.fullName.trim() || null,
-        email:    form.email.trim() || null,
-        password: form.password,
-        role:     form.role,
-        tenantId: form.tenantId,
-        position: form.position.trim() || null,
-        isActive: form.isActive,
+        username:   form.username.trim(),
+        fullName:   form.fullName.trim() || null,
+        email:      form.email.trim() || null,
+        password:   form.googleOnly ? null : form.password,
+        role:       form.role,
+        tenantId:   form.tenantId,
+        position:   form.position.trim() || null,
+        isActive:   form.isActive,
+        googleOnly: form.googleOnly,
       });
       setOpen(false);
       setSnack({ sev: 'success', msg: `Usuario ${form.username.trim()} creado.` });
@@ -202,16 +208,29 @@ export default function UsersRolesPage() {
               onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))}
             />
             <TextField
-              label="Correo" type="email" size="small" fullWidth
+              label={form.googleOnly ? 'Correo institucional' : 'Correo'} type="email"
+              required={form.googleOnly} size="small" fullWidth
               value={form.email}
               onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+              helperText={form.googleOnly ? 'Con este correo entrará por Google (sin contraseña).' : ''}
             />
-            <TextField
-              label="Contraseña" type="password" required size="small" fullWidth
-              value={form.password}
-              onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-              helperText="Mínimo 6 caracteres."
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={form.googleOnly}
+                  onChange={e => setForm(f => ({ ...f, googleOnly: e.target.checked }))}
+                />
+              }
+              label="Acceso con cuenta institucional (Google), sin contraseña"
             />
+            {!form.googleOnly && (
+              <TextField
+                label="Contraseña" type="password" required size="small" fullWidth
+                value={form.password}
+                onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                helperText="Mínimo 6 caracteres."
+              />
+            )}
             <FormControl size="small" fullWidth required>
               <InputLabel id="tenant-lbl">Cliente</InputLabel>
               <Select

@@ -228,6 +228,9 @@ export const authApi = {
   // fullName/position opcionales: para completar una solicitud de acceso (onboarding).
   googleLogin: (idToken, fullName, position) =>
     api.post('/auth/google', { idToken, fullName, position }),
+  // Completar perfil (nombre/puesto) en el primer ingreso de una cuenta precargada.
+  completeProfile: (fullName, position) =>
+    api.post('/auth/complete-profile', { fullName, position }),
 };
 
 export const catalogApi = {
