@@ -49,13 +49,32 @@ function hasPaymentInMonth(l, year, month) {
   return ((diff % fm) + fm) % fm === 0;
 }
 
-/** Calcula la nueva fecha de próximo pago dado el actual y la frecuencia */
-function calcNuevoProximoPago(proximoPagoStr, frecuencia) {
-  const meses = FREQ_MONTHS[frecuencia] || 1;
-  const d = new Date(proximoPagoStr + 'T12:00:00');
-  d.setMonth(d.getMonth() + meses);
-  return d.toISOString().slice(0, 10);
+/** Suma meses a una fecha YYYY-MM-DD; si el día no existe se ajusta al último del mes (igual que .NET AddMonths) */
+function addMonthsISO(dateStr, n) {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  const total = (m - 1) + n;
+  const ny = y + Math.floor(total / 12);
+  const nm = ((total % 12) + 12) % 12;
+  const ultimoDia = new Date(Date.UTC(ny, nm + 1, 0)).getUTCDate();
+  return `${ny}-${String(nm + 1).padStart(2, '0')}-${String(Math.min(d, ultimoDia)).padStart(2, '0')}`;
 }
+
+/**
+ * Calcula el nuevo próximo pago: avanza los periodos necesarios (manteniendo el día de cobro)
+ * hasta quedar después de la fecha de pago. Misma regla que el backend.
+ */
+function calcAvancePago(proximoPagoStr, frecuencia, fechaPagoStr) {
+  const meses = FREQ_MONTHS[frecuencia] || 1;
+  const hoy = new Date();
+  const fechaPago = fechaPagoStr ||
+    `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+  let periodos = 1;
+  while (addMonthsISO(proximoPagoStr, meses * periodos) <= fechaPago) periodos++;
+  return { fecha: addMonthsISO(proximoPagoStr, meses * periodos), periodos };
+}
+
+const calcNuevoProximoPago = (proximoPagoStr, frecuencia, fechaPagoStr) =>
+  calcAvancePago(proximoPagoStr, frecuencia, fechaPagoStr).fecha;
 
 /** Formatea una fecha (YYYY-MM-DD) como "DD/MM/AA", ej. 17/08/26 */
 function formatFechaCorta(dateStr) {
@@ -1169,16 +1188,19 @@ export default function Licencias() {
             />
 
             {/* Nuevo próximo pago (calculado) */}
-            {pagoDialog.licencia && (
-              <TextField
-                label="Nuevo Próximo Pago (calculado automáticamente)"
-                size="small" fullWidth
-                value={formatFechaCorta(calcNuevoProximoPago(pagoDialog.licencia.proximoPago, pagoDialog.licencia.frecuenciaPago))}
-                InputProps={{ readOnly: true }}
-                sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#e8f5e9' } }}
-                helperText={`Se avanzará 1 período de ${pagoDialog.licencia?.frecuenciaPago?.toLowerCase()}`}
-              />
-            )}
+            {pagoDialog.licencia && (() => {
+              const avance = calcAvancePago(pagoDialog.licencia.proximoPago, pagoDialog.licencia.frecuenciaPago, pagoDialog.fechaPago);
+              return (
+                <TextField
+                  label="Nuevo Próximo Pago (calculado automáticamente)"
+                  size="small" fullWidth
+                  value={formatFechaCorta(avance.fecha)}
+                  InputProps={{ readOnly: true }}
+                  sx={{ '& .MuiOutlinedInput-root': { bgcolor: '#e8f5e9' } }}
+                  helperText={`Se avanzará${avance.periodos > 1 ? 'n' : ''} ${avance.periodos} período${avance.periodos > 1 ? 's' : ''} de ${pagoDialog.licencia.frecuenciaPago?.toLowerCase()}`}
+                />
+              );
+            })()}
 
             <TextField
               label="Notas (opcional)"
@@ -1238,7 +1260,7 @@ export default function Licencias() {
                   <Box>
                     <Typography variant="body2" fontWeight={600} fontSize={13}>{l.plataforma}</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {l.area} · {l.frecuenciaPago} · Vence: {formatFechaCorta(calcNuevoProximoPago(l.proximoPago, l.frecuenciaPago))}
+                      {l.area} · {l.frecuenciaPago} · Vence: {formatFechaCorta(calcNuevoProximoPago(l.proximoPago, l.frecuenciaPago, pagoMasivoDialog.fechaPago))}
                     </Typography>
                   </Box>
                   <Typography variant="body2" fontWeight={700} color="success.main">
