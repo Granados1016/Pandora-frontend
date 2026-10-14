@@ -62,7 +62,7 @@ import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 import LicenseBanner from './LicenseBanner';
 import PandoraAI            from './PandoraAI';
 import { useNotifications } from '../hooks/useNotifications';
-import { searchApi } from '../api/pandoraApi';
+import { searchApi, accessRequestsApi } from '../api/pandoraApi';
 import { azulApi }  from '../api/azulApi';
 import { useThemeMode } from '../hooks/useThemeMode';
 import SessionWarning from './SessionWarning';
@@ -107,6 +107,19 @@ export default function Layout({ children }) {
     link.href = canvas.toDataURL();
     document.head.appendChild(link);
   }, [tenantBranding]);
+
+  // Insignia de solicitudes de acceso pendientes (solo SuperAdmin)
+  const [accessPending, setAccessPending] = useState(0);
+  useEffect(() => {
+    if (!isSuperAdmin) { setAccessPending(0); return; }
+    let alive = true;
+    const fetchCount = () => accessRequestsApi.count()
+      .then(r => { if (alive) setAccessPending(r.data?.count || 0); })
+      .catch(() => {});
+    fetchCount();
+    const t = setInterval(fetchCount, 60000); // refresca cada minuto
+    return () => { alive = false; clearInterval(t); };
+  }, [isSuperAdmin, pathname]);
 
   // Estado del sidebar (desktop)
   const [open, setOpen] = useState(
@@ -334,6 +347,7 @@ export default function Layout({ children }) {
         { label: 'Log de Auditoría', icon: <HistoryIcon />,            path: '/admin/audit',            show: isAdmin },
         { label: 'Panel de Clientes',icon: <ApartmentIcon />,          path: '/super-admin/tenants',    show: isSuperAdmin },
         { label: 'Usuarios y Roles', icon: <ManageAccountsIcon />,     path: '/super-admin/users',      show: isSuperAdmin },
+        { label: 'Solicitudes de acceso', icon: <HowToRegIcon />,      path: '/super-admin/access-requests', show: isSuperAdmin, badge: accessPending },
       ],
     },
   ];
@@ -419,8 +433,11 @@ export default function Layout({ children }) {
   };
 
   // ── Ítem de navegación ──────────────────────────────────────────────────────
-  const NavItem = ({ label, icon, path }) => {
+  const NavItem = ({ label, icon, path, badge = 0 }) => {
     const active = pathname === path || (path !== '/' && pathname.startsWith(path));
+    const iconNode = badge > 0
+      ? <Badge badgeContent={badge} color="error" max={99}>{icon}</Badge>
+      : icon;
 
     const btn = (
       <ListItem disablePadding sx={{ px: open ? 1.5 : 1, py: 0.3 }}>
@@ -443,7 +460,7 @@ export default function Layout({ children }) {
               justifyContent: 'center',
             }}
           >
-            {icon}
+            {iconNode}
           </ListItemIcon>
           {open && (
             <ListItemText

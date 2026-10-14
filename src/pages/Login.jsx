@@ -22,9 +22,13 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
 
   // 2FA state
-  const [step,     setStep]     = useState('credentials'); // 'credentials' | 'otp'
+  const [step,     setStep]     = useState('credentials'); // 'credentials' | 'otp' | 'access_request'
   const [otpCode,  setOtpCode]  = useState('');
   const [otpSent,  setOtpSent]  = useState(false);
+
+  // Onboarding: solicitud de acceso con cuenta institucional
+  const [accessReq, setAccessReq] = useState(null);                 // { idToken, email, sent }
+  const [reqForm,   setReqForm]   = useState({ fullName: '', position: '' });
 
   // ── Login con Google ──────────────────────────────────────────────────────
   const googleBtnRef = useRef(null);
@@ -94,13 +98,20 @@ export default function Login() {
     setError('');
     try {
       const res = await authApi.googleLogin(idToken);
+      // Sin cuenta todavía → quedó una solicitud de acceso pendiente.
+      if (res.data?.pending) {
+        setAccessReq({ idToken, email: res.data.email, sent: !res.data.needsDetails });
+        setReqForm({ fullName: res.data.name || '', position: '' });
+        setStep('access_request');
+        return;
+      }
       await loginWithToken(res.data.token, res.data.refreshToken);
       navigate(from, { replace: true });
     } catch (err) {
       const data = err?.response?.data;
       if (data?.error === 'domain_not_allowed') {
         setError(data.message || 'Solo se permite el acceso con tu correo institucional.');
-      } else if (data?.error === 'not_provisioned' || data?.error === 'user_disabled') {
+      } else if (data?.error === 'request_rejected' || data?.error === 'user_disabled') {
         setError(data.message);
       } else if (data?.error === 'license_suspended' || data?.error === 'license_expired') {
         setError(data.message);
@@ -113,6 +124,21 @@ export default function Login() {
       setLoading(false);
     }
   }, [loginWithToken, navigate, from]);
+
+  // Enviar/actualizar los datos de la solicitud de acceso (nombre, puesto).
+  const submitAccessDetails = async () => {
+    if (!accessReq?.idToken) return;
+    setLoading(true);
+    setError('');
+    try {
+      await authApi.googleLogin(accessReq.idToken, reqForm.fullName, reqForm.position);
+      setAccessReq(a => ({ ...a, sent: true }));
+    } catch {
+      setError('No se pudieron enviar tus datos. Intenta iniciar sesión con Google de nuevo.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Carga Google Identity Services y renderiza el botón oficial.
   useEffect(() => {
@@ -186,6 +212,49 @@ export default function Login() {
           )}
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
+          {step === 'access_request' ? (
+            <Box>
+              {!accessReq?.sent ? (
+                <>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    ¡Casi listo! Completa tus datos y envía tu solicitud de acceso.
+                  </Alert>
+                  <TextField
+                    fullWidth label="Nombre completo" value={reqForm.fullName}
+                    onChange={e => setReqForm(f => ({ ...f, fullName: e.target.value }))}
+                    sx={{ mb: 2 }}
+                  />
+                  <TextField
+                    fullWidth label="Puesto / Cargo (opcional)" value={reqForm.position}
+                    onChange={e => setReqForm(f => ({ ...f, position: e.target.value }))}
+                    sx={{ mb: 1.5 }}
+                  />
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                    Cuenta institucional: {accessReq?.email}
+                  </Typography>
+                  <Button
+                    variant="contained" fullWidth size="large" disabled={loading}
+                    onClick={submitAccessDetails}
+                    startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}
+                  >
+                    {loading ? 'Enviando...' : 'Enviar solicitud'}
+                  </Button>
+                </>
+              ) : (
+                <Alert severity="success" sx={{ mb: 1 }}>
+                  <Typography fontWeight={700} gutterBottom>Tu solicitud fue enviada</Typography>
+                  Un administrador debe aprobarla. Cuando te den acceso, vuelve a entrar con
+                  “Iniciar sesión con Google” usando tu cuenta institucional.
+                </Alert>
+              )}
+              <Button
+                variant="text" size="small" sx={{ mt: 1 }}
+                onClick={() => { setStep('credentials'); setAccessReq(null); setError(''); }}
+              >
+                ← Volver al inicio
+              </Button>
+            </Box>
+          ) : (
           <Box component="form" onSubmit={handleSubmit}>
             {step === 'credentials' ? (
               <>
@@ -255,6 +324,7 @@ export default function Login() {
               </>
             )}
           </Box>
+          )}
         </CardContent>
       </Card>
     </Box>
