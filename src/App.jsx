@@ -77,8 +77,11 @@ const MantenimientoDetailPage = lazy(() => import('./pages/mantenimiento/Manteni
 const CheckadorPage      = lazy(() => import('./pages/checador/CheckadorPage'));
 const CheckadorAdminPage = lazy(() => import('./pages/checador/CheckadorAdminPage'));
 
-// Super Admin — Panel de tenants
+// Super Admin — Panel de tenants + gestión global de usuarios/roles
 const TenantsPage = lazy(() => import('./pages/superadmin/TenantsPage'));
+const UsersRolesPage = lazy(() => import('./pages/superadmin/UsersRolesPage'));
+const AccessRequestsPage = lazy(() => import('./pages/superadmin/AccessRequestsPage'));
+const CompletarPerfil = lazy(() => import('./pages/CompletarPerfil'));
 
 // ── Fallback global para Suspense ─────────────────────────────────────────────
 function PageLoader() {
@@ -93,16 +96,31 @@ function PageLoader() {
 function ProtectedRoute({
   children,
   adminOnly       = false,
+  superAdminOnly  = false,
   allowedRoles    = null,
   requiredModule  = null,
   requiredAnyModules = null,
 }) {
-  const { isAuthenticated, isAdmin, hasModule, hasRole } = useAuth();
+  const { isAuthenticated, isAdmin, isSuperAdmin, consoleOnly, needsOnboarding, hasModule, hasRole } = useAuth();
   const location = useLocation();
 
   // 1. Sin sesión → login
   if (!isAuthenticated)
     return <Navigate to="/login" state={{ from: location }} replace />;
+
+  // 1b. Cuenta precargada que aún no completa su perfil → forzar ese paso.
+  if (needsOnboarding && !location.pathname.startsWith('/completar-perfil'))
+    return <Navigate to="/completar-perfil" replace />;
+
+  // 2a. Solo Super Admin (consola de proveedor)
+  if (superAdminOnly && !isSuperAdmin)
+    return <Navigate to="/unauthorized" replace />;
+
+  // 2b. Un SuperAdmin en modo consola (sin impersonar) no entra a módulos
+  //     operativos; se le manda a su panel de clientes. Se excluyen las propias
+  //     rutas /super-admin/* para no crear un bucle de redirección.
+  if (!superAdminOnly && consoleOnly && !location.pathname.startsWith('/super-admin'))
+    return <Navigate to="/super-admin/tenants" replace />;
 
   // 2. Solo Admin
   if (adminOnly && !isAdmin)
@@ -133,6 +151,13 @@ function AppRoutes() {
       <Route path="/forgot-password"   element={<ForgotPassword />} />
       <Route path="/reset-password"    element={<ResetPassword />} />
       <Route path="/unauthorized"      element={<Unauthorized />} />
+
+      {/* Completar perfil (primer ingreso de cuenta precargada) — sin Layout */}
+      <Route path="/completar-perfil" element={
+        <ProtectedRoute>
+          <Suspense fallback={<PageLoader />}><CompletarPerfil /></Suspense>
+        </ProtectedRoute>
+      } />
 
       {/* Protegidas */}
       <Route path="/*" element={
@@ -303,14 +328,14 @@ function AppRoutes() {
 
               {/* ── Capacitaciones ──────────────────────────────────────── */}
               <Route path="/capacitaciones" element={
-                <ProtectedRoute module={MODULES.CAPACITACIONES}>
+                <ProtectedRoute requiredModule={MODULES.CAPACITACIONES}>
                   <CapacitacionesPage />
                 </ProtectedRoute>
               } />
 
               {/* ── Activos Fijos ────────────────────────────────────────── */}
               <Route path="/activos-fijos" element={
-                <ProtectedRoute module={MODULES.ACTIVOS_FIJOS}>
+                <ProtectedRoute requiredModule={MODULES.ACTIVOS_FIJOS}>
                   <ActivosFijosPage />
                 </ProtectedRoute>
               } />
@@ -365,10 +390,30 @@ function AppRoutes() {
                 </ProtectedRoute>
               } />
 
-              {/* ── Panel de Tenants — Solo Super Admin ─────────────────── */}
+              {/* ── Panel de Clientes — Solo Super Admin ────────────────── */}
               <Route path="/super-admin/tenants" element={
-                <ProtectedRoute adminOnly>
+                <ProtectedRoute superAdminOnly>
                   <TenantsPage />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Usuarios y Roles (global) — Solo Super Admin ────────── */}
+              <Route path="/super-admin/users" element={
+                <ProtectedRoute superAdminOnly>
+                  <UsersRolesPage />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Solicitudes de acceso (onboarding Google) ───────────── */}
+              <Route path="/super-admin/access-requests" element={
+                <ProtectedRoute superAdminOnly>
+                  <AccessRequestsPage />
+                </ProtectedRoute>
+              } />
+              {/* Mismo panel para el Admin de cada cliente (ve solo su tenant) */}
+              <Route path="/solicitudes-acceso" element={
+                <ProtectedRoute adminOnly>
+                  <AccessRequestsPage />
                 </ProtectedRoute>
               } />
 

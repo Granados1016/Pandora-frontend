@@ -21,11 +21,14 @@ import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered';
 import FormatColorTextIcon from '@mui/icons-material/FormatColorText';
 import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import TextAlign from '@tiptap/extension-text-align';
+// tiptap v3: usar imports NOMBRADOS. El pre-bundle de Vite rompe la cadena de
+// reexports si se usa el export default de estas extensiones (error:
+// "@tiptap/extension-text-style does not provide an export named 'default'").
+import { StarterKit } from '@tiptap/starter-kit';
+import { TextAlign } from '@tiptap/extension-text-align';
 import { TextStyle, FontSize } from '@tiptap/extension-text-style';
-import Color from '@tiptap/extension-color';
-import FontFamily from '@tiptap/extension-font-family';
+import { Color } from '@tiptap/extension-color';
+import { FontFamily } from '@tiptap/extension-font-family';
 
 const FIXED_VARIABLES = [
   { token: '{{nombre}}',     label: 'Nombre',     color: 'primary' },

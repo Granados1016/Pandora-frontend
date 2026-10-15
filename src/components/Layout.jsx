@@ -5,6 +5,7 @@ import {
   AppBar, Toolbar, Typography, IconButton, Divider, Avatar, Tooltip, Collapse,
   Badge, InputBase, Paper, Chip, Stack, ClickAwayListener, Popper, Dialog,
   DialogTitle, DialogContent, DialogContentText, DialogActions, Button, CircularProgress,
+  Alert,
 } from '@mui/material';
 
 // ── Íconos de navegación ──────────────────────────────────────────────────────
@@ -20,6 +21,7 @@ import InventoryIcon            from '@mui/icons-material/Inventory2';
 import CategoryIcon             from '@mui/icons-material/Category';
 import BarChartIcon             from '@mui/icons-material/BarChart';
 import ApartmentIcon            from '@mui/icons-material/Apartment';
+import ManageAccountsIcon       from '@mui/icons-material/ManageAccounts';
 import PeopleIcon               from '@mui/icons-material/People';
 import CalendarMonthIcon        from '@mui/icons-material/CalendarMonth';
 import MeetingRoomIcon          from '@mui/icons-material/MeetingRoom';
@@ -60,7 +62,7 @@ import { useAuth, MODULES } from '../hooks/useAuth.jsx';
 import LicenseBanner from './LicenseBanner';
 import PandoraAI            from './PandoraAI';
 import { useNotifications } from '../hooks/useNotifications';
-import { searchApi } from '../api/pandoraApi';
+import { searchApi, accessRequestsApi } from '../api/pandoraApi';
 import { azulApi }  from '../api/azulApi';
 import { useThemeMode } from '../hooks/useThemeMode';
 import SessionWarning from './SessionWarning';
@@ -79,7 +81,8 @@ const TRANSITION = 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)';
 export default function Layout({ children }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { username, fullName, isAdmin, hasModule, hasSubModule, hasModuleWrite, logout, tenantBranding } = useAuth();
+  const { username, fullName, isAdmin, isSuperAdmin, isImpersonating, exitImpersonation,
+          hasModule, hasSubModule, hasModuleWrite, logout, tenantBranding } = useAuth();
   const { mode, toggleMode } = useThemeMode();
 
   // ── White-label: título del tab y favicon dinámicos ──────────────────────
@@ -104,6 +107,19 @@ export default function Layout({ children }) {
     link.href = canvas.toDataURL();
     document.head.appendChild(link);
   }, [tenantBranding]);
+
+  // Insignia de solicitudes de acceso pendientes (solo SuperAdmin)
+  const [accessPending, setAccessPending] = useState(0);
+  useEffect(() => {
+    if (!isAdmin && !isSuperAdmin) { setAccessPending(0); return; }
+    let alive = true;
+    const fetchCount = () => accessRequestsApi.count()
+      .then(r => { if (alive) setAccessPending(r.data?.count || 0); })
+      .catch(() => {});
+    fetchCount();
+    const t = setInterval(fetchCount, 60000); // refresca cada minuto
+    return () => { alive = false; clearInterval(t); };
+  }, [isAdmin, isSuperAdmin, pathname]);
 
   // Estado del sidebar (desktop)
   const [open, setOpen] = useState(
@@ -325,11 +341,15 @@ export default function Layout({ children }) {
     },
     {
       label: 'Sistema',
-      show: isAdmin,
+      show: isAdmin || isSuperAdmin,
       items: [
         { label: 'Administración',   icon: <AdminPanelSettingsIcon />, path: '/admin',                  show: isAdmin },
         { label: 'Log de Auditoría', icon: <HistoryIcon />,            path: '/admin/audit',            show: isAdmin },
-        { label: 'Panel de Clientes',icon: <ApartmentIcon />,          path: '/super-admin/tenants',    show: isAdmin },
+        { label: 'Panel de Clientes',icon: <ApartmentIcon />,          path: '/super-admin/tenants',    show: isSuperAdmin },
+        { label: 'Usuarios y Roles', icon: <ManageAccountsIcon />,     path: '/super-admin/users',      show: isSuperAdmin },
+        { label: 'Solicitudes de acceso', icon: <HowToRegIcon />,
+          path: isSuperAdmin ? '/super-admin/access-requests' : '/solicitudes-acceso',
+          show: isAdmin || isSuperAdmin, badge: accessPending },
       ],
     },
   ];
@@ -415,8 +435,11 @@ export default function Layout({ children }) {
   };
 
   // ── Ítem de navegación ──────────────────────────────────────────────────────
-  const NavItem = ({ label, icon, path }) => {
+  const NavItem = ({ label, icon, path, badge = 0 }) => {
     const active = pathname === path || (path !== '/' && pathname.startsWith(path));
+    const iconNode = badge > 0
+      ? <Badge badgeContent={badge} color="error" max={99}>{icon}</Badge>
+      : icon;
 
     const btn = (
       <ListItem disablePadding sx={{ px: open ? 1.5 : 1, py: 0.3 }}>
@@ -439,7 +462,7 @@ export default function Layout({ children }) {
               justifyContent: 'center',
             }}
           >
-            {icon}
+            {iconNode}
           </ListItemIcon>
           {open && (
             <ListItemText
@@ -868,6 +891,21 @@ export default function Layout({ children }) {
         </Box>
 
         <LicenseBanner />
+        {isImpersonating && (
+          <Alert
+            severity="warning"
+            variant="filled"
+            sx={{ mb: 2, borderRadius: 2 }}
+            action={
+              <Button color="inherit" size="small" variant="outlined"
+                onClick={() => { exitImpersonation(); navigate('/super-admin/tenants'); }}>
+                Salir del cliente
+              </Button>
+            }
+          >
+            Estás viendo Pandora como <strong>{tenantBranding?.displayName || 'este cliente'}</strong> (modo Super Admin).
+          </Alert>
+        )}
         {children}
       </Box>
 

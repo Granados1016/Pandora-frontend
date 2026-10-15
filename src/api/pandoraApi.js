@@ -224,6 +224,13 @@ export const authApi = {
   sendOtp:    (username)      => api.post('/auth/send-otp',    { username }),
   verifyOtp:  (data)          => api.post('/auth/verify-otp',  data),
   toggle2FA:  (username, enable) => api.post(`/auth/toggle-2fa/${username}`, { enable }),
+  // Login con cuenta institucional de Google: envía el id_token de Google Identity Services.
+  // fullName/position opcionales: para completar una solicitud de acceso (onboarding).
+  googleLogin: (idToken, fullName, position) =>
+    api.post('/auth/google', { idToken, fullName, position }),
+  // Completar perfil (nombre/puesto) en el primer ingreso de una cuenta precargada.
+  completeProfile: (fullName, position) =>
+    api.post('/auth/complete-profile', { fullName, position }),
 };
 
 export const catalogApi = {
@@ -612,6 +619,22 @@ export const checadorApi = {
 };
 
 // ── Tenants (multi-tenant — panel maestro) ────────────────────────────────────
+// ── Consola de proveedor: gestión global de usuarios y roles (solo SuperAdmin) ──
+export const superAdminApi = {
+  listUsers:    ()            => api.get('/superadmin/users'),
+  createUser:   (data)        => api.post('/superadmin/users', data),
+  setRole:      (id, role)    => api.put(`/superadmin/users/${id}/role`, { role }),
+  toggleActive: (id)          => api.patch(`/superadmin/users/${id}/active`),
+};
+
+// ── Solicitudes de acceso (onboarding con cuenta institucional Google) ────────
+export const accessRequestsApi = {
+  list:    (status = 'pending') => api.get('/access-requests', { params: { status } }),
+  count:   ()                   => api.get('/access-requests/count'),
+  approve: (id, data)           => api.post(`/access-requests/${id}/approve`, data),
+  reject:  (id)                 => api.post(`/access-requests/${id}/reject`),
+};
+
 export const tenantsApi = {
   getAll:       ()           => api.get('/tenants'),
   getById:      (id)         => api.get(`/tenants/${id}`),
