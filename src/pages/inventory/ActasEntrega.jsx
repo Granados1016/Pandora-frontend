@@ -4,6 +4,7 @@ import {
   TableContainer, Paper, Chip, CircularProgress, Snackbar, Alert, Stack, Button, Tooltip,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Checkbox, IconButton,
   List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider, Avatar,
+  FormControlLabel,
 } from '@mui/material';
 import AssignmentIcon     from '@mui/icons-material/Assignment';
 import DescriptionIcon    from '@mui/icons-material/Description';
@@ -38,7 +39,7 @@ function saveBlob(resp, fallbackName) {
 const EMPTY = {
   fecha: new Date().toISOString().slice(0, 10),
   area: '', quienEntrega: '', quienRecibe: '', jefeInmediato: '', observaciones: '',
-  itemIds: [],
+  itemIds: [], asignar: true,
 };
 
 export default function ActasEntrega() {
@@ -94,6 +95,7 @@ export default function ActasEntrega() {
         jefeInmediato: form.jefeInmediato.trim() || null,
         observaciones: form.observaciones.trim() || null,
         itemIds: form.itemIds,
+        asignarEquipos: form.asignar,
       });
       setOpen(false);
       setSnack({ sev: 'success', msg: 'Acta creada. Descarga el documento, imprímelo y súbelo firmado.' });
@@ -302,6 +304,18 @@ export default function ActasEntrega() {
                 )}
               </List>
             </Paper>
+
+            <FormControlLabel
+              control={<Checkbox checked={form.asignar}
+                onChange={e => setForm(f => ({ ...f, asignar: e.target.checked }))} />}
+              label="Asignar estos equipos a quien recibe (área + responsable)"
+            />
+            {form.asignar && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: -1 }}>
+                Al crear el acta, cada equipo quedará asignado a "{form.quienRecibe || '…'}"
+                {form.area ? ` en el área "${form.area}"` : ''}.
+              </Typography>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
