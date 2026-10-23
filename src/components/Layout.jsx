@@ -18,6 +18,7 @@ import LogoutIcon               from '@mui/icons-material/Logout';
 import AdminPanelSettingsIcon   from '@mui/icons-material/AdminPanelSettings';
 import AccountCircleIcon        from '@mui/icons-material/AccountCircle';
 import InventoryIcon            from '@mui/icons-material/Inventory2';
+import AssignmentIcon           from '@mui/icons-material/Assignment';
 import CategoryIcon             from '@mui/icons-material/Category';
 import BarChartIcon             from '@mui/icons-material/BarChart';
 import ApartmentIcon            from '@mui/icons-material/Apartment';
@@ -211,6 +212,7 @@ export default function Layout({ children }) {
       items: [
         { label: 'Dashboard',  icon: <BarChartIcon />,  path: '/inventory',       show: hasSubModule(MODULES.INV_DASHBOARD) || isAdmin },
         { label: 'Equipos',    icon: <InventoryIcon />, path: '/inventory/items', show: hasModule(MODULES.INVENTARIO) },
+        { label: 'Actas de entrega', icon: <AssignmentIcon />, path: '/inventory/actas', show: hasModule(MODULES.INVENTARIO) },
         { label: 'Categorías', icon: <CategoryIcon />,  path: '/inventory/types', show: hasSubModule(MODULES.INV_TYPES) || isAdmin },
       ],
     },

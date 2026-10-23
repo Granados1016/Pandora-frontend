@@ -28,6 +28,7 @@ const Templates      = lazy(() => import('./pages/Templates'));
 const InventoryDashboard = lazy(() => import('./pages/inventory/InventoryDashboard'));
 const InventoryItems     = lazy(() => import('./pages/inventory/InventoryItems'));
 const InventoryTypes     = lazy(() => import('./pages/inventory/InventoryTypes'));
+const ActasEntrega       = lazy(() => import('./pages/inventory/ActasEntrega'));
 const Departments        = lazy(() => import('./pages/catalogs/Departments'));
 const Employees          = lazy(() => import('./pages/catalogs/Employees'));
 
@@ -209,6 +210,11 @@ function AppRoutes() {
               <Route path="/inventory/items" element={
                 <ProtectedRoute requiredModule={MODULES.INVENTARIO}>
                   <InventoryItems />
+                </ProtectedRoute>
+              } />
+              <Route path="/inventory/actas" element={
+                <ProtectedRoute requiredModule={MODULES.INVENTARIO}>
+                  <ActasEntrega />
                 </ProtectedRoute>
               } />
               <Route path="/inventory/types" element={

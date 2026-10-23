@@ -282,6 +282,26 @@ export const inventoryApi = {
   getChangelog:  (id)   => api.get(`/inventory/items/${id}/changelog`),
 };
 
+// ── Actas de entrega / Resguardos de equipo ───────────────────────────────────
+export const resguardosApi = {
+  list:       ()        => api.get('/inventory/resguardos'),
+  get:        (id)      => api.get(`/inventory/resguardos/${id}`),
+  create:     (data)    => api.post('/inventory/resguardos', data),
+  remove:     (id)      => api.delete(`/inventory/resguardos/${id}`),
+  // Descarga del acta (Word) como blob
+  downloadActa: (id)    => api.get(`/inventory/resguardos/${id}/acta`, { responseType: 'blob' }),
+  // Subir documento firmado (escaneado)
+  uploadDocument: (id, file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post(`/inventory/resguardos/${id}/document`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  // Descargar el documento firmado
+  downloadDocument: (id) => api.get(`/inventory/resguardos/${id}/document`, { responseType: 'blob' }),
+};
+
 export const calendarApi = {
   getRooms:   ()         => api.get('/calendar/rooms'),
   createRoom: (data)     => api.post('/calendar/rooms', data),
