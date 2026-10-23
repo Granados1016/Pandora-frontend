@@ -8,12 +8,12 @@ import {
 import SearchIcon            from '@mui/icons-material/Search';
 import ManageAccountsIcon    from '@mui/icons-material/ManageAccounts';
 import PersonAddIcon         from '@mui/icons-material/PersonAdd';
-import { superAdminApi, tenantsApi } from '../../api/pandoraApi';
+import { superAdminApi, tenantsApi, catalogApi } from '../../api/pandoraApi';
 
 const EMPTY_FORM = {
   username: '', fullName: '', email: '', password: '',
   role: 'User', tenantId: '', position: '', isActive: true,
-  googleOnly: false,
+  googleOnly: false, area: '',
 };
 
 const ROLE_OPTIONS = [
@@ -26,6 +26,7 @@ const ROLE_OPTIONS = [
 export default function UsersRolesPage() {
   const [users,   setUsers]   = useState([]);
   const [tenants, setTenants] = useState([]);
+  const [areas,   setAreas]   = useState([]);   // departamentos (áreas)
   const [loading, setLoading] = useState(true);
   const [q,       setQ]       = useState('');
   const [busy,    setBusy]    = useState(null);   // id en proceso
@@ -45,7 +46,20 @@ export default function UsersRolesPage() {
   useEffect(() => {
     load();
     tenantsApi.getAll().then(r => setTenants(r.data)).catch(() => {});
+    catalogApi.getDepartments().then(r => setAreas(r.data)).catch(() => {});
   }, []);
+
+  const changeArea = async (u, area) => {
+    if ((area || '') === (u.area || '')) return;
+    setBusy(u.id);
+    try {
+      await superAdminApi.setArea(u.id, area || null);
+      setUsers(prev => prev.map(x => x.id === u.id ? { ...x, area: area || null } : x));
+      setSnack({ sev: 'success', msg: area ? `Área de ${u.username}: ${area}.` : `Se quitó el área de ${u.username}.` });
+    } catch {
+      setSnack({ sev: 'error', msg: 'No se pudo cambiar el área.' });
+    } finally { setBusy(null); }
+  };
 
   const openNew = () => {
     setForm({ ...EMPTY_FORM, tenantId: tenants[0]?.id || '' });
@@ -73,6 +87,7 @@ export default function UsersRolesPage() {
         position:   form.position.trim() || null,
         isActive:   form.isActive,
         googleOnly: form.googleOnly,
+        area:       form.area || null,
       });
       setOpen(false);
       setSnack({ sev: 'success', msg: `Usuario ${form.username.trim()} creado.` });
@@ -141,7 +156,7 @@ export default function UsersRolesPage() {
               <Table size="small">
                 <TableHead>
                   <TableRow sx={{ bgcolor: 'primary.main' }}>
-                    {['Usuario', 'Cliente', 'Rol', 'Activo'].map(h => (
+                    {['Usuario', 'Cliente', 'Rol', 'Área (inventario)', 'Activo'].map(h => (
                       <TableCell key={h} sx={{ color: 'white', fontWeight: 700 }}>{h}</TableCell>
                     ))}
                   </TableRow>
@@ -171,12 +186,26 @@ export default function UsersRolesPage() {
                         </Select>
                       </TableCell>
                       <TableCell>
+                        <Select
+                          size="small" displayEmpty value={u.area || ''}
+                          onChange={e => changeArea(u, e.target.value)}
+                          disabled={busy === u.id || u.role === 'Admin' || u.role === 'SuperAdmin'}
+                          sx={{ minWidth: 170 }}
+                          renderValue={(v) => v || (u.role === 'Admin' || u.role === 'SuperAdmin' ? 'Todas (admin)' : '— Sin área')}
+                        >
+                          <MenuItem value=""><em>— Sin área</em></MenuItem>
+                          {areas.map(a => (
+                            <MenuItem key={a.id || a.name} value={a.name}>{a.name}</MenuItem>
+                          ))}
+                        </Select>
+                      </TableCell>
+                      <TableCell>
                         <Switch checked={u.isActive} onChange={() => toggleActive(u)} disabled={busy === u.id} />
                       </TableCell>
                     </TableRow>
                   ))}
                   {filtered.length === 0 && (
-                    <TableRow><TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                    <TableRow><TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                       Sin usuarios que coincidan.
                     </TableCell></TableRow>
                   )}
@@ -253,6 +282,20 @@ export default function UsersRolesPage() {
                 ))}
               </Select>
             </FormControl>
+            {(form.role === 'User' || form.role === 'Inventarista') && (
+              <FormControl size="small" fullWidth>
+                <InputLabel id="area-lbl">Área (inventario)</InputLabel>
+                <Select
+                  labelId="area-lbl" label="Área (inventario)" value={form.area}
+                  onChange={e => setForm(f => ({ ...f, area: e.target.value }))}
+                >
+                  <MenuItem value=""><em>— Sin área (no verá inventario)</em></MenuItem>
+                  {areas.map(a => (
+                    <MenuItem key={a.id || a.name} value={a.name}>{a.name}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
             <TextField
               label="Puesto / Cargo" size="small" fullWidth
               value={form.position}

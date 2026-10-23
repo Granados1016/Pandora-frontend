@@ -624,6 +624,7 @@ export const superAdminApi = {
   listUsers:    ()            => api.get('/superadmin/users'),
   createUser:   (data)        => api.post('/superadmin/users', data),
   setRole:      (id, role)    => api.put(`/superadmin/users/${id}/role`, { role }),
+  setArea:      (id, area)    => api.put(`/superadmin/users/${id}/area`, { area }),
   toggleActive: (id)          => api.patch(`/superadmin/users/${id}/active`),
 };
 
