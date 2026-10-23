@@ -300,6 +300,16 @@ export const resguardosApi = {
   },
   // Descargar el documento firmado
   downloadDocument: (id) => api.get(`/inventory/resguardos/${id}/document`, { responseType: 'blob' }),
+  // Plantilla Word del acta (por cliente)
+  plantillaInfo:     ()     => api.get('/inventory/resguardos/plantilla/info'),
+  downloadPlantilla: ()     => api.get('/inventory/resguardos/plantilla', { responseType: 'blob' }),
+  uploadPlantilla:   (file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return api.post('/inventory/resguardos/plantilla', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 
 export const calendarApi = {

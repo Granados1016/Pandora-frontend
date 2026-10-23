@@ -12,7 +12,18 @@ import DownloadIcon       from '@mui/icons-material/Download';
 import DeleteIcon         from '@mui/icons-material/Delete';
 import AddIcon            from '@mui/icons-material/Add';
 import CheckCircleIcon    from '@mui/icons-material/CheckCircle';
+import SettingsIcon       from '@mui/icons-material/Settings';
 import { resguardosApi, inventoryApi } from '../../api/pandoraApi';
+import { useAuth } from '../../hooks/useAuth.jsx';
+
+const TOKENS = [
+  ['{{FECHA}}', 'Fecha de entrega'], ['{{AREA}}', 'Área / Departamento'],
+  ['{{ENTREGA}}', 'Quién entrega'], ['{{RECIBE}}', 'Quién recibe'],
+  ['{{JEFE}}', 'Jefe inmediato'], ['{{FOLIO}}', 'No. de acta'],
+  ['{{OBSERVACIONES}}', 'Observaciones'],
+  ['{{NO}} {{EQUIPO}} {{MARCA}} {{SERIE}} {{INVENTARIO}} {{ESTADO}}', 'Fila de equipo (se repite por equipo)'],
+  ['{{ACCESORIOS}}', 'Accesorios (en la fila de abajo del equipo)'],
+];
 
 function saveBlob(resp, fallbackName) {
   const cd = resp.headers?.['content-disposition'] || '';
@@ -42,6 +53,10 @@ export default function ActasEntrega() {
   const [formErr, setFormErr] = useState('');
   const uploadFor = useRef(null);
   const fileInput = useRef(null);
+  const { isAdmin } = useAuth();
+  const [tplOpen, setTplOpen] = useState(false);
+  const [tplInfo, setTplInfo] = useState(null);
+  const tplInput = useRef(null);
 
   const load = () => {
     setLoading(true);
@@ -125,6 +140,24 @@ export default function ActasEntrega() {
     finally { setBusy(null); }
   };
 
+  const openTpl = () => {
+    resguardosApi.plantillaInfo().then(r => setTplInfo(r.data)).catch(() => setTplInfo({ has: false }));
+    setTplOpen(true);
+  };
+  const downloadTpl = async () => {
+    try { saveBlob(await resguardosApi.downloadPlantilla(), 'plantilla_acta.docx'); }
+    catch { setSnack({ sev: 'error', msg: 'No hay plantilla para descargar.' }); }
+  };
+  const onTplFile = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = '';
+    if (!file) return;
+    try {
+      await resguardosApi.uploadPlantilla(file);
+      setSnack({ sev: 'success', msg: 'Plantilla actualizada. Las próximas actas usarán este formato.' });
+      resguardosApi.plantillaInfo().then(r => setTplInfo(r.data)).catch(() => {});
+    } catch (e2) { setSnack({ sev: 'error', msg: e2?.response?.data || 'No se pudo subir la plantilla.' }); }
+  };
+
   const fmt = (s) => { try { return new Date(s).toLocaleDateString('es-MX'); } catch { return s; } };
 
   return (
@@ -140,10 +173,16 @@ export default function ActasEntrega() {
             Genera el acta de entrega de equipos, descárgala para firmar y sube el documento firmado.
           </Typography>
         </Box>
+        {isAdmin && (
+          <Button variant="outlined" startIcon={<SettingsIcon />} onClick={openTpl} sx={{ borderRadius: 2 }}>
+            Plantilla
+          </Button>
+        )}
         <Button variant="contained" startIcon={<AddIcon />} onClick={openNew} sx={{ borderRadius: 2 }}>
           Nueva acta
         </Button>
       </Stack>
+      <input type="file" ref={tplInput} hidden accept=".docx" onChange={onTplFile} />
 
       <Card sx={{ mt: 2, borderRadius: 3 }}>
         <CardContent>
@@ -270,6 +309,36 @@ export default function ActasEntrega() {
           <Button variant="contained" onClick={create} disabled={saving}
             startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <AssignmentIcon />}>
             {saving ? 'Creando…' : 'Crear acta'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo plantilla del acta (admin) */}
+      <Dialog open={tplOpen} onClose={() => setTplOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800, color: 'primary.main' }}>Plantilla del acta (Word)</DialogTitle>
+        <DialogContent dividers>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            El acta se genera a partir de este documento Word, rellenando los datos. Súbelo con los
+            tokens <code>{'{{...}}'}</code> donde van los datos; la fila de equipo se repite automáticamente.
+          </Typography>
+          <Alert severity={tplInfo?.has ? 'success' : 'warning'} sx={{ my: 2 }}>
+            {tplInfo?.has
+              ? `Plantilla cargada: ${tplInfo.fileName || 'documento.docx'}`
+              : 'Aún no hay plantilla. Sin ella, el acta se genera en un formato básico.'}
+          </Alert>
+          <Typography variant="caption" color="text.secondary">Tokens disponibles:</Typography>
+          <Box component="ul" sx={{ mt: 0.5, pl: 2, fontSize: '0.8rem' }}>
+            {TOKENS.map(([t, d]) => (
+              <li key={t}><code>{t}</code> — {d}</li>
+            ))}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          {tplInfo?.has && <Button onClick={downloadTpl} startIcon={<DownloadIcon />}>Descargar actual</Button>}
+          <Box sx={{ flexGrow: 1 }} />
+          <Button onClick={() => setTplOpen(false)}>Cerrar</Button>
+          <Button variant="contained" startIcon={<UploadFileIcon />} onClick={() => tplInput.current?.click()}>
+            Subir plantilla
           </Button>
         </DialogActions>
       </Dialog>
