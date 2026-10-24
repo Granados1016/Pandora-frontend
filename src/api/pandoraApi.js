@@ -285,6 +285,7 @@ export const inventoryApi = {
 // ── Actas de entrega / Resguardos de equipo ───────────────────────────────────
 export const resguardosApi = {
   list:       ()        => api.get('/inventory/resguardos'),
+  personas:   ()        => api.get('/inventory/resguardos/personas'),
   get:        (id)      => api.get(`/inventory/resguardos/${id}`),
   create:     (data)    => api.post('/inventory/resguardos', data),
   remove:     (id)      => api.delete(`/inventory/resguardos/${id}`),

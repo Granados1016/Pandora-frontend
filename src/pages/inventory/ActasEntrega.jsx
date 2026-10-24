@@ -4,7 +4,7 @@ import {
   TableContainer, Paper, Chip, CircularProgress, Snackbar, Alert, Stack, Button, Tooltip,
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Checkbox, IconButton,
   List, ListItem, ListItemButton, ListItemIcon, ListItemText, Divider, Avatar,
-  FormControlLabel,
+  FormControlLabel, Autocomplete,
 } from '@mui/material';
 import AssignmentIcon     from '@mui/icons-material/Assignment';
 import DescriptionIcon    from '@mui/icons-material/Description';
@@ -50,6 +50,7 @@ export default function ActasEntrega() {
   const [open,    setOpen]    = useState(false);
   const [form,    setForm]    = useState(EMPTY);
   const [items,   setItems]   = useState([]);     // equipos disponibles
+  const [personas, setPersonas] = useState([]);   // usuarios de Pandora (autocompletar)
   const [saving,  setSaving]  = useState(false);
   const [formErr, setFormErr] = useState('');
   const uploadFor = useRef(null);
@@ -71,8 +72,12 @@ export default function ActasEntrega() {
   const openNew = () => {
     setForm(EMPTY); setFormErr('');
     inventoryApi.getItems().then(r => setItems(r.data)).catch(() => setItems([]));
+    resguardosApi.personas().then(r => setPersonas(r.data)).catch(() => setPersonas([]));
     setOpen(true);
   };
+
+  // Nombres únicos de usuarios de Pandora para los autocompletar.
+  const nombres = Array.from(new Set((personas || []).map(p => p.fullName).filter(Boolean)));
 
   const toggleItem = (id) => setForm(f => ({
     ...f,
@@ -264,13 +269,21 @@ export default function ActasEntrega() {
                 value={form.area} onChange={e => setForm(f => ({ ...f, area: e.target.value }))} />
             </Stack>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <TextField label="Quién entrega" size="small" fullWidth
-                value={form.quienEntrega} onChange={e => setForm(f => ({ ...f, quienEntrega: e.target.value }))} />
-              <TextField label="Quién recibe" required size="small" fullWidth
-                value={form.quienRecibe} onChange={e => setForm(f => ({ ...f, quienRecibe: e.target.value }))} />
+              <Autocomplete freeSolo fullWidth options={nombres}
+                inputValue={form.quienEntrega}
+                onInputChange={(_, v) => setForm(f => ({ ...f, quienEntrega: v }))}
+                renderInput={(p) => <TextField {...p} label="Quién entrega" size="small"
+                  helperText="De los usuarios de Pandora (o escribe uno)" />} />
+              <Autocomplete freeSolo fullWidth options={nombres}
+                inputValue={form.quienRecibe}
+                onInputChange={(_, v) => setForm(f => ({ ...f, quienRecibe: v }))}
+                renderInput={(p) => <TextField {...p} label="Quién recibe" required size="small"
+                  helperText="De los usuarios de Pandora (o escribe uno)" />} />
             </Stack>
-            <TextField label="Jefe inmediato (opcional)" size="small" fullWidth
-              value={form.jefeInmediato} onChange={e => setForm(f => ({ ...f, jefeInmediato: e.target.value }))} />
+            <Autocomplete freeSolo fullWidth options={nombres}
+              inputValue={form.jefeInmediato}
+              onInputChange={(_, v) => setForm(f => ({ ...f, jefeInmediato: v }))}
+              renderInput={(p) => <TextField {...p} label="Jefe inmediato (opcional)" size="small" />} />
             <TextField label="Observaciones (opcional)" size="small" fullWidth multiline minRows={2}
               value={form.observaciones} onChange={e => setForm(f => ({ ...f, observaciones: e.target.value }))} />
 
