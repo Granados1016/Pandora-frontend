@@ -39,7 +39,7 @@ function saveBlob(resp, fallbackName) {
 const EMPTY = {
   fecha: new Date().toISOString().slice(0, 10),
   area: '', quienEntrega: '', quienRecibe: '', jefeInmediato: '', observaciones: '',
-  itemIds: [], asignar: true,
+  itemIds: [], acc: {}, asignar: true,
 };
 
 export default function ActasEntrega() {
@@ -79,10 +79,15 @@ export default function ActasEntrega() {
   // Nombres únicos de usuarios de Pandora para los autocompletar.
   const nombres = Array.from(new Set((personas || []).map(p => p.fullName).filter(Boolean)));
 
-  const toggleItem = (id) => setForm(f => ({
-    ...f,
-    itemIds: f.itemIds.includes(id) ? f.itemIds.filter(x => x !== id) : [...f.itemIds, id],
-  }));
+  const toggleItem = (it) => setForm(f => {
+    if (f.itemIds.includes(it.id)) return { ...f, itemIds: f.itemIds.filter(x => x !== it.id) };
+    // al seleccionar, prellenar accesorios con los del inventario
+    return {
+      ...f,
+      itemIds: [...f.itemIds, it.id],
+      acc: { ...f.acc, [it.id]: f.acc[it.id] ?? (it.accessories || '') },
+    };
+  });
 
   const create = async () => {
     if (!form.quienRecibe.trim()) { setFormErr('Indica quién recibe el equipo.'); return; }
@@ -99,7 +104,7 @@ export default function ActasEntrega() {
         quienRecibe: form.quienRecibe.trim(),
         jefeInmediato: form.jefeInmediato.trim() || null,
         observaciones: form.observaciones.trim() || null,
-        itemIds: form.itemIds,
+        items: form.itemIds.map(id => ({ itemId: id, accesorios: (form.acc[id] ?? '').trim() || null })),
         asignarEquipos: form.asignar,
       });
       setOpen(false);
@@ -294,22 +299,38 @@ export default function ActasEntrega() {
             </Divider>
             <Paper variant="outlined" sx={{ maxHeight: 260, overflow: 'auto', borderRadius: 2 }}>
               <List dense disablePadding>
-                {items.map(it => (
-                  <ListItem key={it.id} disablePadding>
-                    <ListItemButton onClick={() => toggleItem(it.id)}>
-                      <ListItemIcon sx={{ minWidth: 36 }}>
-                        <Checkbox edge="start" size="small" checked={form.itemIds.includes(it.id)} tabIndex={-1} />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={`${it.inventoryNumber} · ${it.name}`}
-                        secondary={[it.brand, it.model].filter(Boolean).join(' ') +
-                          (it.department ? ` · ${it.department}` : '')}
-                        primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }}
-                        secondaryTypographyProps={{ fontSize: '0.75rem' }}
-                      />
-                    </ListItemButton>
-                  </ListItem>
-                ))}
+                {items.map(it => {
+                  const checked = form.itemIds.includes(it.id);
+                  return (
+                    <Box key={it.id} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                      <ListItem disablePadding>
+                        <ListItemButton onClick={() => toggleItem(it)}>
+                          <ListItemIcon sx={{ minWidth: 36 }}>
+                            <Checkbox edge="start" size="small" checked={checked} tabIndex={-1} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={`${it.inventoryNumber} · ${it.name}`}
+                            secondary={[it.brand, it.model].filter(Boolean).join(' ') +
+                              (it.department ? ` · ${it.department}` : '')}
+                            primaryTypographyProps={{ fontSize: '0.85rem', fontWeight: 600 }}
+                            secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                      {checked && (
+                        <Box sx={{ px: 2, pb: 1.5, pt: 0 }}>
+                          <TextField
+                            fullWidth size="small" multiline minRows={1}
+                            label="Accesorios de este equipo"
+                            placeholder="Ej. cargador, funda, cable…"
+                            value={form.acc[it.id] ?? ''}
+                            onChange={e => setForm(f => ({ ...f, acc: { ...f.acc, [it.id]: e.target.value } }))}
+                          />
+                        </Box>
+                      )}
+                    </Box>
+                  );
+                })}
                 {items.length === 0 && (
                   <Box sx={{ p: 2, color: 'text.secondary', fontSize: '0.85rem' }}>
                     No hay equipos disponibles para tu área.
