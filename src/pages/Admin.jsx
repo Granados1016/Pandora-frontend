@@ -368,7 +368,7 @@ export default function Admin() {
     setSmtpTesting(true);
     setSmtpMsg('');
     try {
-      const { data } = await adminApi.testSmtp({ toEmail: testEmail });
+      const { data } = await adminApi.testSmtp({ testEmail });
       setSmtpMsg(data?.message ? `✅ ${data.message}` : '✅ Correo de prueba enviado correctamente.');
       setSmtpMsgSev('success');
     } catch (e) {
