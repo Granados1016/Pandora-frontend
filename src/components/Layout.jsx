@@ -55,6 +55,7 @@ import AccountBalanceIcon       from '@mui/icons-material/AccountBalance';
 import MenuBookIcon             from '@mui/icons-material/MenuBook';
 import EngineeringIcon          from '@mui/icons-material/Engineering';
 import BadgeIcon                from '@mui/icons-material/Badge';
+import DirectionsCarIcon        from '@mui/icons-material/DirectionsCar';
 import AccessTimeIcon           from '@mui/icons-material/AccessTime';
 import TrendingUpIcon           from '@mui/icons-material/TrendingUp';
 
@@ -316,6 +317,13 @@ export default function Layout({ children }) {
       show: hasModule(MODULES.MANTENIMIENTO) || isAdmin,
       items: [
         { label: 'Mantenimiento', icon: <EngineeringIcon />, path: '/mantenimiento', show: hasModule(MODULES.MANTENIMIENTO) || isAdmin },
+      ],
+    },
+    {
+      label: 'Flotilla',
+      show: hasModule(MODULES.FLOTILLA) || isAdmin,
+      items: [
+        { label: 'Reserva de Vehículos', icon: <DirectionsCarIcon />, path: '/flotilla', show: hasModule(MODULES.FLOTILLA) || isAdmin },
       ],
     },
     {

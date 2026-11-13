@@ -618,6 +618,25 @@ export const checadorApi = {
   deleteSitio:  (id)           => api.delete(`/checador/sitios/${id}`),
 };
 
+export const flotillaApi = {
+  // Vehículos (catálogo)
+  getVehiculos:   (includeInactive = false) => api.get('/flotilla/vehiculos', { params: { includeInactive } }),
+  createVehiculo: (data)      => api.post('/flotilla/vehiculos', data),
+  updateVehiculo: (id, data)  => api.put(`/flotilla/vehiculos/${id}`, data),
+  deleteVehiculo: (id)        => api.delete(`/flotilla/vehiculos/${id}`),
+  getFotoUrl:     (id)        => `${BASE_URL}/flotilla/vehiculos/${id}/foto`,
+
+  // Reservas
+  getReservas:    (rangeStart, rangeEnd, vehiculoId) =>
+    api.get('/flotilla/reservas', { params: { rangeStart, rangeEnd, ...(vehiculoId ? { vehiculoId } : {}) } }),
+  getReservaById: (id)        => api.get(`/flotilla/reservas/${id}`),
+  checkConflict:  (vehiculoId, start, end, excludeId) =>
+    api.get('/flotilla/reservas/check-conflict', { params: { vehiculoId, start, end, ...(excludeId ? { excludeId } : {}) } }),
+  createReserva:  (data)      => api.post('/flotilla/reservas', data),
+  updateReserva:  (id, data)  => api.put(`/flotilla/reservas/${id}`, data),
+  deleteReserva:  (id)        => api.delete(`/flotilla/reservas/${id}`),
+};
+
 // ── Tenants (multi-tenant — panel maestro) ────────────────────────────────────
 // ── Consola de proveedor: gestión global de usuarios y roles (solo SuperAdmin) ──
 export const superAdminApi = {
