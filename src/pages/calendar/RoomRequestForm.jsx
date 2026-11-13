@@ -4,14 +4,17 @@ import {
   Box, Paper, Typography, Stack, Grid, TextField, MenuItem,
   Button, Alert, CircularProgress, Divider, Checkbox, FormControlLabel,
   FormGroup, RadioGroup, Radio, FormLabel, FormControl, Chip,
-  InputAdornment, Tooltip,
+  InputAdornment, Tooltip, ToggleButton, ToggleButtonGroup,
 } from '@mui/material';
 import EventAvailableIcon  from '@mui/icons-material/EventAvailable';
 import CheckCircleIcon     from '@mui/icons-material/CheckCircle';
 import InfoOutlinedIcon    from '@mui/icons-material/InfoOutlined';
 import WarningAmberIcon    from '@mui/icons-material/WarningAmber';
+import MeetingRoomIcon     from '@mui/icons-material/MeetingRoom';
+import DirectionsCarIcon   from '@mui/icons-material/DirectionsCar';
 import { roomRequestApi }  from '../../api/pandoraApi';
 import { apiError } from '../../api/apiError';
+import VehicleRequestForm  from './VehicleRequestForm';
 
 // ── Datos estáticos ───────────────────────────────────────────────────────────
 
@@ -155,6 +158,7 @@ export default function RoomRequestForm() {
     return { ...EMPTY, requestedDate, startTime, endTime };
   };
 
+  const [mode, setMode]       = useState('sala');   // 'sala' | 'vehiculo'
   const [form, setForm]       = useState(getInitialForm);
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState('');
@@ -303,18 +307,41 @@ export default function RoomRequestForm() {
         }}
       >
         <Stack direction="row" spacing={2} alignItems="center">
-          <EventAvailableIcon color="primary" sx={{ fontSize: 36 }} />
+          {mode === 'vehiculo'
+            ? <DirectionsCarIcon color="primary" sx={{ fontSize: 36 }} />
+            : <EventAvailableIcon color="primary" sx={{ fontSize: 36 }} />}
           <Box>
             <Typography variant="h5" fontWeight={800}>
-              Solicitud de espacio
+              {mode === 'vehiculo' ? 'Solicitud de vehículo' : 'Solicitud de espacio'}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Completa todos los campos marcados con <strong>*</strong> para registrar tu solicitud.
             </Typography>
           </Box>
         </Stack>
+
+        {/* Selector: Sala / Vehículo */}
+        <ToggleButtonGroup
+          value={mode}
+          exclusive
+          onChange={(_, v) => { if (v) { setMode(v); setError(''); } }}
+          fullWidth
+          size="small"
+          sx={{ mt: 2.5 }}
+        >
+          <ToggleButton value="sala" sx={{ borderRadius: 2, fontWeight: 700 }}>
+            <MeetingRoomIcon fontSize="small" sx={{ mr: 1 }} /> Reservar una sala
+          </ToggleButton>
+          <ToggleButton value="vehiculo" sx={{ borderRadius: 2, fontWeight: 700 }}>
+            <DirectionsCarIcon fontSize="small" sx={{ mr: 1 }} /> Reservar un vehículo
+          </ToggleButton>
+        </ToggleButtonGroup>
       </Paper>
 
+      {mode === 'vehiculo' ? (
+        <VehicleRequestForm />
+      ) : (
+      <>
       {error && (
         <Alert severity="error" onClose={() => setError('')} sx={{ mb: 3, borderRadius: 2 }}>
           {error}
@@ -626,6 +653,8 @@ export default function RoomRequestForm() {
         </Paper>
 
       </Stack>
+      </>
+      )}
     </Box>
   );
 }

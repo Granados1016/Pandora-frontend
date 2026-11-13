@@ -326,6 +326,14 @@ export const roomRequestApi = {
   delete:       (id)        => api.delete(`/room-requests/${id}`),
 };
 
+// Solicitudes de vehículo (mismo flujo que roomRequestApi, en el módulo Flotilla)
+export const vehicleRequestApi = {
+  getAll:       (status)    => api.get('/flotilla/solicitudes', { params: status ? { status } : {} }),
+  create:       (data)      => api.post('/flotilla/solicitudes', data),
+  updateStatus: (id, data)  => api.put(`/flotilla/solicitudes/${id}/status`, data),
+  delete:       (id)        => api.delete(`/flotilla/solicitudes/${id}`),
+};
+
 export const mediaApi = {
   uploadImage: (file) => {
     const form = new FormData();
