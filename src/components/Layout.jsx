@@ -251,9 +251,9 @@ export default function Layout({ children }) {
           show: hasModule(MODULES.CALENDARIO) || hasModule(MODULES.CALENDARIO_ADMIN)
              || hasModule(MODULES.CAL_REQUEST) || hasModule(MODULES.CAL_ROOMS)
              || hasModule(MODULES.CAL_SOLICITUDES) || hasModule(MODULES.CAL_REPORTS_CAL) || isAdmin },
-        { label: 'Salas',             icon: <MeetingRoomIcon />,      path: '/calendar/rooms',
+        { label: 'Salas/Vehículo',    icon: <MeetingRoomIcon />,      path: '/calendar/rooms',
           show: hasModule(MODULES.CAL_ROOMS) || hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
-        { label: 'Solicitar Sala',    icon: <AddCircleOutlineIcon />, path: '/calendar/solicitud',
+        { label: 'Solicitar Salas/Vehículo', icon: <AddCircleOutlineIcon />, path: '/calendar/solicitud',
           show: hasModule(MODULES.CAL_REQUEST) || hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },
         { label: 'Solicitudes',       icon: <PendingActionsIcon />,   path: '/calendar/solicitudes',
           show: hasModule(MODULES.CAL_SOLICITUDES) || hasModule(MODULES.CALENDARIO_ADMIN) || isAdmin },

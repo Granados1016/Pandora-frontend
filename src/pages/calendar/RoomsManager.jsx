@@ -4,13 +4,16 @@ import {
   TableRow, TableCell, TableContainer, IconButton, Chip, Stack,
   Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, Switch, FormControlLabel, CircularProgress, Alert, Tooltip,
+  ToggleButton, ToggleButtonGroup,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import MeetingRoomIcon from '@mui/icons-material/MeetingRoom';
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import { calendarApi } from '../../api/pandoraApi';
 import { apiError } from '../../api/apiError';
+import VehiculosManager from './VehiculosManager';
 
 const COLORS = [
   '#1976d2', '#388e3c', '#d32f2f', '#7b1fa2',
@@ -21,6 +24,7 @@ const COLORS = [
 const EMPTY = { name: '', description: '', capacity: 10, location: '', color: '#1976d2', isActive: true };
 
 export default function RoomsManager() {
+  const [view, setView] = useState('salas');   // 'salas' | 'vehiculos'
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -73,14 +77,38 @@ export default function RoomsManager() {
     <Box sx={{ p: { xs: 2, md: 3 } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
         <Box>
-          <Typography variant="h5" fontWeight={700}>Salas</Typography>
-          <Typography variant="body2" color="text.secondary">Gestión de salas para el Pandora Calendar</Typography>
+          <Typography variant="h5" fontWeight={700}>Salas / Vehículos</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {view === 'vehiculos' ? 'Gestión de vehículos de la flotilla' : 'Gestión de salas para el Pandora Calendar'}
+          </Typography>
         </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={openNew} sx={{ borderRadius: 2 }}>
-          Nueva sala
-        </Button>
+        {view === 'salas' && (
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openNew} sx={{ borderRadius: 2 }}>
+            Nueva sala
+          </Button>
+        )}
       </Box>
 
+      {/* Selector: Salas / Vehículos */}
+      <ToggleButtonGroup
+        value={view}
+        exclusive
+        onChange={(_, v) => { if (v) { setView(v); setError(''); } }}
+        size="small"
+        sx={{ mb: 2 }}
+      >
+        <ToggleButton value="salas" sx={{ borderRadius: 2, fontWeight: 700, px: 2.5 }}>
+          <MeetingRoomIcon fontSize="small" sx={{ mr: 1 }} /> Salas
+        </ToggleButton>
+        <ToggleButton value="vehiculos" sx={{ borderRadius: 2, fontWeight: 700, px: 2.5 }}>
+          <DirectionsCarIcon fontSize="small" sx={{ mr: 1 }} /> Vehículos
+        </ToggleButton>
+      </ToggleButtonGroup>
+
+      {view === 'vehiculos' ? (
+        <VehiculosManager />
+      ) : (
+      <>
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
       {loading ? (
@@ -179,6 +207,8 @@ export default function RoomsManager() {
           </Button>
         </DialogActions>
       </Dialog>
+      </>
+      )}
     </Box>
   );
 }

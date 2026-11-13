@@ -4,6 +4,7 @@ import {
   Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
   Dialog, DialogTitle, DialogContent, DialogActions,
   TextField, CircularProgress, Alert, Tabs, Tab, Divider,
+  ToggleButton, ToggleButtonGroup,
 } from '@mui/material';
 import PendingActionsIcon  from '@mui/icons-material/PendingActions';
 import CheckCircleIcon     from '@mui/icons-material/CheckCircle';
@@ -13,11 +14,14 @@ import InfoOutlinedIcon    from '@mui/icons-material/InfoOutlined';
 import RefreshIcon         from '@mui/icons-material/Refresh';
 import CalendarMonthIcon   from '@mui/icons-material/CalendarMonth';
 import CoffeeIcon          from '@mui/icons-material/Coffee';
+import MeetingRoomIcon     from '@mui/icons-material/MeetingRoom';
+import DirectionsCarIcon   from '@mui/icons-material/DirectionsCar';
 import { format, parseISO } from 'date-fns';
 import { es }              from 'date-fns/locale';
 import { roomRequestApi, calendarApi } from '../../api/pandoraApi';
 import { apiError } from '../../api/apiError';
 import ReservationModal    from './ReservationModal';
+import VehicleRequestsManager from './VehicleRequestsManager';
 
 const STATUS_CONFIG = {
   Pendiente: { color: 'warning',  label: 'Pendiente' },
@@ -33,6 +37,7 @@ const TABS = [
 ];
 
 export default function RoomRequestsManager() {
+  const [view, setView]           = useState('salas');   // 'salas' | 'vehiculos'
   const [requests, setRequests]   = useState([]);
   const [rooms, setRooms]         = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -171,17 +176,41 @@ export default function RoomRequestsManager() {
         <Stack direction="row" spacing={1.5} alignItems="center">
           <PendingActionsIcon color="primary" sx={{ fontSize: 28 }} />
           <Box>
-            <Typography variant="h6" fontWeight={700}>Solicitudes de espacio</Typography>
+            <Typography variant="h6" fontWeight={700}>Solicitudes</Typography>
             <Typography variant="body2" color="text.secondary">
-              Gestiona las solicitudes de separación de sala
+              Gestiona las solicitudes de salas y vehículos
             </Typography>
           </Box>
-          {loading && <CircularProgress size={18} />}
+          {view === 'salas' && loading && <CircularProgress size={18} />}
         </Stack>
-        <Button variant="outlined" startIcon={<RefreshIcon />} onClick={load} size="small" sx={{ borderRadius: 2 }}>
-          Actualizar
-        </Button>
+        {view === 'salas' && (
+          <Button variant="outlined" startIcon={<RefreshIcon />} onClick={load} size="small" sx={{ borderRadius: 2 }}>
+            Actualizar
+          </Button>
+        )}
       </Stack>
+
+      {/* Selector: Salas / Vehículos */}
+      <ToggleButtonGroup
+        value={view}
+        exclusive
+        onChange={(_, v) => { if (v) setView(v); }}
+        size="small"
+        sx={{ mb: 2 }}
+      >
+        <ToggleButton value="salas" sx={{ borderRadius: 2, fontWeight: 700, px: 2.5 }}>
+          <MeetingRoomIcon fontSize="small" sx={{ mr: 1 }} /> Salas
+        </ToggleButton>
+        <ToggleButton value="vehiculos" sx={{ borderRadius: 2, fontWeight: 700, px: 2.5 }}>
+          <DirectionsCarIcon fontSize="small" sx={{ mr: 1 }} /> Vehículos
+        </ToggleButton>
+      </ToggleButtonGroup>
+
+      {view === 'vehiculos' ? (
+        <VehicleRequestsManager />
+      ) : (
+      <>
+      {/* ── Salas ───────────────────────────────────────────────────────── */}
 
       {error && (
         <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2, borderRadius: 2 }}>{error}</Alert>
@@ -442,6 +471,8 @@ export default function RoomRequestsManager() {
         employees={employees}
         initial={approveRow ? buildReservationInitial(approveRow) : null}
       />
+      </>
+      )}
     </Box>
   );
 }
