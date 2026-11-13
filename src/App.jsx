@@ -73,6 +73,8 @@ const DashboardEjecutivo = lazy(() => import('./pages/ejecutivo/DashboardEjecuti
 // Mantenimiento
 const MantenimientoPage       = lazy(() => import('./pages/mantenimiento/MantenimientoPage'));
 const MantenimientoDetailPage = lazy(() => import('./pages/mantenimiento/MantenimientoDetailPage'));
+// Flotilla (reserva de vehículos)
+const FlotillaPage            = lazy(() => import('./pages/flotilla/FlotillaPage'));
 
 // Checador
 const CheckadorPage      = lazy(() => import('./pages/checador/CheckadorPage'));
@@ -289,6 +291,13 @@ function AppRoutes() {
               <Route path="/calendar/reports" element={
                 <ProtectedRoute requiredAnyModules={[MODULES.CAL_REPORTS_CAL, MODULES.CALENDARIO_ADMIN]}>
                   <CalendarReports />
+                </ProtectedRoute>
+              } />
+
+              {/* ── Flotilla (Reserva de Vehículos) ─────────────────────── */}
+              <Route path="/flotilla" element={
+                <ProtectedRoute requiredModule={MODULES.FLOTILLA}>
+                  <FlotillaPage />
                 </ProtectedRoute>
               } />
 

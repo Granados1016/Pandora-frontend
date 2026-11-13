@@ -47,6 +47,7 @@ export const MODULES = {
   BITACORA:         33554432, // Módulo de bitácora de incidencias
   MANTENIMIENTO:    67108864,  // Módulo de mantenimiento de equipos
   CHECADOR:         134217728, // Módulo de checador de asistencia
+  FLOTILLA:         268435456, // Módulo de reserva de vehículos (flotilla)
 };
 
 export const MODULE_LABELS = {
@@ -72,6 +73,7 @@ export const MODULE_LABELS = {
   33554432: 'Bitácora — Registro de incidencias',
   67108864:  'Mantenimiento — Gestión de equipos',
   134217728: 'Checador — Registro de asistencia con GPS',
+  268435456: 'Flotilla — Reserva de Vehículos',
 };
 
 // Sub-módulos agrupados por módulo padre — se usan en Admin.jsx
